@@ -130,6 +130,7 @@ export function validateProposal(input = {}) {
       rera_number,
       company,
       possession: poster_type === "developer" ? clean(input.possession, 40) : null,
+      configs: poster_type === "developer" ? clean(input.configs, 80) : null,
       description: clean(input.description, 400),
       notes
     }
@@ -145,7 +146,8 @@ export function makeViewer({ user, profile, isAdmin = false }) {
     id: user.id,
     email: user.email,
     isAdmin,
-    isBroker: !!(profile && profile.rera_number)
+    // Brokers see requests only while acting as a broker (switching role turns it off).
+    isBroker: !!(profile && profile.rera_number && (!profile.role || profile.role === "broker"))
   };
 }
 
@@ -189,6 +191,7 @@ export function toPublic(post, viewer) {
     rera_number: post.rera_number,
     company: post.company,
     possession: post.possession,
+    configs: post.configs,
     description: post.description,
     photos: Array.isArray(post.photos) ? post.photos : [],
     contact_name: post.contact_name,

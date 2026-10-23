@@ -1,6 +1,6 @@
 // All /api/* routes. Dependencies are passed in so the logic can be tested without real services.
 import {
-  LIMITS, isUuid, clean, cleanPhone, buildingKey, validateProposal,
+  LIMITS, POSTER_TYPES, isUuid, clean, cleanPhone, cleanRera, buildingKey, validateProposal,
   makeViewer, canSee, accessSummary, toPublic, sanitizeMessages
 } from "./core.mjs";
 
@@ -85,12 +85,71 @@ export async function handle(req, deps) {
       return json({ profile });
     }
 
+    /* ---------- choose / switch role ---------- */
+    if (path === "/me/role" && method === "POST") {
+      const body = await readJson(req);
+      const role = String(body.role || "").toLowerCase();
+      if (!POSTER_TYPES.includes(role)) return json({ error: "Please choose how you'll use Property Stalkers." }, 400);
+      const update = { id: user.id, email: user.email, role };
+      if (role === "broker") {
+        const licence = cleanRera(body.licence);
+        if (!licence) return json({ error: "Please enter your broker licence / RERA number." }, 400);
+        update.rera_number = licence;
+      }
+      if (role === "developer") {
+        const company = clean(body.company, 80);
+        if (!company) return json({ error: "Please enter your company name." }, 400);
+        update.company = company;
+      }
+      const profile = await store.upsertProfile(update);
+      const viewer = makeViewer({ user, profile, isAdmin });
+      return json({ profile, access: accessSummary(viewer) });
+    }
+
     const profile = await store.getProfile(user.id);
     const needsProfile = !profile || !profile.name || !profile.phone;
+
+    /** Validate, place on the map and save a draft for the user to confirm. */
+    async function makeDraft(proposal) {
+      const v = validateProposal(proposal);
+      if (!v.ok) return { message: v.ask };
+      const place = await geo.locate(v.post);
+      if (!place) {
+        const where = [v.post.building, v.post.locality, v.post.city].filter(Boolean).join(", ");
+        return { message: `I couldn't find "${where}" on the map. Could you check the spelling, or add the area name or a nearby landmark?` };
+      }
+      const draft = {
+        ...v.post,
+        ...place,
+        building_key: buildingKey(v.post.building, v.post.city),
+        contact_name: profile.name,
+        contact_phone: profile.phone
+      };
+      const id = await store.createDraft(user.id, draft);
+      return { draft: { id, ...draft, building_key: undefined, place_id: undefined } };
+    }
+
+    /* ---------- developer project form (no AI needed) ---------- */
+    if (path === "/draft" && method === "POST") {
+      if (needsProfile) return json({ error: "profile_required" }, 400);
+      if ((await store.bumpAiUsage(user.id)) > LIMITS.aiCallsPerDay) {
+        return json({ error: "You've reached today's limit. Please try again tomorrow." }, 429);
+      }
+      const b = await readJson(req);
+      const r = await makeDraft({
+        poster_type: "developer", deal: b.deal === "rent" ? "rent" : "sale",
+        company: b.company, building: b.project, locality: b.area, city: b.city, country: b.country,
+        rera_number: b.rera, property_type: b.property_type, configs: b.configs, bedrooms: b.bedrooms,
+        price: b.price, currency: b.currency, possession: b.possession, description: b.description
+      });
+      if (r.message) return json({ error: r.message }, 400);
+      return json({ draft: r.draft });
+    }
 
     /* ---------- AI chat ---------- */
     if (path === "/chat" && method === "POST") {
       if (needsProfile) return json({ error: "profile_required" }, 400);
+      if (!profile.role) return json({ error: "role_required" }, 400);
       const body = await readJson(req);
       const messages = sanitizeMessages(body.messages);
       if (!messages.length || messages[messages.length - 1].role !== "user") {
@@ -101,35 +160,21 @@ export async function handle(req, deps) {
         return json({ error: "You've reached today's limit for the posting assistant. Please try again tomorrow." }, 429);
       }
 
-      const result = await ai.converse(messages);
+      const result = await ai.converse(messages, { role: profile.role });
       if (!result.proposal) {
         return json({
           type: "message",
-          text: result.text || "Sorry, I didn't catch that. Please describe it in one message: who you are (landlord, broker, buyer or tenant), the property, the price, and the building, area and city."
+          text: result.text || "Sorry, I didn't catch that. Please describe it in one message: the property, the price, and the building, area and city."
         });
       }
 
-      const v = validateProposal(result.proposal);
-      if (!v.ok) return json({ type: "message", text: v.ask });
-
-      const place = await geo.locate(v.post);
-      if (!place) {
-        const where = [v.post.building, v.post.locality, v.post.city].filter(Boolean).join(", ");
-        return json({
-          type: "message",
-          text: `I couldn't find "${where}" on the map. Could you check the spelling, or add the sector number or a nearby landmark?`
-        });
-      }
-
-      const draft = {
-        ...v.post,
-        ...place,
-        building_key: buildingKey(v.post.building, v.post.city),
-        contact_name: profile.name,
-        contact_phone: profile.phone
-      };
-      const id = await store.createDraft(user.id, draft);
-      return json({ type: "draft", text: result.text || "", draft: { id, ...draft, building_key: undefined, place_id: undefined } });
+      // The user's chosen role decides who they post as.
+      const proposal = { ...result.proposal, poster_type: profile.role };
+      if (profile.role === "broker" && !proposal.rera_number) proposal.rera_number = profile.rera_number;
+      if (profile.role === "developer" && !proposal.company) proposal.company = profile.company;
+      const r = await makeDraft(proposal);
+      if (r.message) return json({ type: "message", text: r.message });
+      return json({ type: "draft", text: result.text || "", draft: r.draft });
     }
 
     /* ---------- confirm a draft ---------- */

@@ -55,7 +55,7 @@ export const PROPOSE_TOOL = {
 
 export function makeAI({ apiKey, model = "claude-haiku-5-5", fetchImpl = fetch }) {
   return {
-    async converse(messages) {
+    async converse(messages, { role } = {}) {
       const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -66,7 +66,9 @@ export function makeAI({ apiKey, model = "claude-haiku-5-5", fetchImpl = fetch }
         body: JSON.stringify({
           model,
           max_tokens: 1500,
-          system: SYSTEM_PROMPT,
+          system: role
+            ? `${SYSTEM_PROMPT}\n\nThe user has already told us they are a ${role}. Do not ask who they are; always use poster_type "${role}".`
+            : SYSTEM_PROMPT,
           tools: [PROPOSE_TOOL],
           messages
         })
