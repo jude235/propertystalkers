@@ -51,6 +51,10 @@ alter table public.posts add column if not exists possession text;
 alter table public.posts drop constraint if exists posts_poster_type_check;
 alter table public.posts add constraint posts_poster_type_check
   check (poster_type in ('landlord', 'broker', 'developer', 'buyer', 'tenant'));
+-- Added for roles and developer configurations (safe to re-run).
+alter table public.posts add column if not exists configs text;
+alter table public.profiles add column if not exists role text;
+alter table public.profiles add column if not exists company text;
 
 create index if not exists posts_status_kind_idx on public.posts (status, kind);
 create index if not exists posts_user_idx on public.posts (user_id);
