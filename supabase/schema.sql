@@ -42,6 +42,10 @@ create table if not exists public.posts (
   status        text not null default 'active' check (status in ('active', 'removed')),
   created_at    timestamptz not null default now()
 );
+-- Added for worldwide listings (safe to re-run on an existing database).
+alter table public.posts add column if not exists currency text not null default 'INR';
+alter table public.posts add column if not exists country text;
+
 create index if not exists posts_status_kind_idx on public.posts (status, kind);
 create index if not exists posts_user_idx on public.posts (user_id);
 create index if not exists posts_building_idx on public.posts (building_key);
