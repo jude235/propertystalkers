@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Property Stalkers | Properties and requests on the map</title>
-<meta name="description" content="Find properties for sale and rent around the world on one map, and post your own listing or request in plain words.">
+<meta name="description" content="Search properties and new projects for sale and rent on one map, anywhere in the world. Post your own listing in plain words.">
 <meta name="theme-color" content="#0f3b2e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,6 +65,57 @@
     background: rgba(243, 235, 221, .18); color: inherit; }
   .tab .n:empty { display: none; }
   .tab[aria-selected="true"] .n { background: var(--brand); color: var(--brand-ink); }
+  .tabs[hidden] { display: none; }
+
+  /* Search */
+  .search { position: relative; flex: 1; min-width: 0; }
+  .search input { width: 100%; height: 42px; border-radius: 999px; border: 1px solid rgba(243, 235, 221, .35);
+    background: rgba(243, 235, 221, .12); color: var(--brand-ink); padding: 0 40px 0 42px; font-size: 15px; }
+  .search input::-webkit-search-cancel-button, .search input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+  .search input::placeholder { color: rgba(243, 235, 221, .75); }
+  .search input:focus { outline: none; background: var(--brand-ink); color: var(--ink); border-color: var(--brass); }
+  .search input:focus::placeholder { color: var(--muted); }
+  .s-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--brass); display: flex; }
+  .s-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%;
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+  .s-clear[hidden] { display: none; }
+  .results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--bg); color: var(--ink); border-radius: 14px;
+    box-shadow: var(--shadow); max-height: 60vh; overflow-y: auto; z-index: 25; border: 1px solid var(--line); }
+  .results[hidden] { display: none; }
+  .result { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; background: none; padding: 10px 14px;
+    cursor: pointer; border-bottom: 1px solid var(--line); color: var(--ink); }
+  .result:last-child { border-bottom: 0; }
+  .result:hover, .result.sel { background: var(--soft); }
+  .result img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; }
+  .result .r-main { min-width: 0; flex: 1; }
+  .result b { display: block; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result small { display: block; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result .r-price { font-family: var(--serif); color: var(--brand); white-space: nowrap; font-size: 15px; }
+  .result.go { color: var(--brass-ink); font-weight: 500; font-size: 14px; }
+  .result.empty { cursor: default; color: var(--muted); font-size: 13px; }
+
+  /* Filters */
+  .filters { pointer-events: auto; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 10px 16px 2px; }
+  .filters::-webkit-scrollbar { display: none; }
+  .filters[hidden] { display: none; }
+  .fchip { flex: 0 0 auto; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 8px rgba(15, 59, 46, .14); display: inline-flex; align-items: center; gap: 6px; }
+  .fchip[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .fchip.list { border-color: var(--brass); color: var(--brass-ink); }
+  .fchip .n { font-size: 12px; opacity: .8; }
+
+  /* List of properties in view */
+  .list-head { padding: 22px 18px 8px; }
+  .list-head h2 { font-family: var(--serif); font-weight: 400; font-size: 22px; color: var(--brand); margin: 0 0 4px; }
+  .list-head p { margin: 0; color: var(--muted); font-size: 13px; }
+  .litem { display: flex; gap: 12px; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; padding: 12px 18px; cursor: pointer; color: var(--ink); }
+  .litem:hover { background: var(--soft); }
+  .litem img { width: 84px; height: 64px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; }
+  .litem div { min-width: 0; }
+  .litem b { display: block; font-weight: 500; font-size: 15px; }
+  .litem small { display: block; color: var(--muted); font-size: 12px; margin: 2px 0 4px; }
+  .litem .lp { font-family: var(--serif); color: var(--brand); font-size: 16px; }
+  .tag.dev { color: var(--brand); background: none; }
   .banner-row { padding: 12px 16px 0; }
   .banner { pointer-events: auto; max-width: 420px; background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--brass);
     border-radius: 0 12px 12px 0; padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--muted); box-shadow: 0 4px 14px rgba(15, 59, 46, .12); }
@@ -83,8 +134,9 @@
   .pin::after { content: ""; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
     border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--pin); }
   .pin.req { --pin: var(--req); }
+  .pin.dev { --pin: var(--brass); color: var(--brand); }
   .pin:hover { transform: scale(1.06); }
-  .pin.active { --pin: var(--brass); color: var(--brand); transform: scale(1.12); }
+  .pin.active { --pin: #1d2a24; color: var(--brand-ink); transform: scale(1.12); }
   .cluster { background: var(--brand); color: var(--brand-ink); border-radius: 50%; display: grid; place-items: center; font-weight: 500; font-size: 14px;
     box-shadow: 0 0 0 4px rgba(184, 137, 74, .55); cursor: pointer; }
   .cluster.req { background: var(--req); }
@@ -214,8 +266,9 @@
     .header-in { flex-direction: row; align-items: center; gap: 24px; }
     .top-row { display: contents; }
     .brand { order: 1; }
-    .tabs { order: 2; width: 340px; }
-    .account { order: 3; }
+    .search { order: 2; max-width: 460px; }
+    .tabs { order: 3; width: 300px; }
+    .account { order: 4; }
     .panel { top: 84px; }
   }
 </style>
@@ -235,11 +288,24 @@
       </div>
       <button class="account" id="account">Sign in</button>
     </div>
-    <div class="tabs" role="tablist" aria-label="What to show">
+    <div class="search" role="search">
+      <span class="s-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>
+      <input id="q" type="search" placeholder="Search an area, building or city" autocomplete="off" aria-label="Search an area, building or city" aria-controls="results">
+      <button class="s-clear" id="q-clear" aria-label="Clear search" hidden>&times;</button>
+      <div class="results" id="results" role="listbox" hidden></div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="What to show" hidden>
       <button class="tab" role="tab" data-tab="listing" aria-selected="true">Properties <span class="n" id="n-listing"></span></button>
       <button class="tab" role="tab" data-tab="request" aria-selected="false">Requests <span class="n" id="n-request"></span></button>
     </div>
   </div></header>
+  <div class="filters" id="filters" role="toolbar" aria-label="Filter properties">
+    <button class="fchip" data-f="all" aria-pressed="true">All</button>
+    <button class="fchip" data-f="sale" aria-pressed="false">For sale</button>
+    <button class="fchip" data-f="rent" aria-pressed="false">For rent</button>
+    <button class="fchip" data-f="project" aria-pressed="false">New projects</button>
+    <button class="fchip list" id="show-list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>List <span class="n" id="list-n"></span></button>
+  </div>
   <div class="banner-row"><div class="banner" id="banner" hidden></div></div>
 </div>
 
@@ -278,6 +344,7 @@
 
 const EXAMPLES = [
   { label: "Landlord selling", text: "I am the landlord and want to sell my 3 bedroom in [building name], [sector], [city] for [price]" },
+  { label: "Developer project", text: "We are [company], a developer. Launching [project name] in [area], [city]: 2, 3 and 4 bedroom apartments from [price], possession [month year], RERA [number]" },
   { label: "Broker listing", text: "I am a broker, RERA [number], and want to sell a villa for [price] in [area], [city]" },
   { label: "Tenant looking", text: "I am a tenant looking to rent a 2 bedroom in [building name], [sector], [city], budget [rent] a month" },
   { label: "Buyer looking", text: "I am a buyer looking to purchase a 3 bedroom in [building name], [sector], [city], budget [price]" }
@@ -286,7 +353,7 @@ const EXAMPLES = [
 const S = {
   cfg: null, sb: null, session: null, me: null,
   posts: [], access: null, signedIn: false,
-  tab: "listing", map: null, Marker: null, clusterer: null, plain: [], pinEls: new Map(),
+  tab: "listing", filter: "all", map: null, Marker: null, clusterer: null, plain: [], pinEls: new Map(),
   activeId: null, chat: [], draft: null, draftPhotos: [], busy: false, fitted: false, userId: null
 };
 
@@ -309,7 +376,8 @@ function money(n) {
   return String(n);
 }
 const TYPE = { apartment: "apartment", villa: "villa", independent_house: "independent house", plot: "plot", office: "office", shop: "shop", other: "" };
-const POSTER = { landlord: "Landlord", broker: "Broker", buyer: "Buyer", tenant: "Tenant" };
+const POSTER = { landlord: "Landlord", broker: "Broker", developer: "Developer", buyer: "Buyer", tenant: "Tenant" };
+const isDev = (p) => p.poster_type === "developer";
 const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
 
 function what(p) {
@@ -318,11 +386,12 @@ function what(p) {
   return t || "property";
 }
 function titleOf(p) {
+  if (isDev(p)) return p.building || "New project";
   if (p.kind === "listing") return cap(`${what(p)} for ${p.deal === "rent" ? "rent" : "sale"}`);
   const w = what(p);
   return `Looking to ${p.deal === "rent" ? "rent" : "buy"} ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w}`;
 }
-const placeOf = (p) => [p.building, p.locality, p.city].filter(Boolean).join(", ");
+const placeOf = (p) => [isDev(p) ? null : p.building, p.locality, p.city].filter(Boolean).join(", ");
 const SYMBOL = { INR: "₹", USD: "$", GBP: "£", EUR: "€" };
 function amount(p) {
   if (p.price == null) return "";
@@ -334,16 +403,19 @@ function amount(p) {
 }
 function priceOf(p) {
   const per = p.deal === "rent" ? "/month" : "";
+  if (isDev(p)) return p.price ? `From ${amount(p)}` : "Price on request";
   if (p.kind === "listing") return p.price ? `${amount(p)}${per}` : "Price on request";
   return p.price ? `Budget ${amount(p)}${per}` : "Budget not given";
 }
 function pinLabel(p) {
+  if (isDev(p)) return p.price ? `New · ${amount(p)}+` : "New project";
   if (p.kind === "listing") return p.price ? `${amount(p)}${p.deal === "rent" ? "/mo" : ""}` : (p.bedrooms ? `${p.bedrooms} BHK` : "View");
   const head = p.deal === "rent" ? "Rent" : "Buy";
   return `${head} · ${p.price ? amount(p) : p.bedrooms ? p.bedrooms + " BHK" : "request"}`;
 }
 function posterLine(p) {
   if (p.poster_type === "broker" && p.rera_number) return `Broker · Licence ${p.rera_number}`;
+  if (isDev(p)) return `Developer${p.company ? " · " + p.company : ""}`;
   return POSTER[p.poster_type] || "";
 }
 function ago(iso) {
@@ -465,6 +537,7 @@ async function initMap() {
     center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId,
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
+  S.map.addListener("idle", updateListCount);
 }
 
 /* ---------------- account ---------------- */
@@ -500,7 +573,28 @@ async function loadFeed() {
   renderMarkers();
 }
 
+function passFilter(p) {
+  if (p.kind !== "listing" || S.filter === "all") return true;
+  if (S.filter === "project") return isDev(p);
+  return p.deal === S.filter;
+}
+const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && passFilter(p));
+
+function inView(p) {
+  const b = S.map && S.map.getBounds && S.map.getBounds();
+  return !b || b.contains({ lat: p.lat, lng: p.lng });
+}
+function updateListCount() {
+  const n = visiblePosts().filter(inView).length;
+  $("#list-n").textContent = n ? `(${n})` : "";
+}
+
 function renderMarkers() {
+  const canSeeRequests = !!(S.access && S.access.requests) || S.posts.some((p) => p.kind === "request");
+  $(".tabs").hidden = !canSeeRequests;
+  if (!canSeeRequests && S.tab === "request") S.tab = "listing";
+  $("#filters").hidden = S.tab !== "listing";
+  document.querySelectorAll(".fchip[data-f]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.f === S.filter)));
   const counts = { listing: 0, request: 0 };
   S.posts.forEach((p) => counts[p.kind]++);
   $("#n-listing").textContent = counts.listing ? String(counts.listing) : "";
@@ -514,10 +608,10 @@ function renderMarkers() {
   S.plain = [];
   S.pinEls.clear();
 
-  const shown = S.posts.filter((p) => p.kind === S.tab);
+  const shown = visiblePosts();
   const markers = shown.map((p) => {
     const el = document.createElement("button");
-    el.className = "pin" + (p.kind === "request" ? " req" : "") + (p.id === S.activeId ? " active" : "");
+    el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.id === S.activeId ? " active" : "");
     el.textContent = pinLabel(p);
     el.setAttribute("aria-label", `${titleOf(p)}, ${placeOf(p)}`);
     el.addEventListener("click", (e) => { e.stopPropagation(); openDetails(p.id, { pan: true }); });
@@ -555,27 +649,31 @@ function renderMarkers() {
     S.map.fitBounds(b, 80);
     google.maps.event.addListenerOnce(S.map, "idle", () => { if (S.map.getZoom() > 13) S.map.setZoom(13); });
   }
+  updateListCount();
 }
 
 function renderBanner() {
   const el = $("#banner");
-  if (S.tab !== "request") { el.hidden = true; return; }
-  const a = S.access || { buyerRequests: false, tenantRequests: "none" };
-  let html;
-  if (!S.signedIn) {
-    html = "<b>Requests are for property owners and brokers.</b> Sign in and post a property, or post as a broker with your licence / RERA number, to see who is looking to buy or rent.";
-  } else if (a.tenantRequests === "all") {
-    html = "You can see all buyer and tenant requests.";
-  } else if (a.buyerRequests && a.tenantRequests === "own_buildings") {
-    html = "You can see buyer requests, and tenant requests for buildings where you've listed a property. <b>Licensed brokers</b> see all tenant requests.";
-  } else if (a.buyerRequests) {
-    html = "You can see buyer requests. Tenant requests are visible to <b>licensed brokers</b> and owners with a property in the same building.";
-  } else {
-    html = "You can see your own requests. <b>Buyer requests</b> are visible to landlords with a listed property and licensed brokers. <b>Tenant requests</b> are visible to licensed brokers and owners in the same building.";
+  let html = "";
+  if (S.tab === "request") {
+    html = S.access && S.access.requests
+      ? "You can see all buyer and tenant requests."
+      : "You can see your own requests. Buyer and tenant requests are visible only to <b>brokers with a licence / RERA number</b>.";
+  } else if (!S.posts.some((p) => p.kind === "listing")) {
+    html = "<b>No properties listed yet.</b> Be the first: tap <b>Post property or request</b>.";
+  } else if (!visiblePosts().length) {
+    html = "No properties match this filter yet.";
   }
   el.innerHTML = html;
-  el.hidden = false;
+  el.hidden = !html;
 }
+
+document.querySelectorAll(".fchip[data-f]").forEach((c) => c.addEventListener("click", () => {
+  S.filter = c.dataset.f;
+  closeDetails();
+  renderMarkers();
+}));
+$("#show-list").addEventListener("click", () => openList());
 
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
   if (S.tab === t.dataset.tab) return;
@@ -605,11 +703,13 @@ function focusOn(p, zoom) {
 function openDetails(id, opts = {}) {
   const p = S.posts.find((x) => x.id === id);
   if (!p) return false;
-  if (p.kind !== S.tab) { S.tab = p.kind; renderMarkers(); }
+  if (p.kind !== S.tab || !passFilter(p)) { S.tab = p.kind; S.filter = "all"; renderMarkers(); }
   const isReq = p.kind === "request";
   const photos = p.photos && p.photos.length ? p.photos : (isReq ? [] : [placeholder(p.id)]);
   const msg = isReq
     ? `Hi ${p.contact_name || ""}, I saw your request on Property Stalkers (${titleOf(p).toLowerCase()} in ${placeOf(p)}). I may have something for you.`
+    : isDev(p)
+    ? `Hi, I'm interested in ${titleOf(p)}${p.company ? " by " + p.company : ""} in ${placeOf(p)}, which I saw on Property Stalkers.`
     : `Hi ${p.contact_name || ""}, I'm interested in your ${titleOf(p).toLowerCase()} in ${placeOf(p)}, which I saw on Property Stalkers.`;
 
   $("#panel-content").innerHTML = `
@@ -619,16 +719,21 @@ function openDetails(id, opts = {}) {
       ${photos.length > 1 ? `<span class="counter" id="counter">1 / ${photos.length}</span>` : ""}
     </div>`}
     <div class="body">
-      <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "rent" ? "Wants to rent" : "Wants to buy") : (p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
+      <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "rent" ? "Wants to rent" : "Wants to buy") : isDev(p) ? "New project" : (p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
       <h1 class="title">${esc(titleOf(p))}</h1>
       <p class="loc">${esc(placeOf(p))}</p>
       <p class="price">${esc(priceOf(p))}</p>
-      <div class="facts">
+      ${isDev(p) ? `<div class="facts">
+        <div class="fact"><b>Developer</b><span>${esc(p.company || "—")}</span></div>
+        <div class="fact"><b>Possession</b><span>${esc(p.possession || "—")}</span></div>
+        <div class="fact"><b>Configuration</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK onwards") : esc(cap(TYPE[p.property_type] || "—"))}</span></div>
+        <div class="fact"><b>Project RERA</b><span>${esc(p.rera_number || "—")}</span></div>
+      </div>` : `<div class="facts">
         <div class="fact"><b>Type</b><span>${esc(cap(TYPE[p.property_type] || "Any"))}</span></div>
         <div class="fact"><b>Bedrooms</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK") : "—"}</span></div>
         <div class="fact"><b>Posted by</b><span>${esc(POSTER[p.poster_type])}</span></div>
         <div class="fact"><b>Posted</b><span>${esc(ago(p.created_at))}</span></div>
-      </div>
+      </div>`}
       ${p.description ? `<p class="desc">${esc(p.description)}</p>` : ""}
       <div class="contact">
         <div class="contact-head">
@@ -683,6 +788,132 @@ async function removePost(id) {
     if ($("#sheet").classList.contains("open") && $("#sheet").dataset.view === "account") renderAccount();
   } catch (e) { toast(e.message); }
 }
+
+/* ---------------- list of properties in view ---------------- */
+function thumbOf(p) { return p.photos && p.photos.length ? p.photos[0] : placeholder(p.id); }
+
+function openList() {
+  const items = visiblePosts().filter(inView);
+  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects" }[S.filter] || "properties";
+  $("#panel-content").innerHTML = `
+    <div class="list-head">
+      <h2>${items.length} ${esc(items.length === 1 ? label.replace(/ies$/, "y").replace(/s$/, "") : label)} in this view</h2>
+      <p>Move or zoom the map, or search an area, to see more.</p>
+    </div>
+    ${items.map((p) => `
+      <button class="litem" data-id="${esc(p.id)}">
+        <img src="${esc(thumbOf(p))}" alt="" loading="lazy">
+        <div>
+          ${isDev(p) ? `<span class="tag dev">New project</span>` : ""}
+          <b>${esc(titleOf(p))}</b>
+          <small>${esc(placeOf(p))}</small>
+          <span class="lp">${esc(priceOf(p))}</span>
+        </div>
+      </button>`).join("") || `<p class="hint" style="padding:0 18px">Nothing here yet. Try another area or filter.</p>`}`;
+  document.querySelectorAll(".litem").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { pan: true })));
+  panel.scrollTop = 0;
+  panel.classList.add("open");
+  panel.setAttribute("aria-hidden", "false");
+  setActive(null);
+}
+
+/* ---------------- search ---------------- */
+const qEl = $("#q"), resultsEl = $("#results");
+let searchTimer, searchSel = -1;
+
+function searchText(p) {
+  return [p.building, p.locality, p.city, p.country, p.address, p.company].filter(Boolean).join(" ").toLowerCase();
+}
+function matchPosts(q) {
+  const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
+  if (!words.length) return [];
+  return S.posts.filter((p) => p.kind === S.tab && words.every((w) => searchText(p).includes(w)));
+}
+
+function renderResults() {
+  const q = qEl.value.trim();
+  $("#q-clear").hidden = !q;
+  if (q.length < 2) { resultsEl.hidden = true; return; }
+  const hits = matchPosts(q);
+  searchSel = -1;
+  resultsEl.innerHTML = hits.slice(0, 6).map((p) => `
+      <button class="result" role="option" data-id="${esc(p.id)}">
+        <img src="${esc(thumbOf(p))}" alt="">
+        <span class="r-main"><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))}</small></span>
+        <span class="r-price">${esc(p.price ? amount(p) : "")}</span>
+      </button>`).join("")
+    + (hits.length > 6 ? `<button class="result go" data-all="1">Show all ${hits.length} matches on the map</button>` : "")
+    + `<button class="result go" data-go="1">Show “${esc(q)}” on the map</button>`
+    + (hits.length ? "" : `<div class="result empty">No listed properties match yet. You can still move the map there.</div>`);
+  resultsEl.hidden = false;
+  resultsEl.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("mousedown", (e) => { e.preventDefault(); pickPost(b.dataset.id); }));
+  resultsEl.querySelectorAll("[data-all]").forEach((b) => b.addEventListener("mousedown", (e) => { e.preventDefault(); showMatches(hits); }));
+  resultsEl.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("mousedown", (e) => { e.preventDefault(); goToPlace(q); }));
+}
+
+function closeResults() { resultsEl.hidden = true; }
+
+function pickPost(id) {
+  closeResults();
+  qEl.blur();
+  openDetails(id, { zoom: 15 });
+}
+
+function showMatches(hits) {
+  closeResults();
+  qEl.blur();
+  S.filter = "all";
+  renderMarkers();
+  const b = new google.maps.LatLngBounds();
+  hits.forEach((p) => b.extend({ lat: p.lat, lng: p.lng }));
+  S.map.fitBounds(b, 80);
+  google.maps.event.addListenerOnce(S.map, "idle", () => { if (S.map.getZoom() > 15) S.map.setZoom(15); openList(); });
+}
+
+async function goToPlace(q) {
+  closeResults();
+  qEl.blur();
+  try {
+    const { place } = await api("/geocode?q=" + encodeURIComponent(q));
+    if (!place) return toast(`Couldn't find “${q}”. Try adding the city.`);
+    closeDetails();
+    if (place.viewport) S.map.fitBounds({ north: place.viewport.north, south: place.viewport.south, east: place.viewport.east, west: place.viewport.west }, 40);
+    else { S.map.setCenter({ lat: place.lat, lng: place.lng }); S.map.setZoom(13); }
+    google.maps.event.addListenerOnce(S.map, "idle", () => {
+      const n = visiblePosts().filter(inView).length;
+      if (n) openList();
+      else toast(`No properties listed around ${place.address || q} yet.`);
+    });
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+qEl.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderResults, 120); });
+qEl.addEventListener("focus", renderResults);
+qEl.addEventListener("blur", () => setTimeout(closeResults, 150));
+qEl.addEventListener("keydown", (e) => {
+  const opts = [...resultsEl.querySelectorAll("button.result")];
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    if (!opts.length) return;
+    searchSel = (searchSel + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length;
+    opts.forEach((o, i) => o.classList.toggle("sel", i === searchSel));
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const q = qEl.value.trim();
+    if (!q) return;
+    if (searchSel >= 0 && opts[searchSel]) { opts[searchSel].dispatchEvent(new MouseEvent("mousedown")); return; }
+    const hits = matchPosts(q);
+    if (hits.length === 1) pickPost(hits[0].id);
+    else if (hits.length > 1) showMatches(hits);
+    else goToPlace(q);
+  } else if (e.key === "Escape") {
+    closeResults();
+    qEl.blur();
+  }
+});
+$("#q-clear").addEventListener("click", () => { qEl.value = ""; $("#q-clear").hidden = true; closeResults(); qEl.focus(); });
 
 /* ---------------- sheet (post / account) ---------------- */
 const sheet = $("#sheet");
@@ -816,7 +1047,7 @@ function openComposer() {
   if (!S.chat.length) {
     const intro = document.createElement("div");
     intro.className = "bubble ai";
-    intro.innerHTML = `Tell me what you want to post, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world. Brokers, please add your <b>licence / RERA number</b>, otherwise the post shows as Landlord.<br><br>Tap an example and fill in the brackets:`;
+    intro.innerHTML = `Tell me what you want to post, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world. Developers, include your <b>company name</b>. Brokers, please add your <b>licence / RERA number</b>, otherwise the post shows as Landlord.<br><br>Tap an example and fill in the brackets:`;
     log.appendChild(intro);
     const ex = document.createElement("div");
     ex.className = "examples";
