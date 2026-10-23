@@ -46,8 +46,8 @@
   .header-in { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
   .row { display: flex; align-items: center; gap: 12px; }
   .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
-  .brand-mark { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--brass); display: grid; place-items: center; flex: 0 0 auto; }
-  .brand-name { font-family: var(--serif); font-size: 19px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-mark { width: 30px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; }
+  .brand-name { font-family: var(--serif); font-size: clamp(14px, 4.3vw, 19px); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .account { border: 1px solid rgba(243, 235, 221, .5); cursor: pointer; background: transparent; color: var(--brand-ink);
     height: 38px; min-width: 38px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; flex: 0 0 auto; }
   .account.avatar-btn { padding: 0; width: 38px; background: var(--brass); border-color: var(--brass); color: var(--brand); font-weight: 500; }
@@ -135,10 +135,14 @@
   .maptype { position: fixed; left: 12px; bottom: calc(34px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line);
     background: var(--bg); color: var(--ink); font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: 10px; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0, 0, 0, .25); display: flex; align-items: center; gap: 6px; }
+  @media (max-width: 759px) { .account:not(.avatar-btn) { height: 34px; padding: 0 12px; font-size: 13px; } .brand { gap: 8px; } }
   @media (max-width: 759px) { .maptype { bottom: calc(150px + env(safe-area-inset-bottom)); } }
 
   /* Role picker */
   .roles { display: grid; gap: 10px; margin-top: 4px; }
+  .oauth-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; border: 1px solid var(--line); color: var(--ink); }
+  .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 14px 0 4px; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .role-card { text-align: left; border: 1px solid var(--line); background: #fffdf8; border-radius: 14px; padding: 13px 14px; cursor: pointer; color: var(--ink); }
   .role-card b { display: block; font-family: var(--serif); font-weight: 400; font-size: 17px; color: var(--brand); }
   .role-card small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
@@ -303,6 +307,7 @@
     .panel { top: 84px; }
   }
 </style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 27'%3E%3Cpath d='M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z' fill='%23b8894a'/%3E%3Cpath d='M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z' fill='%230f3b2e'/%3E%3Ccircle cx='12' cy='10.4' r='2.6' fill='%23b8894a'/%3E%3C/svg%3E">
 </head>
 <body>
 
@@ -313,7 +318,7 @@
     <div class="row top-row">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b8894a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M10 21v-6h4v6"/></svg>
+          <svg width="30" height="34" viewBox="0 0 24 27"><path d="M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z" fill="#b8894a"/><path d="M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z" fill="#0f3b2e"/><circle cx="12" cy="10.4" r="2.6" fill="#b8894a"/><circle cx="12.9" cy="9.5" r=".8" fill="#f3ebdd"/></svg>
         </div>
         <div class="brand-name">Property Stalkers</div>
       </div>
@@ -508,10 +513,21 @@ function notice(title, text) {
   document.body.appendChild(n);
 }
 
-async function api(path, opts = {}) {
+async function freshToken(force) {
+  if (!S.sb || !S.session) return null;
+  try {
+    if (force) { const { data } = await S.sb.auth.refreshSession(); if (data && data.session) S.session = data.session; }
+    else { const { data } = await S.sb.auth.getSession(); if (data && data.session) S.session = data.session; }
+  } catch (e) {}
+  return S.session ? S.session.access_token : null;
+}
+
+async function api(path, opts = {}, retried) {
   const headers = { "content-type": "application/json" };
-  if (S.session) headers.authorization = "Bearer " + S.session.access_token;
+  const token = await freshToken(false);
+  if (token) headers.authorization = "Bearer " + token;
   const res = await fetch("/api" + path, { ...opts, headers });
+  if (res.status === 401 && token && !retried && await freshToken(true)) return api(path, opts, true);
   let body = {};
   try { body = await res.json(); } catch (e) {}
   if (!res.ok) {
@@ -531,7 +547,9 @@ async function boot() {
   }
   if (!window.supabase) return notice("Couldn't load", "Please check your internet connection and reload the page.");
 
-  S.sb = window.supabase.createClient(S.cfg.supabaseUrl, S.cfg.supabaseAnonKey);
+  S.sb = window.supabase.createClient(S.cfg.supabaseUrl, S.cfg.supabaseAnonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage }
+  });
   const { data } = await S.sb.auth.getSession();
   S.session = data.session;
   S.userId = S.session ? S.session.user.id : null;
@@ -604,7 +622,7 @@ async function refreshMe() {
   S.me = null;
   if (S.session) {
     try { S.me = await api("/me"); }
-    catch (e) { if (e.status === 401) { await S.sb.auth.signOut(); S.session = null; } }
+    catch (e) { if (e.status === 401) { const { data } = await S.sb.auth.getSession(); if (!data.session) S.session = null; } }
   }
   updateFab();
   const b = $("#account");
@@ -908,9 +926,14 @@ function renderResults() {
     + `<button class="result go" data-go="1">Show “${esc(q)}” on the map</button>`
     + (hits.length ? "" : `<div class="result empty">No listed properties match yet. You can still move the map there.</div>`);
   resultsEl.hidden = false;
-  resultsEl.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("mousedown", (e) => { e.preventDefault(); pickPost(b.dataset.id); }));
-  resultsEl.querySelectorAll("[data-all]").forEach((b) => b.addEventListener("mousedown", (e) => { e.preventDefault(); showMatches(hits); }));
-  resultsEl.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("mousedown", (e) => { e.preventDefault(); goToPlace(q); }));
+  const act = (b, fn) => {
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", fn);
+  };
+  resultsEl.querySelectorAll("[data-id]").forEach((b) => act(b, () => pickPost(b.dataset.id)));
+  resultsEl.querySelectorAll("[data-all]").forEach((b) => act(b, () => showMatches(hits)));
+  resultsEl.querySelectorAll("[data-go]").forEach((b) => act(b, () => goToPlace(q)));
 }
 
 function closeResults() { resultsEl.hidden = true; }
@@ -953,7 +976,7 @@ async function goToPlace(q) {
 
 qEl.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderResults, 120); });
 qEl.addEventListener("focus", renderResults);
-qEl.addEventListener("blur", () => setTimeout(closeResults, 150));
+qEl.addEventListener("blur", () => setTimeout(closeResults, 300));
 qEl.addEventListener("keydown", (e) => {
   const opts = [...resultsEl.querySelectorAll("button.result")];
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -965,7 +988,7 @@ qEl.addEventListener("keydown", (e) => {
     e.preventDefault();
     const q = qEl.value.trim();
     if (!q) return;
-    if (searchSel >= 0 && opts[searchSel]) { opts[searchSel].dispatchEvent(new MouseEvent("mousedown")); return; }
+    if (searchSel >= 0 && opts[searchSel]) { opts[searchSel].click(); return; }
     const hits = matchPosts(q);
     if (hits.length === 1) pickPost(hits[0].id);
     else if (hits.length > 1) showMatches(hits);
@@ -1167,16 +1190,36 @@ async function submitDevForm(e) {
 }
 $("#account").addEventListener("click", () => (S.me ? renderAccount() : renderSignIn()));
 
+async function authProviders() {
+  if (S.providers) return S.providers;
+  try {
+    const r = await fetch(S.cfg.supabaseUrl.replace(/\/$/, "") + "/auth/v1/settings?apikey=" + encodeURIComponent(S.cfg.supabaseAnonKey));
+    S.providers = ((await r.json()).external) || {};
+  } catch (e) { S.providers = {}; }
+  return S.providers;
+}
+
+const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
+
 function renderSignIn(reason) {
   openSheet("signin", "Sign in");
   $("#sheet-body").innerHTML = `
-    <p class="muted">${esc(reason || "Sign in with your email to post properties and requests.")} We'll email you a link. No password needed.</p>
+    <p class="muted">${esc(reason || "Sign in to list a property, a project or what you're looking for.")} You'll stay signed in on this device.</p>
+    <div id="oauth" class="oauth"></div>
     <form id="signin-form">
-      <label class="field"><span>Email</span><input type="email" id="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <label class="field"><span>Email (we'll send you a sign-in link, no password needed)</span><input type="email" id="email" required autocomplete="email" placeholder="you@example.com"></label>
       <button class="btn accent" style="width:100%" id="signin-btn">Email me a sign-in link</button>
       <p class="error" id="signin-err" hidden></p>
     </form>`;
-  $("#email").focus();
+  authProviders().then((pv) => {
+    const box = $("#oauth");
+    if (!box || !pv.google) return;
+    box.innerHTML = `<button class="btn oauth-btn" id="google-btn" type="button">${GOOGLE_G}<span>Continue with Google</span></button><div class="or"><span>or</span></div>`;
+    $("#google-btn").addEventListener("click", async () => {
+      const { error } = await S.sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+      if (error) { const err = $("#signin-err"); err.hidden = false; err.textContent = "Google sign-in isn't available right now. Please use your email."; }
+    });
+  });
   $("#signin-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#email").value.trim();
