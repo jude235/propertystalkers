@@ -89,7 +89,10 @@ export async function handle(req, deps) {
 
       const result = await ai.converse(messages);
       if (!result.proposal) {
-        return json({ type: "message", text: result.text || "Could you tell me a bit more?" });
+        return json({
+          type: "message",
+          text: result.text || "Sorry, I didn't catch that. Please describe it in one message: who you are (landlord, broker, buyer or tenant), the property, the price, and the building, area and city."
+        });
       }
 
       const v = validateProposal(result.proposal);

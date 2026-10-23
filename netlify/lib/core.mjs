@@ -37,10 +37,20 @@ export function cleanRera(r) {
 }
 
 export function cleanPhone(p) {
-  let d = String(p || "").replace(/\D/g, "");
-  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
-  if (d.length === 10 && /^[6-9]/.test(d)) d = "91" + d;
-  return d.length >= 10 && d.length <= 15 ? d : null;
+  const raw = String(p || "").trim();
+  let d = raw.replace(/\D/g, "");
+  if (raw.startsWith("+")) return d.length >= 8 && d.length <= 15 ? d : null;   // already international
+  if (d.startsWith("00")) d = d.slice(2);                                          // 00971… style
+  else if (d.length === 11 && /^0[6-9]/.test(d)) d = "91" + d.slice(1);           // Indian 0-prefixed mobile
+  else if (d.length === 10 && /^[6-9]/.test(d)) d = "91" + d;                      // Indian 10-digit mobile
+  else if (d.startsWith("0")) return null;                                         // local number without country code
+  return d.length >= 8 && d.length <= 15 ? d : null;
+}
+
+/** Three-letter currency code such as INR, AED, USD, GBP. */
+export function cleanCurrency(c) {
+  const s = String(c || "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(s) ? s : null;
 }
 
 function toInt(v, min, max) {
@@ -66,7 +76,7 @@ export function validateProposal(input = {}) {
     rera_number = cleanRera(input.rera_number);
     if (!rera_number) {
       poster_type = "landlord";
-      notes.push("No valid broker RERA number was given, so this will be posted as Landlord.");
+      notes.push("No valid broker licence / RERA number was given, so this will be posted as Landlord.");
     }
   }
 
@@ -84,14 +94,17 @@ export function validateProposal(input = {}) {
   const building = clean(input.building, 100);
   const locality = clean(input.locality, 100);
   const city = clean(input.city, 60);
+  const country = clean(input.country, 60);
   if (!building && !locality) {
-    return { ok: false, ask: "Where is the property? Please share the building or project name and the sector or area." };
+    return { ok: false, ask: "Where is the property? Please share the building or project name and the area, sector or community." };
   }
   if (!city) {
     return { ok: false, ask: "Which city is that in?" };
   }
 
   const property_type = PROPERTY_TYPES.includes(input.property_type) ? input.property_type : "other";
+  const price = toInt(input.price, 1, 100_000_000_000);
+  const currency = cleanCurrency(input.currency) || (price ? "INR" : null);
 
   return {
     ok: true,
@@ -101,10 +114,12 @@ export function validateProposal(input = {}) {
       deal,
       property_type,
       bedrooms: toInt(input.bedrooms, 0, 20),
-      price: toInt(input.price, 1000, 100_000_000_000),
+      price,
+      currency,
       building,
       locality,
       city,
+      country,
       rera_number,
       description: clean(input.description, 400),
       notes
@@ -185,9 +200,11 @@ export function toPublic(post, viewer) {
     property_type: post.property_type,
     bedrooms: post.bedrooms,
     price: post.price,
+    currency: post.currency || "INR",
     building: post.building,
     locality: post.locality,
     city: post.city,
+    country: post.country,
     address: post.address,
     lat: post.lat,
     lng: post.lng,

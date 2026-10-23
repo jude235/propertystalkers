@@ -15,8 +15,6 @@ export function makeGeo({ apiKey, fetchImpl = fetch }) {
   async function geocode(address) {
     const u = new URL("https://maps.googleapis.com/maps/api/geocode/json");
     u.searchParams.set("address", address);
-    u.searchParams.set("region", "in");
-    u.searchParams.set("components", "country:IN");
     u.searchParams.set("key", apiKey);
     const res = await fetchImpl(u.toString());
     const d = await res.json();
@@ -27,12 +25,13 @@ export function makeGeo({ apiKey, fetchImpl = fetch }) {
 
   return {
     /** Returns { lat, lng, precision, address, place_id } or null if it can't be placed. */
-    async locate({ building, locality, city }) {
+    async locate({ building, locality, city, country }) {
       const attempts = [];
-      if (building) attempts.push([building, locality, city]);
-      if (locality) attempts.push([locality, city]);
+      if (building) attempts.push([building, locality, city, country]);
+      if (building && locality) attempts.push([building, city, country]);
+      if (locality) attempts.push([locality, city, country]);
       for (const parts of attempts) {
-        const r = await geocode(parts.filter(Boolean).join(", ") + ", India");
+        const r = await geocode(parts.filter(Boolean).join(", "));
         if (!r) continue;
         let precision = precisionOf(r);
         if (precision === "city") continue;
