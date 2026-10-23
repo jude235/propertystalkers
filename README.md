@@ -7,18 +7,24 @@ and then the post appears on the Google map.
 
 ## How it works
 
+Anyone can open the site and start browsing straight away, without signing in:
+- **Search bar** at the top: type an area, building, project, developer or city. Matching listed properties show instantly. Press Enter, or choose "Show … on the map", to move the map to that place.
+- **Filters**: All, For sale, For rent and New projects. **List** shows every property in the current map view.
+
 | Who posts | Shows on the map as | Who can see it |
 |---|---|---|
-| Landlord (owner) selling or renting out | Emerald price pin under **Properties** | Everyone, including visitors who aren't signed in |
-| Broker with RERA number | Emerald price pin under **Properties**, labelled "Broker · RERA …" | Everyone |
-| Broker **without** RERA number | Posted as **Landlord** | Everyone |
-| Buyer looking to purchase | Brass pin under **Requests** | Brokers with a RERA number, and landlords who have listed a property |
-| Tenant looking to rent | Brass pin under **Requests** | Brokers with a RERA number, and people who have listed a property **in the same building** |
+| Landlord (owner) selling or renting out | Emerald price pin | Everyone, including visitors who aren't signed in |
+| Broker with licence / RERA number | Emerald price pin, labelled "Broker · Licence …" | Everyone |
+| Broker **without** licence number | Posted as **Landlord** | Everyone |
+| Developer (company name required) | Brass "New · price+" pin, under **New projects** | Everyone |
+| Buyer looking to purchase | Pin under **Requests** | Only brokers who gave a licence / RERA number |
+| Tenant looking to rent | Pin under **Requests** | Only brokers who gave a licence / RERA number |
 
-- Location is required for every post: the building or sector, plus the city. If Google can't find it, the assistant asks again.
+- Listings work anywhere in the world. Prices are kept in their own currency (₹, AED, $, £ and so on).
+- Location is required for every post: the building or area, plus the city. If Google can't find it, the assistant asks again.
 - Everyone always sees their own posts. Admins see everything and can remove any post.
 - These rules run on the server, so a request's details never reach anyone who isn't allowed to see them.
-- Each person's name and mobile number (asked once) are shown on their posts with Call and WhatsApp buttons.
+- Each person's name and mobile number (asked once, with country code) are shown on their posts with Call and WhatsApp buttons.
 - Limits: 40 AI messages and 10 posts per person per day (change them in `netlify/lib/core.mjs`, `LIMITS`).
 
 ## What's in this folder
@@ -92,7 +98,7 @@ If you change an environment variable later, go to **Deploys > Trigger deploy** 
 ## Running costs
 
 - **Netlify, Supabase**: free plans are enough to start.
-- **Google Maps**: each product has a monthly free allowance (around 10,000 map loads and 10,000 address lookups at the time of writing), then you pay per 1,000. One lookup happens per post.
+- **Google Maps**: each product has a monthly free allowance (around 10,000 map loads and 10,000 address lookups at the time of writing), then you pay per 1,000. One lookup happens per post, and one per area search (repeated searches are cached).
 - **Claude Haiku 5.5**: well under ₹1 per post at current prices.
 - **Email sender** for sign-in links: free tiers cover a few hundred emails a day.
 
@@ -101,7 +107,6 @@ Check each provider's pricing page for current rates.
 ## Good to know
 
 - **RERA numbers are not verified automatically.** State RERA portals don't offer a way to check them, so the site only checks the format. As admin, you can remove posts with fake numbers.
-- **"Same building" matching** uses the building name and city, or Google's exact building match. A tenant request with only a sector (no building) is visible to RERA brokers only.
 - **Sector-level pins**: if Google can't find the exact building, the pin goes on the sector and the card says so.
 - **Sign-in is by email link.** Phone OTP sign-in can be added later through Supabase with an SMS provider such as MSG91, for a small fee per SMS.
 - To use the smarter (pricier) AI model, add `AI_MODEL` = `claude-sonnet-5-5` in Netlify.
