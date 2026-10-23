@@ -45,6 +45,12 @@ create table if not exists public.posts (
 -- Added for worldwide listings (safe to re-run on an existing database).
 alter table public.posts add column if not exists currency text not null default 'INR';
 alter table public.posts add column if not exists country text;
+-- Added for developer listings (safe to re-run).
+alter table public.posts add column if not exists company text;
+alter table public.posts add column if not exists possession text;
+alter table public.posts drop constraint if exists posts_poster_type_check;
+alter table public.posts add constraint posts_poster_type_check
+  check (poster_type in ('landlord', 'broker', 'developer', 'buyer', 'tenant'));
 
 create index if not exists posts_status_kind_idx on public.posts (status, kind);
 create index if not exists posts_user_idx on public.posts (user_id);
