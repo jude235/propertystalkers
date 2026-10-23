@@ -38,6 +38,10 @@ export function scriptedAI() {
 /** Geocoder with a fixed lookup table. */
 export function tableGeo(table) {
   return {
+    async search(q) {
+      const hit = table[String(q).toLowerCase()];
+      return hit ? { lat: hit.lat, lng: hit.lng, address: q, viewport: null } : null;
+    },
     async locate({ building, locality, city }) {
       for (const key of [[building, locality, city], [locality, city]]) {
         const k = key.filter(Boolean).join(", ").toLowerCase();

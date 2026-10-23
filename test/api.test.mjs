@@ -92,10 +92,9 @@ test("signed-out visitors see listings only", async () => {
   assert.equal(f.posts[0].user_id, undefined);
 });
 
-test("visibility rules for requests", async () => {
+test("visibility: requests are only for licensed brokers", async () => {
   const { person, post, feed } = setup();
   const owner = await person("owner@x.in");            // landlord in Skyview
-  const otherOwner = await person("other@x.in");       // landlord in Palm Court
   const broker = await person("broker@x.in");
   const buyer = await person("buyer@x.in");
   const tenant = await person("tenant@x.in");
@@ -103,31 +102,50 @@ test("visibility rules for requests", async () => {
   const admin = await person("admin@ps.in");
 
   await post(owner, landlordSale);
-  await post(otherOwner, { ...landlordSale, building: "Palm Court" });
   await post(broker, { poster_type: "broker", deal: "rent", rera_number: "RC/REP/HARERA/GGM/2024/45", locality: "Sector 150", city: "Noida", description: "Villa." });
   await post(buyer, buyerReq);
   await post(tenant, tenantReq);
 
   const kinds = async (u) => (await feed(u)).posts.map((p) => `${p.kind}:${p.poster_type}`).sort();
 
-  // Landlord in Skyview: listings + buyer request + tenant request (same building)
-  assert.deepEqual(await kinds(owner), ["listing:broker", "listing:landlord", "listing:landlord", "request:buyer", "request:tenant"]);
-  // Landlord in another building: buyer request but not the Skyview tenant request
-  assert.deepEqual(await kinds(otherOwner), ["listing:broker", "listing:landlord", "listing:landlord", "request:buyer"]);
-  // Broker with RERA: everything
-  assert.deepEqual(await kinds(broker), ["listing:broker", "listing:landlord", "listing:landlord", "request:buyer", "request:tenant"]);
-  // Buyer: listings + own request only
-  assert.deepEqual(await kinds(buyer), ["listing:broker", "listing:landlord", "listing:landlord", "request:buyer"]);
-  // Tenant: listings + own request only
-  assert.deepEqual(await kinds(tenant), ["listing:broker", "listing:landlord", "listing:landlord", "request:tenant"]);
-  // Signed in but has posted nothing: listings only
-  assert.deepEqual(await kinds(nobody), ["listing:broker", "listing:landlord", "listing:landlord"]);
-  // Admin: everything
-  assert.equal((await feed(admin)).posts.length, 5);
+  // Landlord (even in the same building): listings only
+  assert.deepEqual(await kinds(owner), ["listing:broker", "listing:landlord"]);
+  // Licensed broker: everything
+  assert.deepEqual(await kinds(broker), ["listing:broker", "listing:landlord", "request:buyer", "request:tenant"]);
+  // Buyer / tenant: listings + own request only
+  assert.deepEqual(await kinds(buyer), ["listing:broker", "listing:landlord", "request:buyer"]);
+  assert.deepEqual(await kinds(tenant), ["listing:broker", "listing:landlord", "request:tenant"]);
+  assert.deepEqual(await kinds(nobody), ["listing:broker", "listing:landlord"]);
+  assert.equal((await feed(admin)).posts.length, 4);
 
-  assert.deepEqual((await feed(otherOwner)).access, { buyerRequests: true, tenantRequests: "own_buildings" });
-  assert.deepEqual((await feed(broker)).access, { buyerRequests: true, tenantRequests: "all" });
-  assert.deepEqual((await feed(buyer)).access, { buyerRequests: false, tenantRequests: "none" });
+  assert.deepEqual((await feed(owner)).access, { requests: false });
+  assert.deepEqual((await feed(broker)).access, { requests: true });
+  assert.deepEqual((await feed(null)).access, { requests: false });
+});
+
+test("developer listings", async () => {
+  const { person, post, feed } = setup();
+  const dev = await person("dev@x.in", "Sales Desk", "+971501234567");
+  const p = await post(dev, { poster_type: "developer", company: "Sample Developers", building: "Skyview", locality: "Sector 7",
+    city: "Gurugram", price: 25000000, currency: "INR", bedrooms: 3, possession: "Dec 2028", rera_number: "RC/REP/HARERA/GGM/2026/01",
+    description: "3 and 4 BHK residences." });
+  assert.equal(p.kind, "listing");
+  assert.equal(p.deal, "sale");
+  assert.equal(p.company, "Sample Developers");
+  assert.equal(p.possession, "Dec 2028");
+  assert.equal(p.contact_phone, "971501234567");
+  assert.equal((await feed(null)).posts.length, 1);           // public
+  const v = validateProposal({ poster_type: "developer", building: "X", city: "Pune", description: "x" });
+  assert.equal(v.ok, false);                                   // company name required
+  assert.match(v.ask, /developer company/);
+});
+
+test("area search uses the geocoder and caches", async () => {
+  const { call } = setup();
+  const r = await call("GET", "/geocode?q=sector%207%2C%20gurugram");
+  assert.equal(r.status, 200);
+  assert.equal(r.body.place.lat, 28.471);
+  assert.equal((await call("GET", "/geocode?q=a")).body.place, null);
 });
 
 test("broker RERA is saved to the profile; posts carry the poster's contact", async () => {
