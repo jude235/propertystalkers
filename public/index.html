@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Property Stalkers | Properties and requests on the map</title>
+<meta name="description" content="Find properties for sale and rent across India on one map, and post your own listing or request in plain words.">
+<meta name="theme-color" content="#0f3b2e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@googlemaps/markerclusterer@2.5.3/dist/index.min.js"></script>
+<style>
+  /* Emerald heritage theme: Marcellus for headings and prices, Jost for everything else. */
+  :root {
+    --brand: #0f3b2e;        /* emerald */
+    --brand-ink: #f3ebdd;    /* cream text on emerald */
+    --brass: #b8894a;        /* decorative accent */
+    --brass-ink: #8a6327;    /* brass dark enough for text */
+    --req: #7a5a27;          /* request pins and headers */
+    --ink: #1d2a24;
+    --muted: #6d6656;
+    --line: #e4dac6;
+    --bg: #fbf7ef;           /* cards */
+    --soft: #f3ebdd;         /* page, fields */
+    --wa: #1f7a4d;
+    --warn-bg: #f6e7c8;
+    --warn-ink: #5e4210;
+    --radius: 16px;
+    --shadow: 0 10px 30px rgba(15, 59, 46, .18);
+    --serif: Marcellus, Georgia, "Times New Roman", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--soft); color: var(--ink);
+    font-family: Jost, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input, textarea { font: inherit; color: inherit; }
+  #map { position: fixed; inset: 0; background: #e9e2d3; }
+
+  /* ---------- header ---------- */
+  .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; pointer-events: none; }
+  .header { pointer-events: auto; background: var(--brand); color: var(--brand-ink);
+    padding: calc(12px + env(safe-area-inset-top)) 16px 14px; border-bottom: 2px solid var(--brass);
+    box-shadow: 0 6px 20px rgba(15, 59, 46, .25); }
+  .header-in { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  .brand-mark { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--brass); display: grid; place-items: center; flex: 0 0 auto; }
+  .brand-name { font-family: var(--serif); font-size: 19px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .account { border: 1px solid rgba(243, 235, 221, .5); cursor: pointer; background: transparent; color: var(--brand-ink);
+    height: 38px; min-width: 38px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; flex: 0 0 auto; }
+  .account.avatar-btn { padding: 0; width: 38px; background: var(--brass); border-color: var(--brass); color: var(--brand); font-weight: 500; }
+
+  /* Properties / Requests switch */
+  .tabs { display: flex; width: 100%; max-width: 380px; padding: 4px; border-radius: 999px;
+    background: rgba(243, 235, 221, .10); border: 1px solid rgba(243, 235, 221, .28); }
+  .tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; cursor: pointer; background: none;
+    padding: 9px 12px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; color: rgba(243, 235, 221, .88);
+    transition: background .2s, color .2s; }
+  .tab:hover { color: #fff; }
+  .tab:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .tab[aria-selected="true"] { background: var(--brand-ink); color: var(--brand); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+  .tab .n { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 999px; font-size: 12px; line-height: 20px; text-align: center;
+    background: rgba(243, 235, 221, .18); color: inherit; }
+  .tab .n:empty { display: none; }
+  .tab[aria-selected="true"] .n { background: var(--brand); color: var(--brand-ink); }
+  .banner-row { padding: 12px 16px 0; }
+  .banner { pointer-events: auto; max-width: 420px; background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--brass);
+    border-radius: 0 12px 12px 0; padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--muted); box-shadow: 0 4px 14px rgba(15, 59, 46, .12); }
+  .banner b { color: var(--ink); font-weight: 500; }
+
+  .fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 20;
+    border: 1px solid var(--brass); cursor: pointer; background: var(--brand); color: var(--brand-ink); font-weight: 500; font-size: 15px;
+    letter-spacing: .03em; padding: 14px 24px; border-radius: 999px; box-shadow: 0 10px 24px rgba(15, 59, 46, .35);
+    display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .fab svg { color: var(--brass); }
+
+  /* ---------- pins ---------- */
+  .pin { --pin: var(--brand); position: relative; border: 0; cursor: pointer; white-space: nowrap; background: var(--pin); color: var(--brand-ink);
+    font-family: Jost, sans-serif; font-size: 12px; font-weight: 500; letter-spacing: .02em; line-height: 1; padding: 7px 11px; border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .25); margin-bottom: 7px; transition: transform .15s ease; }
+  .pin::after { content: ""; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+    border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--pin); }
+  .pin.req { --pin: var(--req); }
+  .pin:hover { transform: scale(1.06); }
+  .pin.active { --pin: var(--brass); color: var(--brand); transform: scale(1.12); }
+  .cluster { background: var(--brand); color: var(--brand-ink); border-radius: 50%; display: grid; place-items: center; font-weight: 500; font-size: 14px;
+    box-shadow: 0 0 0 4px rgba(184, 137, 74, .55); cursor: pointer; }
+  .cluster.req { background: var(--req); }
+
+  /* ---------- details panel ---------- */
+  .panel { position: fixed; z-index: 30; background: var(--bg); box-shadow: var(--shadow); overflow-y: auto; transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+  @media (min-width: 760px) {
+    .panel { top: 12px; right: 12px; bottom: 12px; width: 400px; border-radius: var(--radius); transform: translateX(calc(100% + 24px)); }
+    .grab { display: none; }
+  }
+  @media (max-width: 759px) {
+    .panel { left: 0; right: 0; bottom: 0; max-height: 86vh; border-radius: 20px 20px 0 0; transform: translateY(105%); padding-bottom: env(safe-area-inset-bottom); }
+  }
+  .panel.open { transform: none; }
+  .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 8px auto 0; }
+  .icon-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; background: rgba(251, 247, 239, .94);
+    box-shadow: 0 2px 8px rgba(0,0,0,.2); display: grid; place-items: center; flex: 0 0 auto; }
+  .panel > .icon-btn { position: absolute; top: 12px; right: 12px; z-index: 2; }
+  .gallery { position: relative; }
+  .slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; aspect-ratio: 4 / 3; background: var(--soft); }
+  .slides::-webkit-scrollbar { display: none; }
+  .slides img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
+  .counter { position: absolute; left: 12px; bottom: 12px; background: rgba(15, 59, 46, .8); color: var(--brand-ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; }
+  .req-head { background: var(--req); color: var(--brand-ink); padding: 56px 18px 20px; border-bottom: 2px solid var(--brass); }
+  .req-head .big { font-family: var(--serif); font-size: 15px; letter-spacing: .14em; text-transform: uppercase; }
+  .body { padding: 18px 18px 24px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--brass-ink); margin-right: 10px; }
+  .tag.req { color: var(--req); }
+  .tag.mine { color: var(--brand); }
+  h1.title { font-family: var(--serif); font-weight: 400; font-size: 25px; line-height: 1.2; margin: 8px 0 4px; color: var(--brand); }
+  .loc { color: var(--muted); font-size: 14px; margin: 0; }
+  .price { font-family: var(--serif); font-weight: 400; font-size: 23px; margin: 14px 0 0; color: var(--brand); }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+  .fact { background: var(--soft); border-radius: 12px; padding: 10px 12px; }
+  .fact b { display: block; font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 3px; }
+  .fact span { font-size: 14px; font-weight: 500; }
+  .desc { font-size: 15px; line-height: 1.6; color: #3c4640; margin: 0 0 16px; white-space: pre-line; }
+  .hint { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
+  .contact { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #fffdf8; }
+  .contact-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: var(--brass); border: 1px solid var(--brass);
+    font-family: var(--serif); display: grid; place-items: center; flex: 0 0 auto; }
+  .contact-name { font-weight: 500; font-size: 15px; }
+  .contact-sub { font-size: 13px; color: var(--muted); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-weight: 500; font-size: 14px; letter-spacing: .02em;
+    padding: 12px; border-radius: 999px; border: 1px solid var(--line); cursor: pointer; background: transparent; color: var(--ink); }
+  .btn.primary, .btn.accent { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+  .btn.wa { background: var(--wa); border-color: var(--wa); color: #fff; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .link-btn { border: 0; background: none; color: #9b2c1f; font-weight: 500; font-size: 13px; cursor: pointer; padding: 14px 0 0; }
+
+  /* ---------- post / account sheet ---------- */
+  .backdrop { position: fixed; inset: 0; background: rgba(15, 59, 46, .45); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; z-index: 41; background: var(--bg); box-shadow: var(--shadow); display: flex; flex-direction: column;
+    transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+  @media (min-width: 760px) {
+    .sheet { left: 50%; top: 50%; width: 480px; height: min(720px, 88vh); border-radius: 20px; transform: translate(-50%, -46%); opacity: 0; pointer-events: none; overflow: hidden; }
+    .sheet.open { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
+  }
+  @media (max-width: 759px) {
+    .sheet { left: 0; right: 0; bottom: 0; height: 92vh; height: 92dvh; border-radius: 20px 20px 0 0; transform: translateY(105%); overflow: hidden; }
+    .sheet.open { transform: none; }
+  }
+  .sheet-head { display: flex; align-items: center; gap: 10px; padding: 16px 14px 14px 18px; background: var(--brand); color: var(--brand-ink); border-bottom: 2px solid var(--brass); }
+  .sheet-head h2 { font-family: var(--serif); font-weight: 400; font-size: 19px; letter-spacing: .02em; margin: 0; flex: 1; }
+  .sheet-head .icon-btn { background: rgba(243, 235, 221, .14); box-shadow: none; }
+  .sheet-head .icon-btn svg { stroke: var(--brand-ink); }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 18px; }
+  .field { display: block; margin-bottom: 14px; }
+  .field span { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 15px; background: #fffdf8; }
+  .field input:focus, .composer textarea:focus { outline: 2px solid var(--brass); outline-offset: -1px; }
+  .muted { color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .muted b { color: var(--ink); font-weight: 500; }
+  .error { color: #9b2c1f; font-size: 13px; margin: 8px 0 0; }
+
+  .log { display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 88%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .bubble.ai { background: var(--soft); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .bubble.ai b { font-weight: 500; color: var(--brand); }
+  .bubble.me { background: var(--brand); color: var(--brand-ink); align-self: flex-end; border-bottom-right-radius: 4px; }
+  .bubble.err { background: #f8e3dc; color: #7a2316; align-self: flex-start; }
+  .typing { display: inline-flex; gap: 4px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--brass); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+  .examples { display: grid; gap: 8px; margin-top: 4px; }
+  .example { text-align: left; border: 1px solid var(--line); background: #fffdf8; border-radius: 14px; padding: 11px 13px; cursor: pointer; }
+  .example b { display: block; font-family: var(--serif); font-weight: 400; font-size: 15px; color: var(--brand); margin-bottom: 3px; }
+  .example span { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .example:hover { border-color: var(--brass); }
+
+  .draft { border: 1px solid var(--brass); border-radius: 16px; padding: 16px; align-self: stretch; background: #fffdf8; }
+  .draft.stale { border-color: var(--line); opacity: .6; }
+  .draft h3 { font-family: var(--serif); font-weight: 400; margin: 8px 0 2px; font-size: 20px; color: var(--brand); }
+  .draft dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; margin: 12px 0; }
+  .draft dt { color: var(--muted); }
+  .draft dd { margin: 0; font-weight: 500; }
+  .note { background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; padding: 8px 10px; border-radius: 10px; margin: 0 0 10px; }
+  .photo-pick { display: block; border: 1px dashed var(--brass); border-radius: 12px; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: var(--brass-ink); cursor: pointer; margin-bottom: 10px; }
+  .photo-pick input { display: none; }
+  .thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+  .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); padding-bottom: calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
+  .composer textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 14px; padding: 11px 13px; font-size: 15px; line-height: 1.4; max-height: 140px; background: #fffdf8; }
+  .composer .btn { flex: 0 0 auto; padding: 0 18px; }
+
+  .my-post { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .my-post div { flex: 1; min-width: 0; }
+  .my-post b { display: block; font-size: 14px; font-weight: 500; }
+  .my-post small { color: var(--muted); font-size: 12px; }
+  .my-post .btn { padding: 8px 12px; font-size: 13px; }
+  .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .14em; color: var(--brass-ink); margin: 26px 0 6px; }
+
+  .toast { position: fixed; left: 50%; top: 20px; transform: translate(-50%, -150%); z-index: 60; background: var(--brand); color: var(--brand-ink);
+    border: 1px solid var(--brass); padding: 12px 18px; border-radius: 14px; font-size: 14px; font-weight: 500; box-shadow: var(--shadow);
+    transition: transform .25s, opacity .25s; max-width: calc(100vw - 32px); opacity: 0; visibility: hidden; }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+  .notice { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; text-align: center; background: var(--soft); }
+  .notice > div { max-width: 440px; }
+  .notice h2 { font-family: var(--serif); font-weight: 400; margin: 0 0 8px; font-size: 24px; color: var(--brand); }
+  .notice p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+  @media (min-width: 760px) {
+    .header-in { flex-direction: row; align-items: center; gap: 24px; }
+    .top-row { display: contents; }
+    .brand { order: 1; }
+    .tabs { order: 2; width: 340px; }
+    .account { order: 3; }
+    .panel { top: 84px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="map" aria-label="Map of properties and requests"></div>
+
+<div class="topbar">
+  <header class="header"><div class="header-in">
+    <div class="row top-row">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b8894a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M10 21v-6h4v6"/></svg>
+        </div>
+        <div class="brand-name">Property Stalkers</div>
+      </div>
+      <button class="account" id="account">Sign in</button>
+    </div>
+    <div class="tabs" role="tablist" aria-label="What to show">
+      <button class="tab" role="tab" data-tab="listing" aria-selected="true">Properties <span class="n" id="n-listing"></span></button>
+      <button class="tab" role="tab" data-tab="request" aria-selected="false">Requests <span class="n" id="n-request"></span></button>
+    </div>
+  </div></header>
+  <div class="banner-row"><div class="banner" id="banner" hidden></div></div>
+</div>
+
+<button class="fab" id="fab">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  Post property or request
+</button>
+
+<aside class="panel" id="panel" aria-hidden="true" aria-label="Details">
+  <div class="grab"></div>
+  <button class="icon-btn" id="panel-close" aria-label="Close">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17202a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div id="panel-content"></div>
+</aside>
+
+<div class="backdrop" id="backdrop"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true">
+  <div class="sheet-head">
+    <h2 id="sheet-title"></h2>
+    <button class="icon-btn" id="sheet-close" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17202a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+  <div id="sheet-foot"></div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   Property Stalkers front end. Settings come from /api/config (Netlify
+   environment variables), so there is nothing to edit in this file.
+   ===================================================================== */
+
+const EXAMPLES = [
+  { label: "Landlord selling", text: "I am the landlord and want to sell my 3 bedroom in [building name], [sector], [city] for [price]" },
+  { label: "Broker listing", text: "I am a broker, RERA [number], and want to sell a villa for 5 Cr in [sector], [city]" },
+  { label: "Tenant looking", text: "I am a tenant looking to rent a 2 bedroom in [building name], [sector], [city], budget [rent] a month" },
+  { label: "Buyer looking", text: "I am a buyer looking to purchase a 3 bedroom in [building name], [sector], [city], budget [price]" }
+];
+
+const S = {
+  cfg: null, sb: null, session: null, me: null,
+  posts: [], access: null, signedIn: false,
+  tab: "listing", map: null, Marker: null, clusterer: null, plain: [], pinEls: new Map(),
+  activeId: null, chat: [], draft: null, draftPhotos: [], busy: false, fitted: false, userId: null
+};
+
+/* ---------------- helpers ---------------- */
+const $ = (s, root = document) => root.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const isDesktop = () => window.innerWidth >= 760;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+function money(n) {
+  if (n == null) return "";
+  const trim = (x) => x.toFixed(2).replace(/\.?0+$/, "");
+  if (n >= 1e7) return trim(n / 1e7) + " Cr";
+  if (n >= 1e5) return trim(n / 1e5) + " L";
+  if (n >= 1e3) return trim(n / 1e3) + "K";
+  return String(n);
+}
+const TYPE = { apartment: "apartment", villa: "villa", independent_house: "independent house", plot: "plot", office: "office", shop: "shop", other: "" };
+const POSTER = { landlord: "Landlord", broker: "Broker", buyer: "Buyer", tenant: "Tenant" };
+const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+
+function what(p) {
+  const t = TYPE[p.property_type] || "";
+  if (p.bedrooms) return `${p.bedrooms} BHK${t ? " " + t : ""}`;
+  return t || "property";
+}
+function titleOf(p) {
+  if (p.kind === "listing") return cap(`${what(p)} for ${p.deal === "rent" ? "rent" : "sale"}`);
+  const w = what(p);
+  return `Looking to ${p.deal === "rent" ? "rent" : "buy"} ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w}`;
+}
+const placeOf = (p) => [p.building, p.locality, p.city].filter(Boolean).join(", ");
+function priceOf(p) {
+  const per = p.deal === "rent" ? "/month" : "";
+  if (p.kind === "listing") return p.price ? `₹${money(p.price)}${per}` : "Price on request";
+  return p.price ? `Budget ₹${money(p.price)}${per}` : "Budget not given";
+}
+function pinLabel(p) {
+  if (p.kind === "listing") return p.price ? `₹${money(p.price)}${p.deal === "rent" ? "/mo" : ""}` : (p.bedrooms ? `${p.bedrooms} BHK` : "View");
+  const head = p.deal === "rent" ? "Rent" : "Buy";
+  return `${head} · ${p.price ? "₹" + money(p.price) : p.bedrooms ? p.bedrooms + " BHK" : "request"}`;
+}
+function posterLine(p) {
+  if (p.poster_type === "broker" && p.rera_number) return `Broker · RERA ${p.rera_number}`;
+  return POSTER[p.poster_type] || "";
+}
+function ago(iso) {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (!isFinite(s)) return "";
+  if (s < 3600) return "just now";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  const d = Math.floor(s / 86400);
+  return d < 30 ? d + (d === 1 ? " day ago" : " days ago") : new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+const initials = (n) => (n || "?").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const telHref = (d) => "tel:+" + String(d || "").replace(/\D/g, "");
+const waHref = (d, text) => `https://wa.me/${String(d || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+
+function placeholder(id) {
+  let seed = [...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  const h = [158, 165, 38, 32][Math.floor(rnd() * 4)]; // emerald and brass tones
+  let towers = "", x = 30;
+  while (x < 780) {
+    const w = 60 + rnd() * 70, top = 140 + rnd() * 230;
+    towers += `<rect x="${x}" y="${top}" width="${w}" height="${600 - top}" fill="hsl(${h},30%,${22 + rnd() * 14}%)"/>`;
+    for (let wy = top + 16; wy < 560; wy += 26)
+      for (let wx = x + 10; wx < x + w - 12; wx += 18)
+        if (rnd() > .35) towers += `<rect x="${wx}" y="${wy}" width="8" height="12" fill="hsla(45,90%,80%,${.35 + rnd() * .5})"/>`;
+    x += w + 8 + rnd() * 16;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${h},70%,78%)"/><stop offset="1" stop-color="hsl(${(h + 40) % 360},65%,90%)"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="640" cy="120" r="54" fill="hsla(40,100%,96%,.85)"/>${towers}<rect y="560" width="800" height="40" fill="hsl(${h},25%,18%)"/></svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+}
+function notice(title, text) {
+  const n = document.createElement("div");
+  n.className = "notice";
+  n.innerHTML = `<div><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`;
+  document.body.appendChild(n);
+}
+
+async function api(path, opts = {}) {
+  const headers = { "content-type": "application/json" };
+  if (S.session) headers.authorization = "Bearer " + S.session.access_token;
+  const res = await fetch("/api" + path, { ...opts, headers });
+  let body = {};
+  try { body = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    const err = new Error(body.error && body.error.includes(" ") ? body.error : "Something went wrong. Please try again.");
+    err.code = body.error; err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
+/* ---------------- start up ---------------- */
+async function boot() {
+  try {
+    S.cfg = await api("/config");
+  } catch (e) {
+    return notice("Almost ready", "The site's server isn't connected yet. Follow the setup guide to add your Supabase, Google Maps and AI keys, then reload this page.");
+  }
+  if (!window.supabase) return notice("Couldn't load", "Please check your internet connection and reload the page.");
+
+  S.sb = window.supabase.createClient(S.cfg.supabaseUrl, S.cfg.supabaseAnonKey);
+  const { data } = await S.sb.auth.getSession();
+  S.session = data.session;
+  S.userId = S.session ? S.session.user.id : null;
+  S.sb.auth.onAuthStateChange((_event, session) => {
+    S.session = session;
+    const id = session ? session.user.id : null;
+    if (id === S.userId) return;
+    S.userId = id;
+    afterAuthChange();
+  });
+
+  try {
+    await loadGoogleMaps();
+  } catch (e) {
+    return notice("The map couldn't load", "Please check your internet connection and reload. If this keeps happening, the Google Maps key may need fixing (see the setup guide).");
+  }
+  await initMap();
+  await refreshMe();
+  await loadFeed();
+  openFromHash();
+  if (S.session && store.get("ps_resume")) { store.del("ps_resume"); openComposer(); }
+}
+
+async function afterAuthChange() {
+  await refreshMe();
+  await loadFeed();
+  if (S.session && store.get("ps_resume")) { store.del("ps_resume"); openComposer(); }
+}
+
+window.gm_authFailure = () => notice("Google Maps key problem", "The Google Maps key was rejected. Check that the Maps JavaScript API is enabled and the key allows this website (see the setup guide).");
+
+function loadGoogleMaps() {
+  return new Promise((resolve, reject) => {
+    window.__psMapsReady = resolve;
+    const s = document.createElement("script");
+    const q = new URLSearchParams({ key: S.cfg.mapsKey, v: "weekly", libraries: "marker", loading: "async", callback: "__psMapsReady", region: "IN", language: "en" });
+    s.src = "https://maps.googleapis.com/maps/api/js?" + q;
+    s.async = true;
+    s.onerror = () => reject(new Error("maps"));
+    document.head.appendChild(s);
+  });
+}
+
+async function initMap() {
+  const { Map } = await google.maps.importLibrary("maps");
+  const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+  S.Marker = AdvancedMarkerElement;
+  S.map = new Map($("#map"), {
+    center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId,
+    disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
+  });
+}
+
+/* ---------------- account ---------------- */
+async function refreshMe() {
+  S.me = null;
+  if (S.session) {
+    try { S.me = await api("/me"); }
+    catch (e) { if (e.status === 401) { await S.sb.auth.signOut(); S.session = null; } }
+  }
+  const b = $("#account");
+  if (S.me) {
+    b.className = "account avatar-btn";
+    b.textContent = initials((S.me.profile && S.me.profile.name) || S.me.email);
+    b.setAttribute("aria-label", "Your account");
+  } else {
+    b.className = "account";
+    b.textContent = "Sign in";
+    b.removeAttribute("aria-label");
+  }
+}
+
+/* ---------------- feed and markers ---------------- */
+async function loadFeed() {
+  try {
+    const f = await api("/feed");
+    S.posts = f.posts;
+    S.access = f.access;
+    S.signedIn = f.signedIn;
+  } catch (e) {
+    toast("Couldn't load the map posts. Please reload.");
+    return;
+  }
+  renderMarkers();
+}
+
+function renderMarkers() {
+  const counts = { listing: 0, request: 0 };
+  S.posts.forEach((p) => counts[p.kind]++);
+  $("#n-listing").textContent = counts.listing ? String(counts.listing) : "";
+  $("#n-request").textContent = counts.request ? String(counts.request) : "";
+  document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === S.tab)));
+  renderBanner();
+  if (!S.map) return;
+
+  if (S.clusterer) S.clusterer.clearMarkers();
+  S.plain.forEach((m) => (m.map = null));
+  S.plain = [];
+  S.pinEls.clear();
+
+  const shown = S.posts.filter((p) => p.kind === S.tab);
+  const markers = shown.map((p) => {
+    const el = document.createElement("button");
+    el.className = "pin" + (p.kind === "request" ? " req" : "") + (p.id === S.activeId ? " active" : "");
+    el.textContent = pinLabel(p);
+    el.setAttribute("aria-label", `${titleOf(p)}, ${placeOf(p)}`);
+    el.addEventListener("click", (e) => { e.stopPropagation(); openDetails(p.id, { pan: true }); });
+    S.pinEls.set(p.id, el);
+    return new S.Marker({ position: { lat: p.lat, lng: p.lng }, content: el, title: titleOf(p) });
+  });
+
+  if (window.markerClusterer) {
+    if (!S.clusterer) {
+      S.clusterer = new markerClusterer.MarkerClusterer({
+        map: S.map,
+        markers: [],
+        renderer: {
+          render: ({ count, position }) => {
+            const d = document.createElement("div");
+            const size = count < 10 ? 40 : count < 50 ? 48 : 56;
+            d.className = "cluster" + (S.tab === "request" ? " req" : "");
+            d.style.width = d.style.height = size + "px";
+            d.textContent = count;
+            return new S.Marker({ position, content: d, zIndex: 1000 + count });
+          }
+        }
+      });
+    }
+    S.clusterer.addMarkers(markers);
+  } else {
+    markers.forEach((m) => (m.map = S.map));
+    S.plain = markers;
+  }
+
+  if (!S.fitted && shown.length) {
+    S.fitted = true;
+    const b = new google.maps.LatLngBounds();
+    shown.forEach((p) => b.extend({ lat: p.lat, lng: p.lng }));
+    S.map.fitBounds(b, 80);
+    google.maps.event.addListenerOnce(S.map, "idle", () => { if (S.map.getZoom() > 13) S.map.setZoom(13); });
+  }
+}
+
+function renderBanner() {
+  const el = $("#banner");
+  if (S.tab !== "request") { el.hidden = true; return; }
+  const a = S.access || { buyerRequests: false, tenantRequests: "none" };
+  let html;
+  if (!S.signedIn) {
+    html = "<b>Requests are for property owners and brokers.</b> Sign in and post a property, or post as a broker with your RERA number, to see who is looking to buy or rent.";
+  } else if (a.tenantRequests === "all") {
+    html = "You can see all buyer and tenant requests.";
+  } else if (a.buyerRequests && a.tenantRequests === "own_buildings") {
+    html = "You can see buyer requests, and tenant requests for buildings where you've listed a property. <b>RERA brokers</b> see all tenant requests.";
+  } else if (a.buyerRequests) {
+    html = "You can see buyer requests. Tenant requests are visible to <b>RERA brokers</b> and owners with a property in the same building.";
+  } else {
+    html = "You can see your own requests. <b>Buyer requests</b> are visible to landlords with a listed property and RERA brokers. <b>Tenant requests</b> are visible to RERA brokers and owners in the same building.";
+  }
+  el.innerHTML = html;
+  el.hidden = false;
+}
+
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+  if (S.tab === t.dataset.tab) return;
+  S.tab = t.dataset.tab;
+  closeDetails();
+  renderMarkers();
+}));
+
+/* ---------------- details panel ---------------- */
+const panel = $("#panel");
+
+function setActive(id) {
+  if (S.activeId && S.pinEls.get(S.activeId)) S.pinEls.get(S.activeId).classList.remove("active");
+  S.activeId = id;
+  if (id && S.pinEls.get(id)) S.pinEls.get(id).classList.add("active");
+}
+
+function focusOn(p, zoom) {
+  if (!S.map) return;
+  if (zoom) S.map.setZoom(zoom);
+  S.map.panTo({ lat: p.lat, lng: p.lng });
+  google.maps.event.addListenerOnce(S.map, "idle", () => {
+    S.map.panBy(isDesktop() ? 210 : 0, isDesktop() ? 0 : Math.round(window.innerHeight * 0.28));
+  });
+}
+
+function openDetails(id, opts = {}) {
+  const p = S.posts.find((x) => x.id === id);
+  if (!p) return false;
+  if (p.kind !== S.tab) { S.tab = p.kind; renderMarkers(); }
+  const isReq = p.kind === "request";
+  const photos = p.photos && p.photos.length ? p.photos : (isReq ? [] : [placeholder(p.id)]);
+  const msg = isReq
+    ? `Hi ${p.contact_name || ""}, I saw your request on Property Stalkers (${titleOf(p).toLowerCase()} in ${placeOf(p)}). I may have something for you.`
+    : `Hi ${p.contact_name || ""}, I'm interested in your ${titleOf(p).toLowerCase()} in ${placeOf(p)}, which I saw on Property Stalkers.`;
+
+  $("#panel-content").innerHTML = `
+    ${isReq ? `<div class="req-head"><div class="big">${esc(POSTER[p.poster_type])} request</div></div>` : `
+    <div class="gallery">
+      <div class="slides" id="slides">${photos.map((src, i) => `<img src="${esc(src)}" alt="Photo ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>
+      ${photos.length > 1 ? `<span class="counter" id="counter">1 / ${photos.length}</span>` : ""}
+    </div>`}
+    <div class="body">
+      <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "rent" ? "Wants to rent" : "Wants to buy") : (p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
+      <h1 class="title">${esc(titleOf(p))}</h1>
+      <p class="loc">${esc(placeOf(p))}</p>
+      <p class="price">${esc(priceOf(p))}</p>
+      <div class="facts">
+        <div class="fact"><b>Type</b><span>${esc(cap(TYPE[p.property_type] || "Any"))}</span></div>
+        <div class="fact"><b>Bedrooms</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK") : "—"}</span></div>
+        <div class="fact"><b>Posted by</b><span>${esc(POSTER[p.poster_type])}</span></div>
+        <div class="fact"><b>Posted</b><span>${esc(ago(p.created_at))}</span></div>
+      </div>
+      ${p.description ? `<p class="desc">${esc(p.description)}</p>` : ""}
+      <div class="contact">
+        <div class="contact-head">
+          <div class="avatar">${esc(initials(p.contact_name))}</div>
+          <div><div class="contact-name">${esc(p.contact_name)}</div><div class="contact-sub">${esc(posterLine(p))}</div></div>
+        </div>
+        ${p.mine ? "" : `<div class="actions">
+          <a class="btn primary" href="${esc(telHref(p.contact_phone))}">Call</a>
+          <a class="btn wa" href="${esc(waHref(p.contact_phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
+        </div>`}
+      </div>
+      ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.</p>` : ""}
+      ${p.removable ? `<button class="link-btn" id="remove-post">${p.mine ? "Remove my post" : "Remove post (admin)"}</button>` : ""}
+    </div>`;
+
+  const slides = $("#slides"), counter = $("#counter");
+  if (slides && counter) slides.addEventListener("scroll", () => {
+    counter.textContent = `${Math.round(slides.scrollLeft / slides.clientWidth) + 1} / ${photos.length}`;
+  }, { passive: true });
+  const rm = $("#remove-post");
+  if (rm) rm.addEventListener("click", () => removePost(p.id));
+
+  panel.scrollTop = 0;
+  panel.classList.add("open");
+  panel.setAttribute("aria-hidden", "false");
+  setActive(p.id);
+  try { history.replaceState(null, "", "#p=" + encodeURIComponent(p.id)); } catch (e) {}
+  if (opts.pan || opts.zoom) focusOn(p, opts.zoom);
+  return true;
+}
+
+function closeDetails() {
+  panel.classList.remove("open");
+  panel.setAttribute("aria-hidden", "true");
+  setActive(null);
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+}
+$("#panel-close").addEventListener("click", closeDetails);
+
+function openFromHash() {
+  const id = new URLSearchParams(location.hash.slice(1)).get("p");
+  if (id && !openDetails(id, { zoom: 15 })) toast("That post is no longer available, or only visible to some members.");
+}
+
+async function removePost(id) {
+  if (!confirm("Remove this post from the map?")) return;
+  try {
+    await api("/posts/" + id, { method: "DELETE" });
+    closeDetails();
+    toast("Post removed.");
+    await loadFeed();
+    if ($("#sheet").classList.contains("open") && $("#sheet").dataset.view === "account") renderAccount();
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------------- sheet (post / account) ---------------- */
+const sheet = $("#sheet");
+function openSheet(view, title) {
+  sheet.dataset.view = view;
+  $("#sheet-title").textContent = title;
+  $("#sheet-foot").innerHTML = "";
+  sheet.classList.add("open");
+  sheet.setAttribute("aria-hidden", "false");
+  $("#backdrop").classList.add("open");
+}
+function closeSheet() {
+  sheet.classList.remove("open");
+  sheet.setAttribute("aria-hidden", "true");
+  $("#backdrop").classList.remove("open");
+}
+$("#sheet-close").addEventListener("click", closeSheet);
+$("#backdrop").addEventListener("click", closeSheet);
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
+});
+
+$("#fab").addEventListener("click", () => openComposer());
+$("#account").addEventListener("click", () => (S.me ? renderAccount() : renderSignIn()));
+
+function renderSignIn(reason) {
+  openSheet("signin", "Sign in");
+  $("#sheet-body").innerHTML = `
+    <p class="muted">${esc(reason || "Sign in with your email to post properties and requests.")} We'll email you a link. No password needed.</p>
+    <form id="signin-form">
+      <label class="field"><span>Email</span><input type="email" id="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <button class="btn accent" style="width:100%" id="signin-btn">Email me a sign-in link</button>
+      <p class="error" id="signin-err" hidden></p>
+    </form>`;
+  $("#email").focus();
+  $("#signin-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("#email").value.trim();
+    const btn = $("#signin-btn");
+    btn.disabled = true; btn.textContent = "Sending…";
+    const { error } = await S.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+    if (error) {
+      btn.disabled = false; btn.textContent = "Email me a sign-in link";
+      const err = $("#signin-err"); err.hidden = false;
+      err.textContent = /rate|seconds/i.test(error.message) ? "Please wait a minute before asking for another link." : "Couldn't send the email. Please check the address and try again.";
+      return;
+    }
+    $("#sheet-body").innerHTML = `
+      <h3 style="margin:4px 0 8px">Check your email</h3>
+      <p class="muted">We sent a sign-in link to <b>${esc(email)}</b>. Open it on this phone or computer and you'll come straight back here, signed in.</p>
+      <p class="muted">Can't see it? Check your spam folder.</p>`;
+  });
+}
+
+function profileForm(profile, submitLabel) {
+  return `
+    <form id="profile-form">
+      <label class="field"><span>Your name</span><input id="pf-name" required maxlength="60" autocomplete="name" value="${esc(profile && profile.name)}"></label>
+      <label class="field"><span>Mobile number (for calls and WhatsApp)</span><input id="pf-phone" required inputmode="tel" autocomplete="tel" placeholder="98765 43210" value="${esc(profile && profile.phone ? "+" + profile.phone : "")}"></label>
+      <button class="btn primary" style="width:100%" id="pf-save">${esc(submitLabel)}</button>
+      <p class="error" id="pf-err" hidden></p>
+    </form>`;
+}
+function bindProfileForm(onSaved) {
+  $("#profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("#pf-save"), label = btn.textContent;
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      await api("/me", { method: "POST", body: JSON.stringify({ name: $("#pf-name").value, phone: $("#pf-phone").value }) });
+      await refreshMe();
+      onSaved();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = label;
+      const el = $("#pf-err"); el.hidden = false; el.textContent = err.message;
+    }
+  });
+}
+
+function renderProfileStep() {
+  openSheet("profile", "Your contact details");
+  $("#sheet-body").innerHTML = `
+    <p class="muted">These are shown on your posts so people can call or WhatsApp you.</p>
+    ${profileForm(S.me && S.me.profile, "Continue")}`;
+  bindProfileForm(() => openComposer());
+}
+
+function renderAccount() {
+  if (!S.me) return renderSignIn();
+  openSheet("account", "Your account");
+  const mine = S.posts.filter((p) => p.mine);
+  const prof = S.me.profile || {};
+  $("#sheet-body").innerHTML = `
+    <p class="muted">Signed in as <b>${esc(S.me.email)}</b>${prof.rera_number ? `<br>Broker RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
+    ${profileForm(prof, "Save details")}
+    <div class="section-title">Your posts</div>
+    ${mine.length ? mine.map((p) => `
+      <div class="my-post">
+        <div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))} · ${esc(ago(p.created_at))}</small></div>
+        <button class="btn" data-view="${esc(p.id)}">View</button>
+        <button class="btn" data-remove="${esc(p.id)}">Remove</button>
+      </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
+    <button class="btn" style="width:100%;margin-top:24px" id="signout">Sign out</button>`;
+  bindProfileForm(() => { toast("Details saved."); renderAccount(); });
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
+  document.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
+  $("#signout").addEventListener("click", async () => {
+    await S.sb.auth.signOut();
+    S.session = null; S.userId = null; S.chat = []; S.draft = null;
+    closeSheet();
+    await refreshMe();
+    await loadFeed();
+    toast("Signed out.");
+  });
+}
+
+/* ---------------- posting chat ---------------- */
+function openComposer() {
+  if (!S.session) { store.set("ps_resume", "1"); return renderSignIn("Sign in to post a property or a request."); }
+  if (!S.me || !S.me.profile || !S.me.profile.name || !S.me.profile.phone) return renderProfileStep();
+  openSheet("chat", "Post a property or request");
+  $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
+  $("#sheet-foot").innerHTML = `
+    <form class="composer" id="composer">
+      <textarea id="msg" rows="2" placeholder="Describe what you want to post…" aria-label="Message"></textarea>
+      <button class="btn accent" id="send" aria-label="Send">Send</button>
+    </form>`;
+
+  const log = $("#log");
+  if (!S.chat.length) {
+    const intro = document.createElement("div");
+    intro.className = "bubble ai";
+    intro.innerHTML = `Tell me what you want to post, in your own words. Always include the <b>location</b> (building, sector and city). Brokers, please add your <b>RERA number</b>, otherwise the post shows as Landlord.<br><br>Tap an example and fill in the brackets:`;
+    log.appendChild(intro);
+    const ex = document.createElement("div");
+    ex.className = "examples";
+    ex.innerHTML = EXAMPLES.map((e, i) => `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>`).join("");
+    log.appendChild(ex);
+    ex.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => useExample(EXAMPLES[+b.dataset.i].text)));
+  } else {
+    S.chat.forEach((m) => { if (!m.hidden) bubble(m.role === "user" ? "me" : "ai", m.display || m.content); });
+    if (S.draft) renderDraft(S.draft);
+  }
+
+  const msg = $("#msg");
+  msg.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#composer").requestSubmit(); }
+  });
+  msg.addEventListener("input", autoGrow);
+  $("#composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+  if (isDesktop()) msg.focus();
+  scrollLog();
+}
+
+function autoGrow() { const t = $("#msg"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 140) + "px"; }
+function scrollLog() { const b = $("#sheet-body"); b.scrollTop = b.scrollHeight; }
+
+function useExample(text) {
+  const t = $("#msg");
+  t.value = text;
+  autoGrow();
+  t.focus();
+  const i = text.indexOf("["), j = text.indexOf("]", i);
+  if (i >= 0 && j > i) t.setSelectionRange(i, j + 1);
+}
+
+function bubble(kind, text) {
+  const log = $("#log");
+  if (!log) return null;
+  const d = document.createElement("div");
+  d.className = "bubble " + kind;
+  d.textContent = text;
+  log.appendChild(d);
+  scrollLog();
+  return d;
+}
+
+async function send() {
+  const t = $("#msg");
+  const text = t.value.trim();
+  if (!text || S.busy) return;
+  if (/\[[^\]]*\]/.test(text)) {
+    toast("Please replace the [brackets] with your details first.");
+    const i = text.indexOf("["); t.focus(); t.setSelectionRange(i, text.indexOf("]", i) + 1);
+    return;
+  }
+  t.value = ""; autoGrow();
+  S.chat.push({ role: "user", content: text });
+  bubble("me", text);
+  await askAI();
+}
+
+async function askAI() {
+  S.busy = true;
+  $("#send").disabled = true;
+  const typing = bubble("ai", "");
+  typing.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
+  try {
+    const r = await api("/chat", { method: "POST", body: JSON.stringify({ messages: S.chat.map(({ role, content }) => ({ role, content })) }) });
+    typing.remove();
+    if (r.type === "draft") {
+      if (r.text) bubble("ai", r.text);
+      S.chat.push({ role: "assistant", content: (r.text ? r.text + "\n" : "") + "[Draft shown to the user for confirmation: " + draftSummary(r.draft) + "]", display: r.text || "Here's your post. Please check it." , hidden: !r.text });
+      S.draft = r.draft;
+      S.draftPhotos = [];
+      renderDraft(r.draft);
+    } else {
+      S.chat.push({ role: "assistant", content: r.text });
+      bubble("ai", r.text);
+    }
+  } catch (e) {
+    typing.remove();
+    if (e.code === "profile_required") return renderProfileStep();
+    if (e.status === 401) { store.set("ps_resume", "1"); return renderSignIn("Your session expired. Please sign in again."); }
+    bubble("err", e.message);
+  } finally {
+    S.busy = false;
+    const b = $("#send"); if (b) b.disabled = false;
+  }
+}
+
+function draftSummary(d) {
+  return [posterLine(d), titleOf(d), placeOf(d), priceOf(d), d.description].filter(Boolean).join(" | ");
+}
+
+function renderDraft(d) {
+  document.querySelectorAll(".draft").forEach((x) => { x.classList.add("stale"); x.querySelectorAll("button, input").forEach((b) => (b.disabled = true)); });
+  const card = document.createElement("div");
+  card.className = "draft";
+  const isListing = d.kind === "listing";
+  card.innerHTML = `
+    <span class="tag${isListing ? "" : " req"}">Check your post</span>
+    <h3>${esc(titleOf(d))}</h3>
+    <div class="muted">${esc(placeOf(d))}</div>
+    <dl>
+      <dt>Posting as</dt><dd>${esc(posterLine(d))}</dd>
+      <dt>${isListing ? "Price" : "Budget"}</dt><dd>${esc(priceOf(d).replace(/^Budget /, ""))}</dd>
+      <dt>On the map</dt><dd>${esc(d.address || placeOf(d))}${d.precision === "area" ? " (sector / area pin)" : ""}</dd>
+      <dt>Contact</dt><dd>${esc(d.contact_name)} · +${esc(d.contact_phone)}</dd>
+    </dl>
+    ${(d.notes || []).map((n) => `<p class="note">${esc(n)}</p>`).join("")}
+    ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
+    ${isListing ? `<label class="photo-pick">Add photos (optional, up to 8)<input type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="thumbs"></div>` : ""}
+    <div class="actions">
+      <button class="btn" data-act="change">Change something</button>
+      <button class="btn accent" data-act="confirm">Confirm and post</button>
+    </div>`;
+  $("#log").appendChild(card);
+  scrollLog();
+
+  const input = card.querySelector("input[type=file]");
+  if (input) input.addEventListener("change", () => {
+    S.draftPhotos = [...S.draftPhotos, ...input.files].slice(0, 8);
+    input.value = "";
+    const th = card.querySelector(".thumbs");
+    th.innerHTML = "";
+    S.draftPhotos.forEach((f) => { const im = document.createElement("img"); im.src = URL.createObjectURL(f); im.alt = ""; th.appendChild(im); });
+  });
+  card.querySelector('[data-act="change"]').addEventListener("click", () => {
+    const t = $("#msg"); t.value = ""; t.placeholder = "Tell me what to change, e.g. price is 1.1 Cr"; t.focus();
+  });
+  card.querySelector('[data-act="confirm"]').addEventListener("click", (e) => confirmDraft(d, e.currentTarget));
+}
+
+async function confirmDraft(d, btn) {
+  btn.disabled = true;
+  try {
+    const urls = [];
+    for (let i = 0; i < S.draftPhotos.length; i++) {
+      btn.textContent = `Uploading photo ${i + 1} of ${S.draftPhotos.length}…`;
+      urls.push(await uploadPhoto(S.draftPhotos[i]));
+    }
+    btn.textContent = "Posting…";
+    const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id, photos: urls }) });
+    S.chat = []; S.draft = null; S.draftPhotos = [];
+    closeSheet();
+    toast(r.post.kind === "listing" ? "Posted! Your property is on the map." : "Posted! Your request is on the map.");
+    await loadFeed();
+    openDetails(r.post.id, { zoom: 15 });
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Confirm and post";
+    bubble("err", e.message);
+  }
+}
+
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej()), "image/jpeg", 0.82));
+  } catch (e) {
+    return file;
+  }
+}
+
+async function uploadPhoto(file) {
+  const blob = await shrink(file);
+  if (blob.size > 5 * 1024 * 1024) throw new Error("One photo is too large. Please use photos under 5 MB.");
+  const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random()).replace(".", "");
+  const path = `${S.session.user.id}/${id}.jpg`;
+  const { error } = await S.sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+  if (error) throw new Error("A photo couldn't be uploaded. Please try again.");
+  return S.sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+}
+
+boot();
+</script>
+</body>
+</html>
