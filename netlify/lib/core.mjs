@@ -1,6 +1,6 @@
 // Business rules: validation, who-can-see-what, and what the browser receives.
 
-export const POSTER_TYPES = ["landlord", "broker", "buyer", "tenant"];
+export const POSTER_TYPES = ["landlord", "broker", "developer", "buyer", "tenant"];
 export const PROPERTY_TYPES = ["apartment", "villa", "independent_house", "plot", "office", "shop", "other"];
 
 export const LIMITS = {
@@ -66,12 +66,13 @@ function toInt(v, min, max) {
 export function validateProposal(input = {}) {
   const poster = String(input.poster_type || "").toLowerCase();
   if (!POSTER_TYPES.includes(poster)) {
-    return { ok: false, ask: "Are you the landlord, a broker, a buyer or a tenant?" };
+    return { ok: false, ask: "Are you the landlord, a broker, a developer, a buyer or a tenant?" };
   }
 
   let poster_type = poster;
   let rera_number = null;
   const notes = [];
+  let company = null;
   if (poster === "broker") {
     rera_number = cleanRera(input.rera_number);
     if (!rera_number) {
@@ -79,11 +80,17 @@ export function validateProposal(input = {}) {
       notes.push("No valid broker licence / RERA number was given, so this will be posted as Landlord.");
     }
   }
+  if (poster === "developer") {
+    company = clean(input.company, 80);
+    if (!company) return { ok: false, ask: "What is the name of the developer company?" };
+    rera_number = cleanRera(input.rera_number); // project registration, optional
+  }
 
   const kind = poster_type === "buyer" || poster_type === "tenant" ? "request" : "listing";
   let deal;
   if (poster_type === "buyer") deal = "sale";
   else if (poster_type === "tenant") deal = "rent";
+  else if (poster_type === "developer") deal = String(input.deal || "").toLowerCase() === "rent" ? "rent" : "sale";
   else {
     deal = String(input.deal || "").toLowerCase();
     if (!["sale", "rent"].includes(deal)) {
@@ -121,6 +128,8 @@ export function validateProposal(input = {}) {
       city,
       country,
       rera_number,
+      company,
+      possession: poster_type === "developer" ? clean(input.possession, 40) : null,
       description: clean(input.description, 400),
       notes
     }
@@ -129,64 +138,32 @@ export function validateProposal(input = {}) {
 
 /* ---------------- visibility ---------------- */
 
-function metres(a, b) {
-  const R = 6371000, rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
 /** Everything we need to know about the person looking at the map. */
-export function makeViewer({ user, profile, myPosts = [], isAdmin = false }) {
+export function makeViewer({ user, profile, isAdmin = false }) {
   if (!user) return null;
-  const myListings = myPosts.filter((p) => p.kind === "listing" && p.status === "active");
   return {
     id: user.id,
     email: user.email,
     isAdmin,
-    isBroker: !!(profile && profile.rera_number),
-    isSeller: myListings.length > 0,
-    buildingKeys: new Set(myListings.map((p) => p.building_key).filter(Boolean)),
-    placeIds: new Set(myListings.filter((p) => p.precision === "building" && p.place_id).map((p) => p.place_id)),
-    buildingPoints: myListings.filter((p) => p.precision === "building").map((p) => ({ lat: p.lat, lng: p.lng }))
+    isBroker: !!(profile && profile.rera_number)
   };
-}
-
-/** Does the viewer have a listed property in the same building as this post? */
-export function ownsInBuilding(viewer, post) {
-  if (!viewer || post.precision !== "building") {
-    // A sector-level request has no building to match against.
-    return !!(viewer && post.building_key && viewer.buildingKeys.has(post.building_key));
-  }
-  if (post.building_key && viewer.buildingKeys.has(post.building_key)) return true;
-  if (post.place_id && viewer.placeIds.has(post.place_id)) return true;
-  return viewer.buildingPoints.some((pt) => metres(pt, post) <= 60);
 }
 
 /**
  * The rules:
- * - Listings (landlord / broker) are public.
- * - Buyer requests: brokers with a RERA number and landlords who have listed a property.
- * - Tenant requests: brokers with a RERA number, or people with a listed property in that building.
+ * - Listings (landlord / broker / developer) are public.
+ * - Buyer and tenant requests are visible only to brokers who gave a licence / RERA number.
  * - You always see your own posts; admins see everything.
  */
 export function canSee(post, viewer) {
   if (post.status !== "active") return false;
   if (post.kind === "listing") return true;
   if (!viewer) return false;
-  if (viewer.isAdmin || post.user_id === viewer.id) return true;
-  if (post.poster_type === "buyer") return viewer.isBroker || viewer.isSeller;
-  if (post.poster_type === "tenant") return viewer.isBroker || ownsInBuilding(viewer, post);
-  return false;
+  return viewer.isAdmin || viewer.isBroker || post.user_id === viewer.id;
 }
 
 export function accessSummary(viewer) {
-  if (!viewer) return { buyerRequests: false, tenantRequests: "none" };
-  const all = viewer.isAdmin || viewer.isBroker;
-  return {
-    buyerRequests: all || viewer.isSeller,
-    tenantRequests: all ? "all" : viewer.buildingKeys.size || viewer.buildingPoints.length ? "own_buildings" : "none"
-  };
+  return { requests: !!(viewer && (viewer.isAdmin || viewer.isBroker)) };
 }
 
 /** What the browser receives. Internal fields and user ids never leave the server. */
@@ -210,6 +187,8 @@ export function toPublic(post, viewer) {
     lng: post.lng,
     precision: post.precision,
     rera_number: post.rera_number,
+    company: post.company,
+    possession: post.possession,
     description: post.description,
     photos: Array.isArray(post.photos) ? post.photos : [],
     contact_name: post.contact_name,

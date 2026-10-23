@@ -24,6 +24,19 @@ export function makeGeo({ apiKey, fetchImpl = fetch }) {
   }
 
   return {
+    /** For the search bar: any place name -> centre and viewport, or null. */
+    async search(q) {
+      const r = await geocode(q);
+      if (!r) return null;
+      const v = r.geometry.viewport;
+      return {
+        lat: r.geometry.location.lat,
+        lng: r.geometry.location.lng,
+        address: r.formatted_address,
+        viewport: v ? { north: v.northeast.lat, east: v.northeast.lng, south: v.southwest.lat, west: v.southwest.lng } : null
+      };
+    },
+
     /** Returns { lat, lng, precision, address, place_id } or null if it can't be placed. */
     async locate({ building, locality, city, country }) {
       const attempts = [];

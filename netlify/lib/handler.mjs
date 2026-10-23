@@ -4,6 +4,8 @@ import {
   makeViewer, canSee, accessSummary, toPublic, sanitizeMessages
 } from "./core.mjs";
 
+const placeCache = new Map();
+
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
@@ -42,8 +44,8 @@ export async function handle(req, deps) {
 
     async function loadViewer() {
       if (!user) return { viewer: null, profile: null };
-      const [profile, myPosts] = await Promise.all([store.getProfile(user.id), store.postsByUser(user.id)]);
-      return { viewer: makeViewer({ user, profile, myPosts, isAdmin }), profile };
+      const profile = await store.getProfile(user.id);
+      return { viewer: makeViewer({ user, profile, isAdmin }), profile };
     }
 
     /* ---------- map feed (signed in or not) ---------- */
@@ -52,6 +54,18 @@ export async function handle(req, deps) {
       const posts = await store.activePosts();
       const visible = posts.filter((p) => canSee(p, viewer)).map((p) => toPublic(p, viewer));
       return json({ posts: visible, access: accessSummary(viewer), signedIn: !!viewer });
+    }
+
+    /* ---------- area search: find a place by name so the map can move there ---------- */
+    if (path === "/geocode" && method === "GET") {
+      const q = clean(url.searchParams.get("q"), 100);
+      if (!q || q.length < 2) return json({ place: null });
+      const key = q.toLowerCase();
+      if (!placeCache.has(key)) {
+        if (placeCache.size > 500) placeCache.clear();
+        placeCache.set(key, await geo.search(q));
+      }
+      return json({ place: placeCache.get(key) });
     }
 
     if (!user) return json({ error: "sign_in_required" }, 401);
