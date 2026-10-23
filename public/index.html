@@ -126,6 +126,37 @@
     letter-spacing: .03em; padding: 14px 24px; border-radius: 999px; box-shadow: 0 10px 24px rgba(15, 59, 46, .35);
     display: flex; align-items: center; gap: 8px; white-space: nowrap; }
   .fab svg { color: var(--brass); }
+  .role-pill { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 20;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; padding: 7px 14px; border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(15, 59, 46, .18); cursor: pointer; white-space: nowrap; }
+  .role-pill b { font-weight: 500; color: var(--brand); }
+  .role-pill span { color: var(--brass-ink); font-weight: 500; margin-left: 6px; }
+  .role-pill[hidden] { display: none; }
+  .maptype { position: fixed; left: 12px; bottom: calc(34px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: 10px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .25); display: flex; align-items: center; gap: 6px; }
+  @media (max-width: 759px) { .maptype { bottom: calc(150px + env(safe-area-inset-bottom)); } }
+
+  /* Role picker */
+  .roles { display: grid; gap: 10px; margin-top: 4px; }
+  .role-card { text-align: left; border: 1px solid var(--line); background: #fffdf8; border-radius: 14px; padding: 13px 14px; cursor: pointer; color: var(--ink); }
+  .role-card b { display: block; font-family: var(--serif); font-weight: 400; font-size: 17px; color: var(--brand); }
+  .role-card small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .role-card[aria-pressed="true"] { border: 2px solid var(--brass); padding: 12px 13px; background: #fff8ea; }
+  .role-extra { margin-top: 12px; }
+  .role-extra[hidden] { display: none; }
+
+  /* Developer form */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .field select, .field textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 15px; background: #fffdf8; }
+  .field textarea { resize: vertical; min-height: 84px; }
+  .field select:focus, .field textarea:focus { outline: 2px solid var(--brass); outline-offset: -1px; }
+  .field .opt { color: var(--muted); font-weight: 400; }
+  .cfgs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cfg { border: 1px solid var(--line); background: #fffdf8; color: var(--ink); padding: 8px 14px; border-radius: 999px; font-size: 14px; cursor: pointer; }
+  .cfg[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+  .price-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
+  .form-section { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .14em; color: var(--brass-ink); margin: 18px 0 10px; }
 
   /* ---------- pins ---------- */
   .pin { --pin: var(--brand); position: relative; border: 0; cursor: pointer; white-space: nowrap; background: var(--pin); color: var(--brand-ink);
@@ -309,9 +340,14 @@
   <div class="banner-row"><div class="banner" id="banner" hidden></div></div>
 </div>
 
+<button class="role-pill" id="role-pill" hidden></button>
 <button class="fab" id="fab">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-  Post property or request
+  <span id="fab-label">Sign in to post</span>
+</button>
+<button class="maptype" id="maptype" aria-label="Switch map style">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+  <span id="maptype-label">Map</span>
 </button>
 
 <aside class="panel" id="panel" aria-hidden="true" aria-label="Details">
@@ -343,12 +379,22 @@
    ===================================================================== */
 
 const EXAMPLES = [
-  { label: "Landlord selling", text: "I am the landlord and want to sell my 3 bedroom in [building name], [sector], [city] for [price]" },
-  { label: "Developer project", text: "We are [company], a developer. Launching [project name] in [area], [city]: 2, 3 and 4 bedroom apartments from [price], possession [month year], RERA [number]" },
-  { label: "Broker listing", text: "I am a broker, RERA [number], and want to sell a villa for [price] in [area], [city]" },
-  { label: "Tenant looking", text: "I am a tenant looking to rent a 2 bedroom in [building name], [sector], [city], budget [rent] a month" },
-  { label: "Buyer looking", text: "I am a buyer looking to purchase a 3 bedroom in [building name], [sector], [city], budget [price]" }
+  { role: "landlord", label: "Selling", text: "I want to sell my 3 bedroom apartment in [building name], [area], [city] for [price]" },
+  { role: "landlord", label: "Renting out", text: "I want to rent out my 2 bedroom apartment in [building name], [area], [city] for [rent] a month" },
+  { role: "broker", label: "Listing for sale", text: "Selling a 4 bedroom villa in [building or community], [area], [city] for [price]" },
+  { role: "broker", label: "Listing for rent", text: "Renting out a 2 bedroom apartment in [building name], [area], [city] for [rent] a month" },
+  { role: "buyer", label: "Looking to buy", text: "I'm looking to buy a 3 bedroom apartment in [building or area], [city], budget [price]" },
+  { role: "tenant", label: "Looking to rent", text: "I'm looking to rent a 2 bedroom apartment in [building or area], [city], budget [rent] a month" }
 ];
+
+const ROLES = {
+  landlord: { label: "Owner / Landlord", desc: "Sell or rent out your own property", cta: "List my property" },
+  broker: { label: "Broker / Agent", desc: "List properties and see what buyers and tenants are looking for", cta: "List a property" },
+  developer: { label: "Developer", desc: "List new projects and launches", cta: "List a project" },
+  buyer: { label: "Buyer", desc: "Tell brokers what you want to buy", cta: "Post what I'm looking for" },
+  tenant: { label: "Tenant", desc: "Tell brokers what you want to rent", cta: "Post a rental request" }
+};
+const roleOf = () => (S.me && S.me.profile && S.me.profile.role) || null;
 
 const S = {
   cfg: null, sb: null, session: null, me: null,
@@ -506,13 +552,13 @@ async function boot() {
   await refreshMe();
   await loadFeed();
   openFromHash();
-  if (S.session && store.get("ps_resume")) { store.del("ps_resume"); openComposer(); }
+  if (S.session && store.get("ps_resume")) { store.del("ps_resume"); startPosting(); }
 }
 
 async function afterAuthChange() {
   await refreshMe();
   await loadFeed();
-  if (S.session && store.get("ps_resume")) { store.del("ps_resume"); openComposer(); }
+  if (S.session && store.get("ps_resume")) { store.del("ps_resume"); startPosting(); }
 }
 
 window.gm_authFailure = () => notice("Google Maps key problem", "The Google Maps key was rejected. Check that the Maps JavaScript API is enabled and the key allows this website (see the setup guide).");
@@ -534,11 +580,24 @@ async function initMap() {
   const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
   S.Marker = AdvancedMarkerElement;
   S.map = new Map($("#map"), {
-    center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId,
+    center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || "hybrid",
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
   S.map.addListener("idle", updateListCount);
+  updateMapTypeButton();
 }
+
+function updateMapTypeButton() {
+  const sat = S.map && S.map.getMapTypeId && S.map.getMapTypeId() !== "roadmap";
+  $("#maptype-label").textContent = sat ? "Map" : "Satellite";
+}
+$("#maptype").addEventListener("click", () => {
+  if (!S.map) return;
+  const next = S.map.getMapTypeId() === "roadmap" ? "hybrid" : "roadmap";
+  S.map.setMapTypeId(next);
+  store.set("ps_maptype", next);
+  updateMapTypeButton();
+});
 
 /* ---------------- account ---------------- */
 async function refreshMe() {
@@ -547,6 +606,7 @@ async function refreshMe() {
     try { S.me = await api("/me"); }
     catch (e) { if (e.status === 401) { await S.sb.auth.signOut(); S.session = null; } }
   }
+  updateFab();
   const b = $("#account");
   if (S.me) {
     b.className = "account avatar-btn";
@@ -660,9 +720,11 @@ function renderBanner() {
       ? "You can see all buyer and tenant requests."
       : "You can see your own requests. Buyer and tenant requests are visible only to <b>brokers with a licence / RERA number</b>.";
   } else if (!S.posts.some((p) => p.kind === "listing")) {
-    html = "<b>No properties listed yet.</b> Be the first: tap <b>Post property or request</b>.";
+    html = "<b>No properties listed yet.</b> Be the first: sign in and list yours.";
   } else if (!visiblePosts().length) {
-    html = "No properties match this filter yet.";
+    html = S.filter === "project"
+      ? "<b>No new projects listed yet.</b> Developers can sign in, choose <b>Developer</b> and tap <b>List a project</b>."
+      : "No properties match this filter yet.";
   }
   el.innerHTML = html;
   el.hidden = !html;
@@ -726,7 +788,7 @@ function openDetails(id, opts = {}) {
       ${isDev(p) ? `<div class="facts">
         <div class="fact"><b>Developer</b><span>${esc(p.company || "—")}</span></div>
         <div class="fact"><b>Possession</b><span>${esc(p.possession || "—")}</span></div>
-        <div class="fact"><b>Configuration</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK onwards") : esc(cap(TYPE[p.property_type] || "—"))}</span></div>
+        <div class="fact"><b>Configuration</b><span>${esc(p.configs || (p.bedrooms ? p.bedrooms + " BHK onwards" : cap(TYPE[p.property_type] || "—")))}</span></div>
         <div class="fact"><b>Project RERA</b><span>${esc(p.rera_number || "—")}</span></div>
       </div>` : `<div class="facts">
         <div class="fact"><b>Type</b><span>${esc(cap(TYPE[p.property_type] || "Any"))}</span></div>
@@ -937,7 +999,172 @@ document.addEventListener("keydown", (e) => {
   if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
 });
 
-$("#fab").addEventListener("click", () => openComposer());
+$("#fab").addEventListener("click", () => startPosting());
+$("#role-pill").addEventListener("click", () => renderRolePicker(true));
+
+function updateFab() {
+  const role = roleOf();
+  $("#fab-label").textContent = role ? ROLES[role].cta : S.me ? "Get started" : "Sign in to post";
+  const pill = $("#role-pill");
+  if (role) {
+    pill.innerHTML = `Posting as <b>${esc(ROLES[role].label)}</b><span>Switch</span>`;
+    pill.hidden = false;
+  } else pill.hidden = true;
+}
+
+/** One entry point: sign in -> contact details -> role -> the right posting screen. */
+function startPosting() {
+  if (!S.session) { store.set("ps_resume", "1"); return renderSignIn("Sign in to list a property, a project or what you're looking for."); }
+  const p = S.me && S.me.profile;
+  if (!p || !p.name || !p.phone) return renderProfileStep();
+  if (!p.role) return renderRolePicker(false);
+  if (p.role === "developer") return openDevForm();
+  return openComposer();
+}
+
+function renderRolePicker(switching) {
+  openSheet("role", switching ? "Switch role" : "How will you use Property Stalkers?");
+  const prof = (S.me && S.me.profile) || {};
+  let chosen = prof.role || null;
+  $("#sheet-body").innerHTML = `
+    <p class="muted">${switching ? "Choose who you're posting as now. You can switch back any time." : "Pick one to get started. You can switch any time."}</p>
+    <div class="roles">
+      ${Object.entries(ROLES).map(([id, r]) => `
+        <button type="button" class="role-card" data-role="${id}" aria-pressed="${id === chosen}"><b>${esc(r.label)}</b><small>${esc(r.desc)}</small></button>`).join("")}
+    </div>
+    <div class="role-extra" id="extra-broker" hidden>
+      <label class="field"><span>Broker licence / RERA number</span><input id="r-licence" value="${esc(prof.rera_number)}" placeholder="e.g. BRN 12345 or P51700012345" autocomplete="off"></label>
+      <p class="muted" style="margin-top:-6px;font-size:13px">Needed to see buyer and tenant requests. It's shown on your listings.</p>
+    </div>
+    <div class="role-extra" id="extra-developer" hidden>
+      <label class="field"><span>Company name</span><input id="r-company" value="${esc(prof.company)}" placeholder="e.g. Skyline Developers" autocomplete="organization"></label>
+    </div>
+    <button class="btn primary" style="width:100%;margin-top:16px" id="role-save">Continue</button>
+    <p class="error" id="role-err" hidden></p>`;
+  const showExtra = () => {
+    $("#extra-broker").hidden = chosen !== "broker";
+    $("#extra-developer").hidden = chosen !== "developer";
+  };
+  showExtra();
+  document.querySelectorAll(".role-card").forEach((c) => c.addEventListener("click", () => {
+    chosen = c.dataset.role;
+    document.querySelectorAll(".role-card").forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
+    showExtra();
+  }));
+  $("#role-save").addEventListener("click", async () => {
+    const err = $("#role-err");
+    if (!chosen) { err.hidden = false; err.textContent = "Please choose one option."; return; }
+    const btn = $("#role-save"); btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      const changed = chosen !== prof.role;
+      await api("/me/role", { method: "POST", body: JSON.stringify({ role: chosen, licence: $("#r-licence").value, company: $("#r-company").value }) });
+      if (changed) { S.chat = []; S.draft = null; S.devForm = null; }
+      await refreshMe();
+      await loadFeed();
+      toast(`You're now posting as ${ROLES[chosen].label}.`);
+      if (switching) closeSheet(); else startPosting();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "Continue";
+      err.hidden = false; err.textContent = e.message;
+    }
+  });
+}
+
+/* ---------------- developer project form ---------------- */
+const CURRENCIES = ["INR", "AED", "USD", "GBP", "EUR", "SAR", "QAR", "OMR", "KWD", "BHD", "SGD", "CAD", "AUD"];
+const CONFIGS = [["0", "Studio"], ["1", "1 BHK"], ["2", "2 BHK"], ["3", "3 BHK"], ["4", "4 BHK"], ["5", "5+ BHK"]];
+
+function configsText(sel) {
+  const nums = sel.map(Number).sort((a, b) => a - b);
+  const parts = nums.map((n) => (n === 0 ? "Studio" : n === 5 ? "5+" : String(n)));
+  const hasBhk = nums.some((n) => n > 0);
+  if (!parts.length) return "";
+  const list = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(", ") + " & " + parts[parts.length - 1];
+  return hasBhk ? list + " BHK" : list;
+}
+function monthText(v) {
+  if (!/^\d{4}-\d{2}$/.test(v || "")) return "";
+  const [y, m] = v.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
+function openDevForm() {
+  openSheet("devform", "List a project");
+  const prof = (S.me && S.me.profile) || {};
+  const f = S.devForm || { company: prof.company || "", currency: "INR", configs: [] };
+  $("#sheet-body").innerHTML = `
+    <form id="dev-form" novalidate>
+      <p class="muted">Fill this in once and your project goes on the map for buyers and brokers. Fields marked <span class="opt">(optional)</span> can be left empty.</p>
+      <div class="form-section">The project</div>
+      <label class="field"><span>Project name</span><input id="d-project" required value="${esc(f.project)}" placeholder="e.g. Lagoon Views"></label>
+      <label class="field"><span>Developer company</span><input id="d-company" required value="${esc(f.company)}" placeholder="e.g. Skyline Developers"></label>
+      <label class="field"><span>Project RERA / registration number <span class="opt">(optional)</span></span><input id="d-rera" value="${esc(f.rera)}" placeholder="e.g. P51800012345"></label>
+      <div class="form-section">Location</div>
+      <label class="field"><span>Area, sector or community</span><input id="d-area" required value="${esc(f.area)}" placeholder="e.g. Damac Lagoons or Sector 150"></label>
+      <div class="grid2">
+        <label class="field"><span>City</span><input id="d-city" required value="${esc(f.city)}" placeholder="e.g. Dubai"></label>
+        <label class="field"><span>Country <span class="opt">(optional)</span></span><input id="d-country" value="${esc(f.country)}" placeholder="e.g. UAE"></label>
+      </div>
+      <div class="form-section">Homes</div>
+      <label class="field"><span>Property type</span>
+        <select id="d-type">
+          ${[["apartment", "Apartments"], ["villa", "Villas / townhouses"], ["independent_house", "Independent houses"], ["plot", "Plots"], ["office", "Offices"], ["shop", "Shops / retail"], ["other", "Mixed / other"]]
+            .map(([v, l]) => `<option value="${v}"${(f.type || "apartment") === v ? " selected" : ""}>${l}</option>`).join("")}
+        </select>
+      </label>
+      <div class="field"><span>Configurations <span class="opt">(tap all that apply)</span></span>
+        <div class="cfgs">${CONFIGS.map(([v, l]) => `<button type="button" class="cfg" data-v="${v}" aria-pressed="${f.configs.includes(v)}">${l}</button>`).join("")}</div>
+      </div>
+      <div class="field"><span>Starting price</span>
+        <div class="price-row">
+          <input id="d-price" inputmode="numeric" required value="${esc(f.price)}" placeholder="e.g. 1850000">
+          <select id="d-currency">${CURRENCIES.map((c) => `<option${f.currency === c ? " selected" : ""}>${c}</option>`).join("")}</select>
+        </div>
+      </div>
+      <label class="field"><span>Possession / handover <span class="opt">(optional)</span></span><input id="d-possession" type="month" value="${esc(f.possession)}"></label>
+      <label class="field"><span>About the project <span class="opt">(optional)</span></span><textarea id="d-desc" maxlength="400" placeholder="Amenities, payment plan, nearby landmarks…">${esc(f.description)}</textarea></label>
+      <button class="btn primary" style="width:100%" id="d-submit">Preview listing</button>
+      <p class="error" id="d-err" hidden></p>
+    </form>`;
+  document.querySelectorAll(".cfg").forEach((b) => b.addEventListener("click", () => b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"))));
+  $("#dev-form").addEventListener("submit", submitDevForm);
+  $("#dev-form").addEventListener("input", () => { $("#d-err").hidden = true; });
+}
+
+function readDevForm() {
+  return {
+    project: $("#d-project").value.trim(), company: $("#d-company").value.trim(), rera: $("#d-rera").value.trim(),
+    area: $("#d-area").value.trim(), city: $("#d-city").value.trim(), country: $("#d-country").value.trim(),
+    type: $("#d-type").value, configs: [...document.querySelectorAll(".cfg[aria-pressed='true']")].map((b) => b.dataset.v),
+    price: $("#d-price").value.replace(/[^\d.]/g, ""), currency: $("#d-currency").value,
+    possession: $("#d-possession").value, description: $("#d-desc").value.trim()
+  };
+}
+
+async function submitDevForm(e) {
+  e.preventDefault();
+  const f = readDevForm();
+  S.devForm = f;
+  const err = $("#d-err");
+  const missing = [["project", "project name"], ["company", "company"], ["area", "area"], ["city", "city"], ["price", "starting price"]].filter(([k]) => !f[k]).map(([, l]) => l);
+  if (missing.length) { err.hidden = false; err.textContent = `Please add the ${missing.join(", ")}.`; return; }
+  const btn = $("#d-submit"); btn.disabled = true; btn.textContent = "Finding it on the map…";
+  try {
+    const nums = f.configs.map(Number).filter((n) => n > 0);
+    const r = await api("/draft", { method: "POST", body: JSON.stringify({
+      project: f.project, company: f.company, rera: f.rera, area: f.area, city: f.city, country: f.country,
+      property_type: f.type, configs: configsText(f.configs), bedrooms: nums.length ? Math.min(...nums) : null,
+      price: Math.round(Number(f.price)), currency: f.currency, possession: monthText(f.possession), description: f.description
+    }) });
+    S.draft = r.draft;
+    S.draftPhotos = [];
+    $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
+    renderDraft(r.draft);
+  } catch (ex) {
+    btn.disabled = false; btn.textContent = "Preview listing";
+    err.hidden = false; err.textContent = ex.message;
+  }
+}
 $("#account").addEventListener("click", () => (S.me ? renderAccount() : renderSignIn()));
 
 function renderSignIn(reason) {
@@ -999,7 +1226,7 @@ function renderProfileStep() {
   $("#sheet-body").innerHTML = `
     <p class="muted">These are shown on your posts so people can call or WhatsApp you.</p>
     ${profileForm(S.me && S.me.profile, "Continue")}`;
-  bindProfileForm(() => openComposer());
+  bindProfileForm(() => startPosting());
 }
 
 function renderAccount() {
@@ -1008,7 +1235,11 @@ function renderAccount() {
   const mine = S.posts.filter((p) => p.mine);
   const prof = S.me.profile || {};
   $("#sheet-body").innerHTML = `
-    <p class="muted">Signed in as <b>${esc(S.me.email)}</b>${prof.rera_number ? `<br>Broker licence / RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
+    <p class="muted">Signed in as <b>${esc(S.me.email)}</b>${prof.rera_number && prof.role === "broker" ? `<br>Broker licence / RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
+    <div class="my-post" style="border-top:1px solid var(--line);margin-bottom:16px">
+      <div><b>Posting as ${esc(prof.role ? ROLES[prof.role].label : "—")}</b><small>${prof.role ? esc(ROLES[prof.role].desc) : "Choose how you'll use Property Stalkers"}</small></div>
+      <button class="btn" id="switch-role">${prof.role ? "Switch" : "Choose"}</button>
+    </div>
     ${profileForm(prof, "Save details")}
     <div class="section-title">Your posts</div>
     ${mine.length ? mine.map((p) => `
@@ -1019,6 +1250,7 @@ function renderAccount() {
       </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
     <button class="btn" style="width:100%;margin-top:24px" id="signout">Sign out</button>`;
   bindProfileForm(() => { toast("Details saved."); renderAccount(); });
+  $("#switch-role").addEventListener("click", () => renderRolePicker(true));
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
   document.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
   $("#signout").addEventListener("click", async () => {
@@ -1035,7 +1267,9 @@ function renderAccount() {
 function openComposer() {
   if (!S.session) { store.set("ps_resume", "1"); return renderSignIn("Sign in to post a property or a request."); }
   if (!S.me || !S.me.profile || !S.me.profile.name || !S.me.profile.phone) return renderProfileStep();
-  openSheet("chat", "Post a property or request");
+  const role = roleOf();
+  if (!role) return renderRolePicker(false);
+  openSheet("chat", ROLES[role].cta);
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
@@ -1047,11 +1281,14 @@ function openComposer() {
   if (!S.chat.length) {
     const intro = document.createElement("div");
     intro.className = "bubble ai";
-    intro.innerHTML = `Tell me what you want to post, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world. Developers, include your <b>company name</b>. Brokers, please add your <b>licence / RERA number</b>, otherwise the post shows as Landlord.<br><br>Tap an example and fill in the brackets:`;
+    intro.innerHTML = (role === "buyer" || role === "tenant"
+      ? `Tell me what you're looking for, in your own words: the <b>area and city</b>, the type of home and your budget. Licensed brokers will see it and can call or WhatsApp you.`
+      : `Tell me about the property, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world, and the price.`)
+      + `<br><br>Tap an example and fill in the brackets:`;
     log.appendChild(intro);
     const ex = document.createElement("div");
     ex.className = "examples";
-    ex.innerHTML = EXAMPLES.map((e, i) => `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>`).join("");
+    ex.innerHTML = EXAMPLES.map((e, i) => (e.role === role || (role === "developer" && e.role === "broker")) ? `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>` : "").join("");
     log.appendChild(ex);
     ex.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => useExample(EXAMPLES[+b.dataset.i].text)));
   } else {
@@ -1128,6 +1365,7 @@ async function askAI() {
   } catch (e) {
     typing.remove();
     if (e.code === "profile_required") return renderProfileStep();
+    if (e.code === "role_required") return renderRolePicker(false);
     if (e.status === 401) { store.set("ps_resume", "1"); return renderSignIn("Your session expired. Please sign in again."); }
     bubble("err", e.message);
   } finally {
@@ -1174,6 +1412,7 @@ function renderDraft(d) {
     S.draftPhotos.forEach((f) => { const im = document.createElement("img"); im.src = URL.createObjectURL(f); im.alt = ""; th.appendChild(im); });
   });
   card.querySelector('[data-act="change"]').addEventListener("click", () => {
+    if ($("#sheet").dataset.view === "devform") return openDevForm();
     const t = $("#msg"); t.value = ""; t.placeholder = "Tell me what to change, e.g. price is 1.1 Cr"; t.focus();
   });
   card.querySelector('[data-act="confirm"]').addEventListener("click", (e) => confirmDraft(d, e.currentTarget));
@@ -1189,7 +1428,7 @@ async function confirmDraft(d, btn) {
     }
     btn.textContent = "Posting…";
     const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id, photos: urls }) });
-    S.chat = []; S.draft = null; S.draftPhotos = [];
+    S.chat = []; S.draft = null; S.draftPhotos = []; S.devForm = null;
     closeSheet();
     toast(r.post.kind === "listing" ? "Posted! Your property is on the map." : "Posted! Your request is on the map.");
     await loadFeed();
