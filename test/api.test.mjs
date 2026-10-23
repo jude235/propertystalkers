@@ -71,6 +71,9 @@ test("helpers", () => {
   assert.equal(cleanPhone("098765 43210"), "919876543210");
   assert.equal(cleanPhone("+91 98765-43210"), "919876543210");
   assert.equal(cleanPhone("12345"), null);
+  assert.equal(cleanPhone("+971 50 123 4567"), "971501234567");
+  assert.equal(cleanPhone("00971501234567"), "971501234567");
+  assert.equal(cleanPhone("050 123 4567"), null); // local number without country code
   const m = sanitizeMessages([{ role: "assistant", content: "hi" }, { role: "user", content: "a" }, { role: "user", content: "b" }, { role: "system", content: "x" }]);
   assert.deepEqual(m, [{ role: "user", content: "a\nb" }]);
 });
@@ -160,6 +163,15 @@ test("chat: plain replies, profile required, ungeocodable location, drafts are p
   const steal = await call("POST", "/posts", { token: other.token, body: { draftId: r3.body.draft.id } });
   assert.equal(steal.status, 404);
   assert.equal((await call("POST", "/posts", { token: u.token, body: { draftId: "not-a-uuid" } })).status, 404);
+});
+
+test("worldwide: currency and country are kept", async () => {
+  const v = validateProposal({ poster_type: "landlord", deal: "sale", property_type: "villa", price: 4500000, currency: "aed",
+    building: "Portofino", locality: "Damac Lagoons", city: "Dubai", country: "United Arab Emirates", description: "Villa." });
+  assert.equal(v.post.currency, "AED");
+  assert.equal(v.post.country, "United Arab Emirates");
+  const d = validateProposal({ poster_type: "buyer", price: 12000000, locality: "Kharadi", city: "Pune", description: "x" });
+  assert.equal(d.post.currency, "INR");
 });
 
 test("only photos from the user's own storage folder are kept", async () => {
