@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Property Stalkers | Properties and requests on the map</title>
-<meta name="description" content="Find properties for sale and rent across India on one map, and post your own listing or request in plain words.">
+<meta name="description" content="Find properties for sale and rent around the world on one map, and post your own listing or request in plain words.">
 <meta name="theme-color" content="#0f3b2e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -278,7 +278,7 @@
 
 const EXAMPLES = [
   { label: "Landlord selling", text: "I am the landlord and want to sell my 3 bedroom in [building name], [sector], [city] for [price]" },
-  { label: "Broker listing", text: "I am a broker, RERA [number], and want to sell a villa for 5 Cr in [sector], [city]" },
+  { label: "Broker listing", text: "I am a broker, RERA [number], and want to sell a villa for [price] in [area], [city]" },
   { label: "Tenant looking", text: "I am a tenant looking to rent a 2 bedroom in [building name], [sector], [city], budget [rent] a month" },
   { label: "Buyer looking", text: "I am a buyer looking to purchase a 3 bedroom in [building name], [sector], [city], budget [price]" }
 ];
@@ -323,18 +323,27 @@ function titleOf(p) {
   return `Looking to ${p.deal === "rent" ? "rent" : "buy"} ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w}`;
 }
 const placeOf = (p) => [p.building, p.locality, p.city].filter(Boolean).join(", ");
+const SYMBOL = { INR: "₹", USD: "$", GBP: "£", EUR: "€" };
+function amount(p) {
+  if (p.price == null) return "";
+  const cur = p.currency || "INR";
+  if (cur === "INR") return "₹" + money(p.price);
+  const n = p.price, trim = (x) => x.toFixed(2).replace(/\.?0+$/, "");
+  const short = n >= 1e9 ? trim(n / 1e9) + "B" : n >= 1e6 ? trim(n / 1e6) + "M" : n >= 1e3 ? trim(n / 1e3) + "K" : String(n);
+  return SYMBOL[cur] ? SYMBOL[cur] + short : cur + " " + short;
+}
 function priceOf(p) {
   const per = p.deal === "rent" ? "/month" : "";
-  if (p.kind === "listing") return p.price ? `₹${money(p.price)}${per}` : "Price on request";
-  return p.price ? `Budget ₹${money(p.price)}${per}` : "Budget not given";
+  if (p.kind === "listing") return p.price ? `${amount(p)}${per}` : "Price on request";
+  return p.price ? `Budget ${amount(p)}${per}` : "Budget not given";
 }
 function pinLabel(p) {
-  if (p.kind === "listing") return p.price ? `₹${money(p.price)}${p.deal === "rent" ? "/mo" : ""}` : (p.bedrooms ? `${p.bedrooms} BHK` : "View");
+  if (p.kind === "listing") return p.price ? `${amount(p)}${p.deal === "rent" ? "/mo" : ""}` : (p.bedrooms ? `${p.bedrooms} BHK` : "View");
   const head = p.deal === "rent" ? "Rent" : "Buy";
-  return `${head} · ${p.price ? "₹" + money(p.price) : p.bedrooms ? p.bedrooms + " BHK" : "request"}`;
+  return `${head} · ${p.price ? amount(p) : p.bedrooms ? p.bedrooms + " BHK" : "request"}`;
 }
 function posterLine(p) {
-  if (p.poster_type === "broker" && p.rera_number) return `Broker · RERA ${p.rera_number}`;
+  if (p.poster_type === "broker" && p.rera_number) return `Broker · Licence ${p.rera_number}`;
   return POSTER[p.poster_type] || "";
 }
 function ago(iso) {
@@ -554,15 +563,15 @@ function renderBanner() {
   const a = S.access || { buyerRequests: false, tenantRequests: "none" };
   let html;
   if (!S.signedIn) {
-    html = "<b>Requests are for property owners and brokers.</b> Sign in and post a property, or post as a broker with your RERA number, to see who is looking to buy or rent.";
+    html = "<b>Requests are for property owners and brokers.</b> Sign in and post a property, or post as a broker with your licence / RERA number, to see who is looking to buy or rent.";
   } else if (a.tenantRequests === "all") {
     html = "You can see all buyer and tenant requests.";
   } else if (a.buyerRequests && a.tenantRequests === "own_buildings") {
-    html = "You can see buyer requests, and tenant requests for buildings where you've listed a property. <b>RERA brokers</b> see all tenant requests.";
+    html = "You can see buyer requests, and tenant requests for buildings where you've listed a property. <b>Licensed brokers</b> see all tenant requests.";
   } else if (a.buyerRequests) {
-    html = "You can see buyer requests. Tenant requests are visible to <b>RERA brokers</b> and owners with a property in the same building.";
+    html = "You can see buyer requests. Tenant requests are visible to <b>licensed brokers</b> and owners with a property in the same building.";
   } else {
-    html = "You can see your own requests. <b>Buyer requests</b> are visible to landlords with a listed property and RERA brokers. <b>Tenant requests</b> are visible to RERA brokers and owners in the same building.";
+    html = "You can see your own requests. <b>Buyer requests</b> are visible to landlords with a listed property and licensed brokers. <b>Tenant requests</b> are visible to licensed brokers and owners in the same building.";
   }
   el.innerHTML = html;
   el.hidden = false;
@@ -733,7 +742,7 @@ function profileForm(profile, submitLabel) {
   return `
     <form id="profile-form">
       <label class="field"><span>Your name</span><input id="pf-name" required maxlength="60" autocomplete="name" value="${esc(profile && profile.name)}"></label>
-      <label class="field"><span>Mobile number (for calls and WhatsApp)</span><input id="pf-phone" required inputmode="tel" autocomplete="tel" placeholder="98765 43210" value="${esc(profile && profile.phone ? "+" + profile.phone : "")}"></label>
+      <label class="field"><span>Mobile number with country code (for calls and WhatsApp)</span><input id="pf-phone" required inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210 or +971 50 123 4567" value="${esc(profile && profile.phone ? "+" + profile.phone : "")}"></label>
       <button class="btn primary" style="width:100%" id="pf-save">${esc(submitLabel)}</button>
       <p class="error" id="pf-err" hidden></p>
     </form>`;
@@ -768,7 +777,7 @@ function renderAccount() {
   const mine = S.posts.filter((p) => p.mine);
   const prof = S.me.profile || {};
   $("#sheet-body").innerHTML = `
-    <p class="muted">Signed in as <b>${esc(S.me.email)}</b>${prof.rera_number ? `<br>Broker RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
+    <p class="muted">Signed in as <b>${esc(S.me.email)}</b>${prof.rera_number ? `<br>Broker licence / RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
     ${profileForm(prof, "Save details")}
     <div class="section-title">Your posts</div>
     ${mine.length ? mine.map((p) => `
@@ -807,7 +816,7 @@ function openComposer() {
   if (!S.chat.length) {
     const intro = document.createElement("div");
     intro.className = "bubble ai";
-    intro.innerHTML = `Tell me what you want to post, in your own words. Always include the <b>location</b> (building, sector and city). Brokers, please add your <b>RERA number</b>, otherwise the post shows as Landlord.<br><br>Tap an example and fill in the brackets:`;
+    intro.innerHTML = `Tell me what you want to post, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world. Brokers, please add your <b>licence / RERA number</b>, otherwise the post shows as Landlord.<br><br>Tap an example and fill in the brackets:`;
     log.appendChild(intro);
     const ex = document.createElement("div");
     ex.className = "examples";
