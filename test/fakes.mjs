@@ -30,8 +30,8 @@ export function memoryStore() {
 export function scriptedAI() {
   const queue = [];
   return {
-    queue, calls: [],
-    async converse(messages) { this.calls.push(messages); return queue.shift() || { text: "ok", proposal: null }; }
+    queue, calls: [], roles: [],
+    async converse(messages, opts = {}) { this.calls.push(messages); this.roles.push(opts.role); return queue.shift() || { text: "ok", proposal: null }; }
   };
 }
 

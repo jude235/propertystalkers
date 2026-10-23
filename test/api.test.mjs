@@ -22,7 +22,13 @@ function setup() {
     assert.equal(r.status, 200);
     return u;
   }
+  async function setRole(u, role, extra = {}) {
+    return call("POST", "/me/role", { token: u.token, body: { role, ...extra } });
+  }
   async function post(u, proposal, photos = []) {
+    const role = proposal.poster_type === "broker" && !proposal.rera_number ? "landlord" : proposal.poster_type;
+    const rr = await setRole(u, role, { licence: proposal.rera_number, company: proposal.company });
+    assert.equal(rr.status, 200, JSON.stringify(rr.body));
     ai.queue.push({ text: "Here's your draft.", proposal });
     const c = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "post it" }] } });
     assert.equal(c.body.type, "draft", JSON.stringify(c.body));
@@ -31,7 +37,7 @@ function setup() {
     return p.body.post;
   }
   const feed = async (u) => (await call("GET", "/feed", { token: u && u.token })).body;
-  return { store, ai, call, person, post, feed };
+  return { store, ai, call, person, post, feed, setRole };
 }
 
 const landlordSale = { poster_type: "landlord", deal: "sale", property_type: "apartment", bedrooms: 3, price: 15000000,
@@ -166,9 +172,12 @@ test("chat: plain replies, profile required, ungeocodable location, drafts are p
   assert.equal((await call("POST", "/chat", { body: { messages: [] } })).status, 401);
 
   const u = await person("u@x.in");
+  assert.equal((await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "hi" }] } })).body.error, "role_required");
+  await call("POST", "/me/role", { token: u.token, body: { role: "landlord" } });
   ai.queue.push({ text: "Which city is it in?", proposal: null });
   const r1 = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "selling 3bhk in skyview" }] } });
   assert.deepEqual(r1.body, { type: "message", text: "Which city is it in?" });
+  assert.equal(ai.roles[ai.roles.length - 1], "landlord");
 
   ai.queue.push({ text: "", proposal: { ...landlordSale, building: "Nowhere Towers", locality: "Sector 999", city: "Atlantis" } });
   const r2 = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
@@ -215,12 +224,56 @@ test("removing posts: owner and admin only", async () => {
 });
 
 test("rate limits", async () => {
-  const { call, person, ai } = setup();
+  const { call, person, ai, setRole } = setup();
   const u = await person("r@x.in");
+  await setRole(u, "buyer");
   for (let i = 0; i < 40; i++) {
     ai.queue.push({ text: "?", proposal: null });
     await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "hi" }] } });
   }
   const r = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "hi" }] } });
   assert.equal(r.status, 429);
+});
+
+test("roles: choose, validate, switch", async () => {
+  const { call, person, post, feed, setRole, ai } = setup();
+  const u = await person("roles@x.in");
+  assert.equal((await setRole(u, "astronaut")).status, 400);
+  assert.equal((await setRole(u, "broker")).status, 400);                 // licence required
+  assert.equal((await setRole(u, "developer")).status, 400);              // company required
+  const b = await setRole(u, "broker", { licence: "BRN 12345" });
+  assert.equal(b.status, 200);
+  assert.deepEqual(b.body.access, { requests: true });
+  const buyer = await person("b@x.in");
+  await post(buyer, buyerReq);
+  assert.equal((await feed(u)).posts.filter((p) => p.kind === "request").length, 1);
+  // switching away from broker hides requests
+  const s2 = await setRole(u, "buyer");
+  assert.deepEqual(s2.body.access, { requests: false });
+  assert.equal((await feed(u)).posts.filter((p) => p.kind === "request").length, 0);
+  // the chosen role overrides whatever the AI guessed
+  await setRole(u, "landlord");
+  ai.queue.push({ text: "", proposal: { ...landlordSale, poster_type: "buyer" } });
+  const r = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
+  assert.equal(r.body.draft.poster_type, "landlord");
+});
+
+test("developer form creates a draft without the AI", async () => {
+  const { call, person, setRole, ai } = setup();
+  const d = await person("form@x.in");
+  await setRole(d, "developer", { company: "Sample Developers" });
+  const r = await call("POST", "/draft", { token: d.token, body: {
+    company: "Sample Developers", project: "Skyview", area: "Sector 7", city: "Gurugram", rera: "RC/REP/HARERA/GGM/2026/09",
+    property_type: "apartment", configs: "2, 3 & 4 BHK", bedrooms: 2, price: 21000000, currency: "INR", possession: "Mar 2029",
+    description: "Tower with sky deck." } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.draft.poster_type, "developer");
+  assert.equal(r.body.draft.configs, "2, 3 & 4 BHK");
+  assert.equal(r.body.draft.possession, "Mar 2029");
+  assert.equal(ai.calls.length, 0);
+  const p = await call("POST", "/posts", { token: d.token, body: { draftId: r.body.draft.id } });
+  assert.equal(p.body.post.configs, "2, 3 & 4 BHK");
+  const bad = await call("POST", "/draft", { token: d.token, body: { company: "X", project: "Nowhere", area: "Sector 999", city: "Atlantis" } });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /couldn't find/);
 });
