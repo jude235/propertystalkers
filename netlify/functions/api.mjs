@@ -4,7 +4,14 @@ import { makeStore } from "../lib/db.mjs";
 import { makeAI } from "../lib/ai.mjs";
 import { makeGeo } from "../lib/geo.mjs";
 
-const env = process.env;
+// Tidy pasted values: trim spaces and stray quote marks, and make sure the
+// Supabase address is a full https:// URL without a trailing slash.
+const tidy = (v) => (v || "").trim().replace(/^["']+|["']+$/g, "").trim();
+const env = Object.fromEntries(Object.entries(process.env).map(([k, v]) => [k, tidy(v)]));
+if (env.SUPABASE_URL) {
+  if (!/^https?:\/\//i.test(env.SUPABASE_URL)) env.SUPABASE_URL = "https://" + env.SUPABASE_URL;
+  env.SUPABASE_URL = env.SUPABASE_URL.replace(/\/+$/, "");
+}
 let deps;
 
 function getDeps() {
