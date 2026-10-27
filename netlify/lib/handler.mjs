@@ -77,11 +77,24 @@ export async function handle(req, deps) {
     }
     if (path === "/me" && method === "POST") {
       const body = await readJson(req);
+      const existing = await store.getProfile(user.id);
       const name = clean(body.name, 60);
       const phone = cleanPhone(body.phone);
+      const email = String(body.email || user.email || "").trim().toLowerCase().slice(0, 120);
       if (!name || name.length < 2) return json({ error: "Please enter your name." }, 400);
-      if (!phone) return json({ error: "Please enter a valid mobile number." }, 400);
-      const profile = await store.upsertProfile({ id: user.id, email: user.email, name, phone });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Please enter a valid email address." }, 400);
+      if (!phone) return json({ error: "Please enter a valid mobile number with country code." }, 400);
+      const update = { id: user.id, email, name, phone };
+      if (body.rera !== undefined) {
+        const raw = String(body.rera || "").trim();
+        const rera = raw ? cleanRera(raw) : null;
+        if (raw && !rera) return json({ error: "That licence / RERA number doesn't look right. Please check it, or leave it empty." }, 400);
+        if (!rera && existing && existing.role === "broker") {
+          return json({ error: "Brokers need a licence / RERA number. Add it, or switch role first." }, 400);
+        }
+        update.rera_number = rera;
+      }
+      const profile = await store.upsertProfile(update);
       return json({ profile });
     }
 
@@ -90,7 +103,7 @@ export async function handle(req, deps) {
       const body = await readJson(req);
       const role = String(body.role || "").toLowerCase();
       if (!POSTER_TYPES.includes(role)) return json({ error: "Please choose how you'll use Property Stalkers." }, 400);
-      const update = { id: user.id, email: user.email, role };
+      const update = { id: user.id, role };
       if (role === "broker") {
         const licence = cleanRera(body.licence);
         if (!licence) return json({ error: "Please enter your broker licence / RERA number." }, 400);
@@ -107,7 +120,7 @@ export async function handle(req, deps) {
     }
 
     const profile = await store.getProfile(user.id);
-    const needsProfile = !profile || !profile.name || !profile.phone;
+    const needsProfile = !profile || !profile.name || !profile.phone || !profile.email;
 
     /** Validate, place on the map and save a draft for the user to confirm. */
     async function makeDraft(proposal) {
