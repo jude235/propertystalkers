@@ -310,3 +310,31 @@ test("editing: owner can change price, details, photos and location; others can'
   assert.equal(seen.price, 14500000);
   assert.equal(seen.lat, 28.48);
 });
+
+test("profile: email and mobile required, licence optional and checked", async () => {
+  const { call, store } = setup();
+  const u = store.addUser("p@x.in");
+  const phoneUser = { ...store.addUser("ph@x.in") };
+  store._users.get(phoneUser.token).email = null; // signed in with a mobile number
+  let r = await call("POST", "/me", { token: phoneUser.token, body: { name: "Asha", phone: "+971501234567" } });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /email/);
+  r = await call("POST", "/me", { token: phoneUser.token, body: { name: "Asha", phone: "+971501234567", email: "asha@x.ae" } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.profile.email, "asha@x.ae");
+  r = await call("POST", "/me", { token: u.token, body: { name: "Ravi", phone: "", email: "p@x.in" } });
+  assert.equal(r.status, 400);
+  r = await call("POST", "/me", { token: u.token, body: { name: "Ravi", phone: "+919876543210", rera: "!!" } });
+  assert.equal(r.status, 400);
+  r = await call("POST", "/me", { token: u.token, body: { name: "Ravi", phone: "+919876543210", rera: "BRN 12345" } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.profile.email, "p@x.in");
+  assert.ok(r.body.profile.rera_number);
+  // switching role keeps the contact email
+  await call("POST", "/me/role", { token: phoneUser.token, body: { role: "landlord" } });
+  assert.equal((await call("GET", "/me", { token: phoneUser.token })).body.profile.email, "asha@x.ae");
+  // a broker can't clear their licence
+  await call("POST", "/me/role", { token: u.token, body: { role: "broker", licence: "BRN 12345" } });
+  r = await call("POST", "/me", { token: u.token, body: { name: "Ravi", phone: "+919876543210", rera: "" } });
+  assert.equal(r.status, 400);
+});
