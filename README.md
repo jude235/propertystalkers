@@ -74,7 +74,11 @@ You'll create four free accounts, copy some keys, and paste them into Netlify.
 1. Create a free account at github.com and a new **private** repository called `propertystalkers`.
 2. Click **uploading an existing file** and drag in everything from this folder, **except** `node_modules` if it's there. Click **Commit changes**.
 
-### 5. Netlify (runs the site)
+### 5. Hosting
+
+The live site now runs on **Cloudflare Pages** (free plan, no per-update credits). The server code is in `functions/api/[[path]].js`, which reuses `netlify/lib/`. Netlify instructions below are kept for reference.
+
+### 5a. Netlify (old host)
 
 1. At netlify.com, choose **Add new site > Import an existing project > GitHub** and pick `propertystalkers`. Netlify reads the settings from `netlify.toml`, so leave the build settings as they are.
 2. Before deploying, open **Environment variables** and add:
