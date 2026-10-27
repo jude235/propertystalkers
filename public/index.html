@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Property Stalkers | Properties and requests on the map</title>
 <meta name="description" content="Search properties and new projects for sale and rent on one map, anywhere in the world. Post your own listing in plain words.">
 <meta name="theme-color" content="#0f3b2e">
@@ -34,7 +34,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--soft); color: var(--ink);
     font-family: Jost, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
-  button, input, textarea { font: inherit; color: inherit; }
+  button, input, textarea, select { font: inherit; color: inherit; }
   #map-wrap { position: fixed; inset: 0; }
   #map { width: 100%; height: 100%; background: #e9e2d3; }
 
@@ -47,7 +47,8 @@
   .row { display: flex; align-items: center; gap: 12px; }
   .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
   .brand-mark { width: 30px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; }
-  .brand-name { font-family: var(--serif); font-size: clamp(14px, 4.3vw, 19px); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-name { font-family: var(--sans, 'Jost', sans-serif); font-weight: 500; font-size: clamp(18px, 5.2vw, 22px); letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; }
+  .brand-name span { color: #d6ad6e; }
   .account { border: 1px solid rgba(243, 235, 221, .5); cursor: pointer; background: transparent; color: var(--brand-ink);
     height: 38px; min-width: 38px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; flex: 0 0 auto; }
   .account.avatar-btn { padding: 0; width: 38px; background: var(--brass); border-color: var(--brass); color: var(--brand); font-weight: 500; }
@@ -274,7 +275,19 @@
   .draft dd { margin: 0; font-weight: 500; }
   .note { background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; padding: 8px 10px; border-radius: 10px; margin: 0 0 10px; }
   .photo-pick { display: block; border: 1px dashed var(--brass); border-radius: 12px; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: var(--brass-ink); cursor: pointer; margin-bottom: 10px; }
-  .photo-pick input { display: none; }
+  .photo-pick { position: relative; overflow: hidden; }
+  .photo-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; font-size: 0; }
+  .edit-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
+  .edit-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .edit-thumbs .et { position: relative; }
+  .edit-thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; display: block; }
+  .edit-thumbs button { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: #9b2c1f; color: #fff; font-size: 16px; line-height: 24px; cursor: pointer; }
+  .seg { display: flex; gap: 8px; }
+  .segb { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: #fffdf8; cursor: pointer; font-weight: 500; }
+  .segb[aria-pressed="true"] { border: 2px solid var(--brass); background: #fff8ea; padding: 9px; }
+  .otp-input { letter-spacing: .4em; font-size: 22px !important; text-align: center; }
+  .tabs2 { display: flex; gap: 6px; margin-bottom: 14px; }
+  @media (max-width: 759px) { input, select, textarea, .field input, .field select, .field textarea, .composer textarea, .search input { font-size: 16px !important; } }
   .thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
   .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); padding-bottom: calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
@@ -320,7 +333,7 @@
         <div class="brand-mark" aria-hidden="true">
           <svg width="30" height="34" viewBox="0 0 24 27"><path d="M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z" fill="#b8894a"/><path d="M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z" fill="#0f3b2e"/><circle cx="12" cy="10.4" r="2.6" fill="#b8894a"/><circle cx="12.9" cy="9.5" r=".8" fill="#f3ebdd"/></svg>
         </div>
-        <div class="brand-name">Property Stalkers</div>
+        <div class="brand-name">property<span>stalkers</span></div>
       </div>
       <button class="account" id="account">Sign in</button>
     </div>
@@ -628,7 +641,7 @@ async function refreshMe() {
   const b = $("#account");
   if (S.me) {
     b.className = "account avatar-btn";
-    b.textContent = initials((S.me.profile && S.me.profile.name) || S.me.email);
+    b.textContent = initials((S.me.profile && S.me.profile.name) || S.me.email || "Me");
     b.setAttribute("aria-label", "Your account");
   } else {
     b.className = "account";
@@ -826,6 +839,7 @@ function openDetails(id, opts = {}) {
         </div>`}
       </div>
       ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.</p>` : ""}
+      ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
       ${p.removable ? `<button class="link-btn" id="remove-post">${p.mine ? "Remove my post" : "Remove post (admin)"}</button>` : ""}
     </div>`;
 
@@ -835,6 +849,8 @@ function openDetails(id, opts = {}) {
   }, { passive: true });
   const rm = $("#remove-post");
   if (rm) rm.addEventListener("click", () => removePost(p.id));
+  const ed = $("#edit-post");
+  if (ed) ed.addEventListener("click", () => openEditForm(p.id));
 
   panel.scrollTop = 0;
   panel.classList.add("open");
@@ -867,6 +883,112 @@ async function removePost(id) {
     await loadFeed();
     if ($("#sheet").classList.contains("open") && $("#sheet").dataset.view === "account") renderAccount();
   } catch (e) { toast(e.message); }
+}
+
+/* ---------------- edit your own post ---------------- */
+const TYPE_OPTS = [["apartment", "Apartment"], ["villa", "Villa / townhouse"], ["independent_house", "Independent house"], ["plot", "Plot"], ["office", "Office"], ["shop", "Shop / retail"], ["other", "Other"]];
+
+function openEditForm(id) {
+  const p = S.posts.find((x) => x.id === id);
+  if (!p) return;
+  const isReq = p.kind === "request", dev = isDev(p);
+  const E = { photos: [...(p.photos || [])], files: [] };
+  openSheet("edit", "Edit your post");
+  $("#sheet-body").innerHTML = `
+    <form id="edit-form" novalidate>
+      <p class="muted">Change anything below and save. Your post updates on the map straight away.</p>
+      ${!isReq && !dev ? `<div class="field"><span>Listing for</span><div class="seg">
+        <button type="button" class="segb" data-deal="sale" aria-pressed="${p.deal !== "rent"}">Sale</button>
+        <button type="button" class="segb" data-deal="rent" aria-pressed="${p.deal === "rent"}">Rent</button></div></div>` : ""}
+      ${dev ? `<label class="field"><span>Project name</span><input id="e-building" value="${esc(p.building)}"></label>
+        <label class="field"><span>Developer company</span><input id="e-company" value="${esc(p.company)}"></label>` : ""}
+      <div class="grid2">
+        <label class="field"><span>Property type</span><select id="e-type">${TYPE_OPTS.map(([v, l]) => `<option value="${v}"${p.property_type === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        ${dev ? `<label class="field"><span>Configurations</span><input id="e-configs" value="${esc(p.configs)}" placeholder="e.g. 2, 3 & 4 BHK"></label>`
+              : `<label class="field"><span>Bedrooms</span><input id="e-bedrooms" inputmode="numeric" value="${esc(p.bedrooms ?? "")}" placeholder="e.g. 3"></label>`}
+      </div>
+      <div class="field"><span>${isReq ? "Budget" : dev ? "Starting price" : p.deal === "rent" ? "Rent per month" : "Price"}</span>
+        <div class="price-row">
+          <input id="e-price" inputmode="numeric" value="${esc(p.price ? Number(p.price).toLocaleString("en-US") : "")}">
+          <select id="e-currency">${CURRENCIES.map((c) => `<option${(p.currency || "INR") === c ? " selected" : ""}>${c}</option>`).join("")}</select>
+        </div>
+      </div>
+      ${dev ? `<div class="grid2"><label class="field"><span>Possession</span><input id="e-possession" value="${esc(p.possession)}" placeholder="e.g. Dec 2027"></label>
+        <label class="field"><span>Project RERA</span><input id="e-rera" value="${esc(p.rera_number)}"></label></div>` : ""}
+      ${p.poster_type === "broker" ? `<label class="field"><span>Your licence / RERA number</span><input id="e-rera" value="${esc(p.rera_number)}"></label>` : ""}
+      <div class="form-section">Location</div>
+      ${dev ? "" : `<label class="field"><span>Building or project <span class="opt">(optional)</span></span><input id="e-building" value="${esc(p.building)}"></label>`}
+      <label class="field"><span>Area, sector or community</span><input id="e-locality" value="${esc(p.locality)}"></label>
+      <div class="grid2">
+        <label class="field"><span>City</span><input id="e-city" value="${esc(p.city)}"></label>
+        <label class="field"><span>Country <span class="opt">(optional)</span></span><input id="e-country" value="${esc(p.country)}"></label>
+      </div>
+      <label class="field"><span>Description <span class="opt">(optional)</span></span><textarea id="e-desc" maxlength="400">${esc(p.description)}</textarea></label>
+      ${isReq ? "" : `<div class="form-section">Photos</div>
+        <div class="edit-thumbs" id="e-thumbs"></div>
+        <label class="photo-pick">Add photos (up to 8 in total)<input type="file" id="e-files" accept="image/jpeg,image/png,image/webp" multiple></label>`}
+      <button class="btn primary" style="width:100%" id="e-save">Save changes</button>
+      <p class="error" id="e-err" hidden></p>
+    </form>`;
+  let deal = p.deal;
+  document.querySelectorAll(".segb").forEach((b) => b.addEventListener("click", () => {
+    deal = b.dataset.deal;
+    document.querySelectorAll(".segb").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+  const drawThumbs = () => {
+    const box = $("#e-thumbs"); if (!box) return;
+    box.innerHTML = [...E.photos.map((u, i) => ({ src: u, kind: "old", i })), ...E.files.map((f, i) => ({ src: URL.createObjectURL(f), kind: "new", i }))]
+      .map((t) => `<div class="et"><img src="${esc(t.src)}" alt=""><button type="button" aria-label="Remove photo" data-k="${t.kind}" data-i="${t.i}">&times;</button></div>`).join("")
+      || `<p class="muted" style="margin:0 0 10px">No photos yet.</p>`;
+    box.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+      (b.dataset.k === "old" ? E.photos : E.files).splice(Number(b.dataset.i), 1); drawThumbs();
+    }));
+  };
+  drawThumbs();
+  const fi = $("#e-files");
+  if (fi) fi.addEventListener("change", () => {
+    const room = 8 - E.photos.length - E.files.length;
+    E.files.push(...[...fi.files].slice(0, Math.max(0, room)));
+    if (fi.files.length > room) toast("A post can have up to 8 photos.");
+    fi.value = ""; drawThumbs();
+  });
+  $("#edit-form").addEventListener("input", () => { $("#e-err").hidden = true; });
+  $("#edit-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const val = (id) => { const el = $(id); return el ? el.value.trim() : undefined; };
+    const err = $("#e-err"), btn = $("#e-save");
+    const price = Number(String(val("#e-price") || "").replace(/[^0-9.]/g, ""));
+    if (!val("#e-city")) { err.hidden = false; err.textContent = "Please add the city."; return; }
+    if (!val("#e-locality") && !val("#e-building")) { err.hidden = false; err.textContent = "Please add the area or building."; return; }
+    btn.disabled = true;
+    try {
+      const urls = [...E.photos];
+      for (let i = 0; i < E.files.length; i++) {
+        btn.textContent = `Uploading photo ${i + 1} of ${E.files.length}…`;
+        urls.push(await uploadPhoto(E.files[i]));
+      }
+      btn.textContent = "Saving…";
+      const body = {
+        deal, property_type: val("#e-type"), price: price ? Math.round(price) : null, currency: val("#e-currency"),
+        building: val("#e-building"), locality: val("#e-locality"), city: val("#e-city"), country: val("#e-country"),
+        description: val("#e-desc")
+      };
+      if ($("#e-bedrooms")) body.bedrooms = val("#e-bedrooms") ? Number(val("#e-bedrooms").replace(/\D/g, "")) : null;
+      if ($("#e-configs")) body.configs = val("#e-configs");
+      if ($("#e-company")) body.company = val("#e-company");
+      if ($("#e-possession")) body.possession = val("#e-possession");
+      if ($("#e-rera")) body.rera_number = val("#e-rera");
+      if (!isReq) body.photos = urls;
+      await api("/posts/" + p.id, { method: "PATCH", body: JSON.stringify(body) });
+      closeSheet();
+      toast("Changes saved.");
+      await loadFeed();
+      openDetails(p.id, { pan: true });
+    } catch (ex) {
+      btn.disabled = false; btn.textContent = "Save changes";
+      err.hidden = false; err.textContent = ex.message;
+    }
+  });
 }
 
 /* ---------------- list of properties in view ---------------- */
@@ -1010,6 +1132,21 @@ function openSheet(view, title) {
   sheet.setAttribute("aria-hidden", "false");
   $("#backdrop").classList.add("open");
 }
+if (window.visualViewport) {
+  const fitSheet = () => {
+    const vv = window.visualViewport;
+    const kb = window.innerHeight - vv.height - vv.offsetTop;
+    if (window.innerWidth < 760 && kb > 80) { sheet.style.height = Math.round(vv.height - 6) + "px"; sheet.style.bottom = Math.round(kb) + "px"; }
+    else { sheet.style.height = ""; sheet.style.bottom = ""; }
+  };
+  window.visualViewport.addEventListener("resize", fitSheet);
+  window.visualViewport.addEventListener("scroll", fitSheet);
+}
+document.addEventListener("focusin", (e) => {
+  if (window.innerWidth < 760 && e.target.matches && e.target.matches("#sheet input, #sheet textarea, #sheet select")) {
+    setTimeout(() => { try { e.target.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (x) {} }, 350);
+  }
+});
 function closeSheet() {
   sheet.classList.remove("open");
   sheet.setAttribute("aria-hidden", "true");
@@ -1201,41 +1338,98 @@ async function authProviders() {
 
 const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
 
-function renderSignIn(reason) {
+function renderSignIn(reason, mode) {
   openSheet("signin", "Sign in");
+  mode = mode || "email";
   $("#sheet-body").innerHTML = `
     <p class="muted">${esc(reason || "Sign in to list a property, a project or what you're looking for.")} You'll stay signed in on this device.</p>
     <div id="oauth" class="oauth"></div>
-    <form id="signin-form">
-      <label class="field"><span>Email (we'll send you a sign-in link, no password needed)</span><input type="email" id="email" required autocomplete="email" placeholder="you@example.com"></label>
-      <button class="btn accent" style="width:100%" id="signin-btn">Email me a sign-in link</button>
+    <div class="tabs2" id="auth-tabs" hidden>
+      <button type="button" class="segb" data-m="email" aria-pressed="${mode === "email"}">Email</button>
+      <button type="button" class="segb" data-m="phone" aria-pressed="${mode === "phone"}">Mobile number</button>
+    </div>
+    <form id="signin-form" novalidate>
+      ${mode === "phone"
+        ? `<label class="field"><span>Mobile number with country code</span><input type="tel" id="ident" inputmode="tel" autocomplete="tel" placeholder="+971 50 123 4567"></label>`
+        : `<label class="field"><span>Email</span><input type="email" id="ident" autocomplete="email" placeholder="you@example.com"></label>`}
+      <button class="btn accent" style="width:100%" id="signin-btn">Send me a code</button>
       <p class="error" id="signin-err" hidden></p>
     </form>`;
   authProviders().then((pv) => {
     const box = $("#oauth");
-    if (!box || !pv.google) return;
-    box.innerHTML = `<button class="btn oauth-btn" id="google-btn" type="button">${GOOGLE_G}<span>Continue with Google</span></button><div class="or"><span>or</span></div>`;
-    $("#google-btn").addEventListener("click", async () => {
-      const { error } = await S.sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
-      if (error) { const err = $("#signin-err"); err.hidden = false; err.textContent = "Google sign-in isn't available right now. Please use your email."; }
-    });
+    if (box && pv.google) {
+      box.innerHTML = `<button class="btn oauth-btn" id="google-btn" type="button">${GOOGLE_G}<span>Continue with Google</span></button><div class="or"><span>or</span></div>`;
+      $("#google-btn").addEventListener("click", async () => {
+        const { error } = await S.sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+        if (error) { const err = $("#signin-err"); err.hidden = false; err.textContent = "Google sign-in isn't available right now. Please use your email."; }
+      });
+    }
+    const tabs = $("#auth-tabs");
+    if (tabs && pv.phone) {
+      tabs.hidden = false;
+      tabs.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => renderSignIn(reason, b.dataset.m)));
+    }
   });
   $("#signin-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = $("#email").value.trim();
+    const raw = $("#ident").value.trim();
+    const err = $("#signin-err");
+    let ident;
+    if (mode === "phone") {
+      const digits = raw.replace(/[^0-9]/g, "");
+      if (digits.length < 8) { err.hidden = false; err.textContent = "Please enter your mobile number with country code, e.g. +971 50 123 4567."; return; }
+      ident = { phone: "+" + digits };
+    } else {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) { err.hidden = false; err.textContent = "Please enter a valid email address."; return; }
+      ident = { email: raw };
+    }
     const btn = $("#signin-btn");
     btn.disabled = true; btn.textContent = "Sending…";
-    const { error } = await S.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+    const { error } = await S.sb.auth.signInWithOtp({ ...ident, options: mode === "email" ? { emailRedirectTo: location.origin + location.pathname } : {} });
     if (error) {
-      btn.disabled = false; btn.textContent = "Email me a sign-in link";
-      const err = $("#signin-err"); err.hidden = false;
-      err.textContent = /rate|seconds/i.test(error.message) ? "Please wait a minute before asking for another link." : "Couldn't send the email. Please check the address and try again.";
+      btn.disabled = false; btn.textContent = "Send me a code";
+      err.hidden = false;
+      err.textContent = /rate|seconds/i.test(error.message) ? "Please wait a minute before asking for another code."
+        : mode === "phone" ? "Couldn't send a text to that number. Please check it, or sign in with email." : "Couldn't send the email. Please check the address and try again.";
       return;
     }
-    $("#sheet-body").innerHTML = `
-      <h3 style="margin:4px 0 8px">Check your email</h3>
-      <p class="muted">We sent a sign-in link to <b>${esc(email)}</b>. Open it on this phone or computer and you'll come straight back here, signed in.</p>
-      <p class="muted">Can't see it? Check your spam folder.</p>`;
+    renderCodeEntry(ident, mode, reason);
+  });
+}
+
+function renderCodeEntry(ident, mode, reason) {
+  const where = ident.email || ident.phone;
+  $("#sheet-body").innerHTML = `
+    <h3 style="margin:4px 0 8px">Enter your code</h3>
+    <p class="muted">We sent a code to <b>${esc(where)}</b>.${mode === "email" ? " The email also has a sign-in link you can tap instead. Can't see it? Check your spam folder." : ""}</p>
+    <form id="code-form" novalidate>
+      <label class="field"><span>Code</span><input id="otp" class="otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></label>
+      <button class="btn primary" style="width:100%" id="code-btn">Sign in</button>
+      <p class="error" id="code-err" hidden></p>
+    </form>
+    <button class="link-btn" style="color:var(--brand)" id="code-back">Use a different ${mode === "phone" ? "number" : "email"} or send again</button>`;
+  const otp = $("#otp");
+  otp.focus();
+  otp.addEventListener("input", () => {
+    otp.value = otp.value.replace(/\D/g, "");
+    $("#code-err").hidden = true;
+    if (otp.value.length >= 6 && otp.value.length === Number(otp.dataset.len || 6)) $("#code-form").requestSubmit();
+  });
+  $("#code-back").addEventListener("click", () => renderSignIn(reason, mode));
+  $("#code-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const token = otp.value.trim();
+    const err = $("#code-err");
+    if (token.length < 6) { err.hidden = false; err.textContent = "Please enter the code from the " + (mode === "phone" ? "text message." : "email."); return; }
+    const btn = $("#code-btn"); btn.disabled = true; btn.textContent = "Checking…";
+    const { error } = await S.sb.auth.verifyOtp({ ...ident, token, type: mode === "phone" ? "sms" : "email" });
+    if (error) {
+      btn.disabled = false; btn.textContent = "Sign in";
+      err.hidden = false; err.textContent = /expired/i.test(error.message) ? "That code has expired. Tap below to get a new one." : "That code isn't right. Please check it and try again.";
+      return;
+    }
+    closeSheet();
+    toast("You're signed in.");
   });
 }
 
@@ -1278,7 +1472,7 @@ function renderAccount() {
   const mine = S.posts.filter((p) => p.mine);
   const prof = S.me.profile || {};
   $("#sheet-body").innerHTML = `
-    <p class="muted">Signed in as <b>${esc(S.me.email)}</b>${prof.rera_number && prof.role === "broker" ? `<br>Broker licence / RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
+    <p class="muted">Signed in as <b>${esc(S.me.email || (S.me.phone ? "+" + String(S.me.phone).replace(/^\+/, "") : ""))}</b>${prof.rera_number && prof.role === "broker" ? `<br>Broker licence / RERA: <b>${esc(prof.rera_number)}</b>` : ""}${S.me.isAdmin ? "<br><b>Admin</b>: you can see and remove every post." : ""}</p>
     <div class="my-post" style="border-top:1px solid var(--line);margin-bottom:16px">
       <div><b>Posting as ${esc(prof.role ? ROLES[prof.role].label : "—")}</b><small>${prof.role ? esc(ROLES[prof.role].desc) : "Choose how you'll use Property Stalkers"}</small></div>
       <button class="btn" id="switch-role">${prof.role ? "Switch" : "Choose"}</button>
@@ -1289,6 +1483,7 @@ function renderAccount() {
       <div class="my-post">
         <div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))} · ${esc(ago(p.created_at))}</small></div>
         <button class="btn" data-view="${esc(p.id)}">View</button>
+        <button class="btn" data-edit="${esc(p.id)}">Edit</button>
         <button class="btn" data-remove="${esc(p.id)}">Remove</button>
       </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
     <button class="btn" style="width:100%;margin-top:24px" id="signout">Sign out</button>`;
@@ -1296,6 +1491,7 @@ function renderAccount() {
   $("#switch-role").addEventListener("click", () => renderRolePicker(true));
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
   document.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
+  document.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit)));
   $("#signout").addEventListener("click", async () => {
     await S.sb.auth.signOut();
     S.session = null; S.userId = null; S.chat = []; S.draft = null;
