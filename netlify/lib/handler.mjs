@@ -73,7 +73,7 @@ export async function handle(req, deps) {
     /* ---------- profile ---------- */
     if (path === "/me" && method === "GET") {
       const { viewer, profile } = await loadViewer();
-      return json({ email: user.email, profile, isAdmin, access: accessSummary(viewer) });
+      return json({ email: user.email || null, phone: user.phone || null, profile, isAdmin, access: accessSummary(viewer) });
     }
     if (path === "/me" && method === "POST") {
       const body = await readJson(req);
@@ -211,6 +211,46 @@ export async function handle(req, deps) {
       }
       const { viewer } = await loadViewer();
       return json({ post: toPublic(post, viewer) });
+    }
+
+    /* ---------- edit your own post ---------- */
+    const edit = path.match(/^\/posts\/([^/]+)$/);
+    if (edit && method === "PATCH") {
+      if (!isUuid(edit[1])) return json({ error: "Not found" }, 404);
+      const post = await store.getPost(edit[1]);
+      if (!post || post.status !== "active") return json({ error: "Not found" }, 404);
+      if (post.user_id !== user.id && !isAdmin) return json({ error: "You can only edit your own posts." }, 403);
+      const b = await readJson(req);
+      const pick = (k) => (b[k] === undefined ? post[k] : b[k]);
+      const v = validateProposal({
+        poster_type: post.poster_type, deal: pick("deal"), property_type: pick("property_type"), bedrooms: pick("bedrooms"),
+        price: pick("price"), currency: pick("currency"), building: pick("building"), locality: pick("locality"),
+        city: pick("city"), country: pick("country"), rera_number: pick("rera_number"), company: pick("company"),
+        possession: pick("possession"), configs: pick("configs"), description: pick("description")
+      });
+      if (!v.ok) return json({ error: v.ask }, 400);
+      const { notes, kind, poster_type, ...fields } = v.post;
+      // A broker who clears the licence number isn't turned into a landlord on edit; keep their old number.
+      if (post.poster_type === "broker" && !fields.rera_number) fields.rera_number = post.rera_number;
+      const norm = (x) => String(x || "").trim().toLowerCase();
+      const moved = ["building", "locality", "city", "country"].some((k) => norm(fields[k]) !== norm(post[k]));
+      if (moved) {
+        const place = await geo.locate(fields);
+        if (!place) {
+          const where = [fields.building, fields.locality, fields.city].filter(Boolean).join(", ");
+          return json({ error: `Couldn't find "${where}" on the map. Check the spelling or add the area name.` }, 400);
+        }
+        Object.assign(fields, place, { building_key: buildingKey(fields.building, fields.city) });
+      }
+      if (post.kind === "listing" && Array.isArray(b.photos)) {
+        const prefix = `${env.SUPABASE_URL}/storage/v1/object/public/photos/${post.user_id}/`;
+        fields.photos = b.photos
+          .filter((u) => typeof u === "string" && u.startsWith(prefix) && !u.includes("..") && u.length < 400)
+          .slice(0, LIMITS.maxPhotos);
+      }
+      const updated = await store.updatePost(post.id, fields);
+      const { viewer } = await loadViewer();
+      return json({ post: toPublic(updated, viewer) });
     }
 
     /* ---------- remove a post ---------- */

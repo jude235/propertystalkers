@@ -13,7 +13,7 @@ export function makeStore({ url, serviceKey }) {
       if (!token) return null;
       const { data, error } = await sb.auth.getUser(token);
       if (error || !data || !data.user) return null;
-      return { id: data.user.id, email: data.user.email };
+      return { id: data.user.id, email: data.user.email || null, phone: data.user.phone || null };
     },
     async getProfile(id) {
       return must(await sb.from("profiles").select("*").eq("id", id).maybeSingle());
@@ -33,6 +33,9 @@ export function makeStore({ url, serviceKey }) {
     },
     async createPost(post) {
       return must(await sb.from("posts").insert(post).select().single());
+    },
+    async updatePost(id, patch) {
+      return must(await sb.from("posts").update(patch).eq("id", id).select().single());
     },
     async setPostStatus(id, status) {
       must(await sb.from("posts").update({ status }).eq("id", id));
