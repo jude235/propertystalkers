@@ -1450,7 +1450,7 @@ function renderCodeEntry(ident, mode, reason) {
     catch (ex) { error = { message: "network" }; }
     if (error) {
       btn.disabled = false; btn.textContent = "Sign in";
-      err.hidden = false; err.textContent = /expired/i.test(error.message) ? "That code has expired. Tap below to get a new one."
+      err.hidden = false; err.textContent = /expired|invalid/i.test(error.message) ? "That code isn't right or has expired. Check the latest email, or tap below to get a new code."
         : error.message === "network" ? "Couldn't reach the sign-in service. Please check your connection and try again." : "That code isn't right. Please check it and try again.";
       return;
     }
