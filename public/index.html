@@ -34,6 +34,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--soft); color: var(--ink);
     font-family: Jost, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  [hidden] { display: none !important; }
   button, input, textarea, select { font: inherit; color: inherit; }
   #map-wrap { position: fixed; inset: 0; }
   #map { width: 100%; height: 100%; background: #e9e2d3; }
@@ -1354,7 +1355,7 @@ function renderSignIn(reason, mode) {
   $("#sheet-body").innerHTML = `
     <p class="muted">${esc(reason || "Sign in to list a property, a project or what you're looking for.")} You'll stay signed in on this device.</p>
     <div id="oauth" class="oauth"></div>
-    <div class="tabs2" id="auth-tabs" hidden>
+    <div class="tabs2" id="auth-tabs">
       <button type="button" class="segb" data-m="email" aria-pressed="${mode === "email"}">Email</button>
       <button type="button" class="segb" data-m="phone" aria-pressed="${mode === "phone"}">Mobile number</button>
     </div>
@@ -1374,14 +1375,21 @@ function renderSignIn(reason, mode) {
         if (error) { const err = $("#signin-err"); err.hidden = false; err.textContent = "Google sign-in isn't available right now. Please use your email."; }
       });
     }
-    const tabs = $("#auth-tabs");
-    if (tabs && pv.phone) {
-      tabs.hidden = false;
-      tabs.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => renderSignIn(reason, b.dataset.m)));
-    }
+    S.phoneSignIn = !!pv.phone;
+    if (mode === "phone" && !pv.phone) showPhoneSoon();
   });
+  document.querySelectorAll("#auth-tabs button").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.m !== mode) renderSignIn(reason, b.dataset.m);
+  }));
+  function showPhoneSoon() {
+    const err = $("#signin-err");
+    err.hidden = false;
+    err.textContent = "Sign-in with a mobile number is being set up and isn't available yet. Please use your email for now. You can add your mobile number in My profile.";
+    $("#signin-btn").textContent = "Use email instead";
+  }
   $("#signin-form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (mode === "phone" && S.providers && !S.providers.phone) { renderSignIn(reason, "email"); return; }
     const raw = $("#ident").value.trim();
     const err = $("#signin-err");
     let ident;
