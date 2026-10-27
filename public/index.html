@@ -565,18 +565,24 @@ async function boot() {
   }
   if (!window.supabase) return notice("Couldn't load", "Please check your internet connection and reload the page.");
 
-  S.sb = window.supabase.createClient(S.cfg.supabaseUrl, S.cfg.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage }
+  // Talk to Supabase through our own domain (/sb), so sign-in and photos work even where
+  // *.supabase.co is blocked. Keep the original storage key so people stay signed in.
+  S.sbBase = location.origin + "/sb";
+  const ref = new URL(S.cfg.supabaseUrl).hostname.split(".")[0];
+  S.sb = window.supabase.createClient(S.sbBase, S.cfg.supabaseAnonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: `sb-${ref}-auth-token` }
   });
-  const { data } = await S.sb.auth.getSession();
-  S.session = data.session;
+  try {
+    const { data } = await withTimeout(S.sb.auth.getSession(), 8000);
+    S.session = data.session;
+  } catch (e) { S.session = null; }
   S.userId = S.session ? S.session.user.id : null;
   S.sb.auth.onAuthStateChange((_event, session) => {
     S.session = session;
     const id = session ? session.user.id : null;
     if (id === S.userId) return;
     S.userId = id;
-    afterAuthChange();
+    setTimeout(afterAuthChange, 0);
   });
 
   try {
@@ -804,7 +810,7 @@ function openDetails(id, opts = {}) {
   if (!p) return false;
   if (p.kind !== S.tab || !passFilter(p)) { S.tab = p.kind; S.filter = "all"; renderMarkers(); }
   const isReq = p.kind === "request";
-  const photos = p.photos && p.photos.length ? p.photos : (isReq ? [] : [placeholder(p.id)]);
+  const photos = p.photos && p.photos.length ? p.photos.map(shown) : (isReq ? [] : [placeholder(p.id)]);
   const msg = isReq
     ? `Hi ${p.contact_name || ""}, I saw your request on Property Stalkers (${titleOf(p).toLowerCase()} in ${placeOf(p)}). I may have something for you.`
     : isDev(p)
@@ -943,7 +949,7 @@ function openEditForm(id) {
   }));
   const drawThumbs = () => {
     const box = $("#e-thumbs"); if (!box) return;
-    box.innerHTML = [...E.photos.map((u, i) => ({ src: u, kind: "old", i })), ...E.files.map((f, i) => ({ src: URL.createObjectURL(f), kind: "new", i }))]
+    box.innerHTML = [...E.photos.map((u, i) => ({ src: shown(u), kind: "old", i })), ...E.files.map((f, i) => ({ src: URL.createObjectURL(f), kind: "new", i }))]
       .map((t) => `<div class="et"><img src="${esc(t.src)}" alt=""><button type="button" aria-label="Remove photo" data-k="${t.kind}" data-i="${t.i}">&times;</button></div>`).join("")
       || `<p class="muted" style="margin:0 0 10px">No photos yet.</p>`;
     box.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
@@ -998,7 +1004,11 @@ function openEditForm(id) {
 }
 
 /* ---------------- list of properties in view ---------------- */
-function thumbOf(p) { return p.photos && p.photos.length ? p.photos[0] : placeholder(p.id); }
+function shown(u) {
+  const real = S.cfg && S.cfg.supabaseUrl;
+  return real && S.sbBase && typeof u === "string" && u.startsWith(real + "/storage/") ? S.sbBase + u.slice(real.length) : u;
+}
+function thumbOf(p) { return p.photos && p.photos.length ? shown(p.photos[0]) : placeholder(p.id); }
 
 function openList() {
   const items = visiblePosts().filter(inView);
@@ -1326,7 +1336,7 @@ $("#account").addEventListener("click", () => (S.me ? renderAccount() : renderSi
 async function authProviders() {
   if (S.providers) return S.providers;
   try {
-    const r = await fetch(S.cfg.supabaseUrl.replace(/\/$/, "") + "/auth/v1/settings?apikey=" + encodeURIComponent(S.cfg.supabaseAnonKey));
+    const r = await withTimeout(fetch(S.sbBase + "/auth/v1/settings?apikey=" + encodeURIComponent(S.cfg.supabaseAnonKey)), 8000);
     S.providers = ((await r.json()).external) || {};
   } catch (e) { S.providers = {}; }
   return S.providers;
