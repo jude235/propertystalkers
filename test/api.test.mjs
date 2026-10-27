@@ -277,3 +277,36 @@ test("developer form creates a draft without the AI", async () => {
   assert.equal(bad.status, 400);
   assert.match(bad.body.error, /couldn't find/);
 });
+
+test("editing: owner can change price, details, photos and location; others can't", async () => {
+  const { call, person, post, feed } = setup();
+  const owner = await person("own@x.in");
+  const other = await person("oth@x.in");
+  const p = await post(owner, { poster_type: "landlord", deal: "sale", property_type: "apartment", bedrooms: 3, price: 15000000, building: "Skyview", locality: "Sector 7", city: "Gurugram" });
+  const prefix = `${ENV.SUPABASE_URL}/storage/v1/object/public/photos/`;
+  const ownerId = (await call("GET", "/me", { token: owner.token })).body.profile.id;
+
+  const no = await call("PATCH", "/posts/" + p.id, { token: other.token, body: { price: 1 } });
+  assert.equal(no.status, 403);
+  assert.equal((await call("PATCH", "/posts/" + p.id, { body: { price: 1 } })).status, 401);
+
+  const r = await call("PATCH", "/posts/" + p.id, { token: owner.token, body: {
+    price: 14500000, bedrooms: 4, description: "Price reduced",
+    photos: [prefix + ownerId + "/a.jpg", prefix + "someone-else/b.jpg"] } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.post.price, 14500000);
+  assert.equal(r.body.post.bedrooms, 4);
+  assert.equal(r.body.post.description, "Price reduced");
+  assert.deepEqual(r.body.post.photos, [prefix + ownerId + "/a.jpg"]);
+  assert.equal(r.body.post.lat, 28.47); // not moved
+
+  const moved = await call("PATCH", "/posts/" + p.id, { token: owner.token, body: { building: "Palm Court" } });
+  assert.equal(moved.status, 200);
+  assert.equal(moved.body.post.lat, 28.48);
+
+  const bad = await call("PATCH", "/posts/" + p.id, { token: owner.token, body: { locality: "Nowhere", building: "", city: "Atlantis" } });
+  assert.equal(bad.status, 400);
+  const seen = (await feed()).posts.find((x) => x.id === p.id);
+  assert.equal(seen.price, 14500000);
+  assert.equal(seen.lat, 28.48);
+});

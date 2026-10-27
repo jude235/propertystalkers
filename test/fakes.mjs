@@ -17,6 +17,7 @@ export function memoryStore() {
     async postsByUser(uid) { return posts.filter((p) => p.user_id === uid); },
     async getPost(id) { return posts.find((p) => p.id === id) || null; },
     async createPost(p) { const v = { id: randomUUID(), created_at: new Date().toISOString(), ...p }; posts.push(v); return v; },
+    async updatePost(id, patch) { const p = posts.find((x) => x.id === id); Object.assign(p, patch); return p; },
     async setPostStatus(id, status) { const p = posts.find((x) => x.id === id); if (p) p.status = status; },
     async countPostsSince(uid, since) { return posts.filter((p) => p.user_id === uid && p.created_at >= since).length; },
     async createDraft(uid, data) { const id = randomUUID(); drafts.set(id, { uid, data }); return id; },
