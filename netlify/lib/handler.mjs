@@ -119,6 +119,17 @@ export async function handle(req, deps) {
       return json({ profile, access: accessSummary(viewer) });
     }
 
+    /** Keep only photos in the owner's folder of our bucket (direct or via the /sb proxy), stored in canonical form. */
+    function ownPhotos(list, ownerId) {
+      const real = `${env.SUPABASE_URL}/storage/v1/object/public/photos/${ownerId}/`;
+      const proxied = `${url.origin}/sb/storage/v1/object/public/photos/${ownerId}/`;
+      return (Array.isArray(list) ? list : [])
+        .filter((u) => typeof u === "string" && !u.includes("..") && u.length < 400)
+        .map((u) => (u.startsWith(proxied) ? real + u.slice(proxied.length) : u))
+        .filter((u) => u.startsWith(real))
+        .slice(0, LIMITS.maxPhotos);
+    }
+
     const profile = await store.getProfile(user.id);
     const needsProfile = !profile || !profile.name || !profile.phone || !profile.email;
 
@@ -204,10 +215,7 @@ export async function handle(req, deps) {
       }
 
       // Photos must be in this user's folder of our own storage bucket.
-      const prefix = `${env.SUPABASE_URL}/storage/v1/object/public/photos/${user.id}/`;
-      const photos = (Array.isArray(body.photos) ? body.photos : [])
-        .filter((u) => typeof u === "string" && u.startsWith(prefix) && !u.includes("..") && u.length < 400)
-        .slice(0, LIMITS.maxPhotos);
+      const photos = ownPhotos(body.photos, user.id);
 
       const { notes, ...fields } = draft;
       const post = await store.createPost({
@@ -256,10 +264,7 @@ export async function handle(req, deps) {
         Object.assign(fields, place, { building_key: buildingKey(fields.building, fields.city) });
       }
       if (post.kind === "listing" && Array.isArray(b.photos)) {
-        const prefix = `${env.SUPABASE_URL}/storage/v1/object/public/photos/${post.user_id}/`;
-        fields.photos = b.photos
-          .filter((u) => typeof u === "string" && u.startsWith(prefix) && !u.includes("..") && u.length < 400)
-          .slice(0, LIMITS.maxPhotos);
+        fields.photos = ownPhotos(b.photos, post.user_id);
       }
       const updated = await store.updatePost(post.id, fields);
       const { viewer } = await loadViewer();
