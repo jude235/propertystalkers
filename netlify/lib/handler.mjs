@@ -271,6 +271,54 @@ export async function handle(req, deps) {
       return json({ post: toPublic(updated, viewer) });
     }
 
+    /* ---------- admin: import developer projects from DLD open data ---------- */
+    if (path === "/admin/import-projects" && method === "POST") {
+      if (!isAdmin) return json({ error: "Admins only." }, 403);
+      if (needsProfile) return json({ error: "profile_required" }, 400);
+      const body = await readJson(req);
+      const list = (Array.isArray(body.projects) ? body.projects : []).slice(0, LIMITS.importBatch);
+      const rows = list.map((p) => ({
+        id: clean(String(p.id ?? ""), 20).replace(/[^0-9A-Za-z-]/g, ""),
+        name: clean(p.name, 100),
+        area: clean(p.area, 100),
+        developer: clean(p.developer, 80),
+        completion: clean(p.completion, 40),
+        status: clean(p.status, 40),
+        percent: Number.isFinite(+p.percent) ? Math.max(0, Math.min(100, Math.round(+p.percent))) : null,
+        villas: Math.max(0, Math.min(100000, parseInt(p.villas, 10) || 0)),
+        units: Math.max(0, Math.min(100000, parseInt(p.units, 10) || 0)),
+        master: clean(p.master, 100)
+      })).filter((r) => r.id && r.name && r.developer);
+      const keys = rows.map((r) => `dld:${r.id}`);
+      const existing = new Set(await store.existingBuildingKeys(keys));
+      const result = { created: 0, skipped: 0, unplaced: [] };
+      const fresh = [];
+      for (const r of rows) {
+        if (existing.has(`dld:${r.id}`)) { result.skipped++; continue; }
+        existing.add(`dld:${r.id}`);
+        const place = await geo.locate({ building: r.name, locality: r.area, city: "Dubai", country: "United Arab Emirates" });
+        if (!place || !/dubai/i.test(place.address || "")) { result.unplaced.push(r.id); continue; }
+        const bits = [`Off-plan project by ${r.developer}${r.master ? `, part of ${r.master}` : ""}.`];
+        if (r.status) bits.push(`Status: ${r.status}${r.percent != null ? `, ${r.percent}% built` : ""}.`);
+        if (r.completion) bits.push(`Expected completion ${r.completion}.`);
+        bits.push("Details from Dubai Land Department records; prices on request.");
+        fresh.push({
+          kind: "listing", poster_type: "developer", deal: "sale",
+          property_type: r.villas > r.units ? "villa" : "apartment",
+          configs: [r.units ? `${r.units} units` : "", r.villas ? `${r.villas} villas` : ""].filter(Boolean).join(", ") || null,
+          building: r.name, locality: r.area || null, city: "Dubai", country: "United Arab Emirates",
+          company: r.developer, possession: r.completion || null, rera_number: null,
+          description: bits.join(" ").slice(0, 400), price: null, currency: "AED",
+          ...place, place_id: place.place_id || null, building_key: `dld:${r.id}`,
+          photos: [], user_id: user.id, contact_name: "Property Stalkers enquiries",
+          contact_phone: profile.phone, status: "active"
+        });
+      }
+      if (fresh.length) await store.createPosts(fresh);
+      result.created = fresh.length;
+      return json(result);
+    }
+
     /* ---------- remove a post ---------- */
     const del = path.match(/^\/posts\/([^/]+)$/);
     if (del && method === "DELETE") {

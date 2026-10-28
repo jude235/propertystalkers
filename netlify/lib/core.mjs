@@ -4,6 +4,7 @@ export const POSTER_TYPES = ["landlord", "broker", "developer", "buyer", "tenant
 export const PROPERTY_TYPES = ["apartment", "villa", "independent_house", "plot", "office", "shop", "other"];
 
 export const LIMITS = {
+  importBatch: 10,       // DLD projects per admin import call (keeps each call under the host's request cap)
   aiCallsPerDay: 40,     // AI messages per user per day
   postsPerDay: 10,       // confirmed posts per user per day
   maxPhotos: 8,
@@ -197,6 +198,7 @@ export function toPublic(post, viewer) {
     contact_name: post.contact_name,
     contact_phone: post.contact_phone,
     created_at: post.created_at,
+    source: String(post.building_key || "").startsWith("dld:") ? "dld" : null,
     mine,
     removable: mine || !!(viewer && viewer.isAdmin)
   };

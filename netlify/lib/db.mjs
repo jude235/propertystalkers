@@ -34,6 +34,13 @@ export function makeStore({ url, serviceKey }) {
     async createPost(post) {
       return must(await sb.from("posts").insert(post).select().single());
     },
+    async createPosts(posts) {
+      return must(await sb.from("posts").insert(posts).select("id"));
+    },
+    async existingBuildingKeys(keys) {
+      if (!keys.length) return [];
+      return must(await sb.from("posts").select("building_key").in("building_key", keys)).map((r) => r.building_key);
+    },
     async updatePost(id, patch) {
       return must(await sb.from("posts").update(patch).eq("id", id).select().single());
     },
