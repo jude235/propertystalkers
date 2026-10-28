@@ -54,7 +54,12 @@
     height: 38px; min-width: 38px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; flex: 0 0 auto; }
   .banner-inline { background: #fff3e6; border: 1px solid #f0c48a; color: #7a4a10; border-radius: 12px; padding: 10px 12px; font-size: 14px; margin: 0 0 12px; }
   .account.profile-btn { display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 4px; position: relative; }
-  .pav { width: 30px; height: 30px; border-radius: 50%; background: var(--brass); color: var(--brand); display: grid; place-items: center; font-size: 13px; font-weight: 500; }
+  .pav { width: 30px; height: 30px; border-radius: 50%; background: var(--brass); color: var(--brand); display: grid; place-items: center; font-size: 13px; font-weight: 500; overflow: hidden; }
+  .pav img, .avatar img, .pf-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pf-pic-row { display: flex; align-items: center; gap: 14px; margin: 4px 0 16px; }
+  .pf-pic { width: 72px; height: 72px; border-radius: 50%; background: var(--brand); color: var(--brass); border: 2px solid var(--brass);
+    font-family: var(--serif); font-size: 24px; display: grid; place-items: center; overflow: hidden; flex: 0 0 auto; }
+  .pf-pic-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
   .pdot { position: absolute; top: 2px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: #e0583c; border: 2px solid var(--brand); }
   .plabel-s { display: none; }
   @media (max-width: 400px) { .plabel { display: none; } .plabel-s { display: inline; } .account.profile-btn { padding: 0 10px 0 4px; gap: 6px; } .brand-name { font-size: 18px; } }
@@ -228,7 +233,7 @@
   .contact { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #fffdf8; }
   .contact-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
   .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: var(--brass); border: 1px solid var(--brass);
-    font-family: var(--serif); display: grid; place-items: center; flex: 0 0 auto; }
+    font-family: var(--serif); display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; }
   .contact-name { font-weight: 500; font-size: 15px; }
   .contact-sub { font-size: 13px; color: var(--muted); }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -667,7 +672,8 @@ function renderAccountButton() {
   const b = $("#account");
   if (S.me) {
     b.className = "account profile-btn";
-    b.innerHTML = `<span class="pav">${esc(initials((S.me.profile && S.me.profile.name) || S.me.email || "Me"))}</span><span class="plabel">My profile</span><span class="plabel-s">Profile</span>${profileComplete() ? "" : `<span class="pdot" aria-label="Profile incomplete"></span>`}`;
+    const pic = S.me.profile && S.me.profile.avatar_url;
+    b.innerHTML = `<span class="pav">${pic ? `<img src="${esc(shown(pic))}" alt="">` : esc(initials((S.me.profile && S.me.profile.name) || S.me.email || "Me"))}</span><span class="plabel">My profile</span><span class="plabel-s">Profile</span>${profileComplete() ? "" : `<span class="pdot" aria-label="Profile incomplete"></span>`}`;
     b.setAttribute("aria-label", "My profile");
   } else {
     b.className = "account";
@@ -858,7 +864,7 @@ function openDetails(id, opts = {}) {
       ${p.description ? `<p class="desc">${esc(p.description)}</p>` : ""}
       <div class="contact">
         <div class="contact-head">
-          <div class="avatar">${esc(initials(p.contact_name))}</div>
+          <div class="avatar">${p.contact_avatar ? `<img src="${esc(shown(p.contact_avatar))}" alt="">` : esc(initials(p.contact_name))}</div>
           <div><div class="contact-name">${esc(p.contact_name)}</div><div class="contact-sub">${esc(posterLine(p))}</div></div>
         </div>
         ${p.mine ? "" : `<div class="actions">
@@ -1504,16 +1510,47 @@ function profileForm(profile, submitLabel) {
   const phone = profile.phone ? "+" + profile.phone : (S.me && S.me.phone ? "+" + String(S.me.phone).replace(/^\+/, "") : "");
   return `
     <form id="profile-form" novalidate>
+      <div class="pf-pic-row">
+        <div class="pf-pic" id="pf-pic">${profile.avatar_url ? `<img src="${esc(shown(profile.avatar_url))}" alt="Your profile picture">` : esc(initials(profile.name || email || "Me"))}</div>
+        <div class="pf-pic-actions">
+          <button type="button" class="btn" id="pf-pic-add">${profile.avatar_url ? "Change photo" : "Add profile photo"}</button>
+          <button type="button" class="link-btn" id="pf-pic-remove" ${profile.avatar_url ? "" : "hidden"}>Remove photo</button>
+          <input type="file" id="pf-pic-file" accept="image/*" hidden>
+        </div>
+      </div>
       <label class="field"><span>Your name</span><input id="pf-name" maxlength="60" autocomplete="name" value="${esc(profile.name)}"></label>
       <label class="field"><span>Email</span><input id="pf-email" type="email" maxlength="120" autocomplete="email" value="${esc(email)}" placeholder="you@example.com"></label>
       <label class="field"><span>Mobile number with country code (for calls and WhatsApp)</span><input id="pf-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+971 50 123 4567" value="${esc(phone)}"></label>
-      <label class="field"><span>Broker licence / RERA number <span class="opt">(optional)</span></span><input id="pf-rera" maxlength="40" autocomplete="off" value="${esc(profile.rera_number)}" placeholder="e.g. BRN 12345 or P51700012345"></label>
+      <label class="field"><span>Broker licence / RERA number <span class="opt">(optional)</span></span><input id="pf-rera" maxlength="40" autocomplete="off" value="${esc(profile.rera_number)}" placeholder="e.g. 45530 or BRN 45530"></label>
       <button class="btn primary" style="width:100%" id="pf-save">${esc(submitLabel)}</button>
       <p class="error" id="pf-err" hidden></p>
     </form>`;
 }
 function bindProfileForm(onSaved) {
+  let avatar; // undefined = unchanged, "" = remove, url = new picture
+  const showErr = (m) => { const el = $("#pf-err"); el.hidden = false; el.textContent = m; };
   $("#profile-form").addEventListener("input", () => { $("#pf-err").hidden = true; });
+  $("#pf-pic-add").addEventListener("click", () => $("#pf-pic-file").click());
+  $("#pf-pic-file").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const btn = $("#pf-pic-add"), save = $("#pf-save");
+    btn.disabled = true; save.disabled = true; btn.textContent = "Uploading…";
+    try {
+      const url = await uploadPhoto(file, { square: 400 });
+      avatar = url;
+      $("#pf-pic").innerHTML = `<img src="${esc(shown(url))}" alt="Your profile picture">`;
+      $("#pf-pic-remove").hidden = false;
+    } catch (err) { showErr(err.message || "The photo couldn't be uploaded. Please try again."); }
+    btn.disabled = false; save.disabled = false; btn.textContent = "Change photo";
+  });
+  $("#pf-pic-remove").addEventListener("click", () => {
+    avatar = "";
+    $("#pf-pic").textContent = initials($("#pf-name").value.trim() || "Me");
+    $("#pf-pic-remove").hidden = true;
+    $("#pf-pic-add").textContent = "Add profile photo";
+  });
   $("#profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = $("#pf-save"), label = btn.textContent;
@@ -1523,7 +1560,7 @@ function bindProfileForm(onSaved) {
       if (v("#pf-name").length < 2) throw new Error("Please enter your name.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("#pf-email"))) throw new Error("Please enter a valid email address.");
       if (v("#pf-phone").replace(/\D/g, "").length < 8) throw new Error("Please enter your mobile number with country code.");
-      await api("/me", { method: "POST", body: JSON.stringify({ name: v("#pf-name"), email: v("#pf-email"), phone: v("#pf-phone"), rera: v("#pf-rera") }) });
+      await api("/me", { method: "POST", body: JSON.stringify({ name: v("#pf-name"), email: v("#pf-email"), phone: v("#pf-phone"), rera: v("#pf-rera"), ...(avatar !== undefined ? { avatar } : {}) }) });
       await refreshMe();
       onSaved();
     } catch (err) {
@@ -1763,11 +1800,18 @@ async function confirmDraft(d, btn) {
   }
 }
 
-async function shrink(file) {
+async function shrink(file, square) {
   try {
     const bmp = await createImageBitmap(file);
-    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
     const c = document.createElement("canvas");
+    if (square) {
+      // Centre-crop to a square for profile pictures.
+      const side = Math.min(bmp.width, bmp.height), out = Math.min(square, side);
+      c.width = c.height = out;
+      c.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, out, out);
+      return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej()), "image/jpeg", 0.85));
+    }
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
     c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
     c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
     return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej()), "image/jpeg", 0.82));
@@ -1776,8 +1820,9 @@ async function shrink(file) {
   }
 }
 
-async function uploadPhoto(file) {
-  const blob = await shrink(file);
+async function uploadPhoto(file, opts = {}) {
+  if (file.type && !/^image\//.test(file.type)) throw new Error("Please choose a photo.");
+  const blob = await shrink(file, opts.square);
   if (blob.size > 5 * 1024 * 1024) throw new Error("One photo is too large. Please use photos under 5 MB.");
   const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random()).replace(".", "");
   const path = `${S.session.user.id}/${id}.jpg`;
