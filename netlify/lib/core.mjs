@@ -29,7 +29,7 @@ export function buildingKey(building, city) {
 
 // RERA numbers vary by state (e.g. P51700012345, PRM/KA/RERA/1251/309/PR/..., RC/REP/HARERA/GGM/...).
 // We only check it looks like a registration number; it cannot be verified automatically.
-const RERA_RE = /^[A-Z0-9][A-Z0-9/\-. ]{4,58}[A-Z0-9]$/;
+const RERA_RE = /^[A-Z0-9][A-Z0-9/\-. #:]{1,58}[A-Z0-9]$/;  // any licence / BRN / RERA format, 3+ chars with a digit
 export function cleanRera(r) {
   const s = clean(r, 60);
   if (!s) return null;
@@ -197,6 +197,7 @@ export function toPublic(post, viewer) {
     photos: Array.isArray(post.photos) ? post.photos : [],
     contact_name: post.contact_name,
     contact_phone: post.contact_phone,
+    contact_avatar: post.contact_avatar || null,
     created_at: post.created_at,
     source: String(post.building_key || "").startsWith("dld:") ? "dld" : null,
     mine,

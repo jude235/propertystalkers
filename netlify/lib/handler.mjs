@@ -52,6 +52,8 @@ export async function handle(req, deps) {
     if (path === "/feed" && method === "GET") {
       const { viewer } = await loadViewer();
       const posts = await store.activePosts();
+      const avatars = await store.avatarsFor([...new Set(posts.map((p) => p.user_id))]);
+      for (const p of posts) p.contact_avatar = avatars[p.user_id] || null;
       const visible = posts.filter((p) => canSee(p, viewer)).map((p) => toPublic(p, viewer));
       return json({ posts: visible, access: accessSummary(viewer), signedIn: !!viewer });
     }
@@ -69,6 +71,18 @@ export async function handle(req, deps) {
     }
 
     if (!user) return json({ error: "sign_in_required" }, 401);
+
+    /** Keep only photos in the owner's folder of our bucket (direct or via the /sb proxy), stored in canonical form. */
+    function ownPhotos(list, ownerId) {
+      const real = `${env.SUPABASE_URL}/storage/v1/object/public/photos/${ownerId}/`;
+      const proxied = `${url.origin}/sb/storage/v1/object/public/photos/${ownerId}/`;
+      return (Array.isArray(list) ? list : [])
+        .filter((u) => typeof u === "string" && !u.includes("..") && u.length < 400)
+        .map((u) => (u.startsWith(proxied) ? real + u.slice(proxied.length) : u))
+        .filter((u) => u.startsWith(real))
+        .slice(0, LIMITS.maxPhotos);
+    }
+
 
     /* ---------- profile ---------- */
     if (path === "/me" && method === "GET") {
@@ -94,6 +108,12 @@ export async function handle(req, deps) {
         }
         update.rera_number = rera;
       }
+      if (body.avatar !== undefined) {
+        // A profile picture must be in the user's own folder of our photo bucket; empty removes it.
+        const pic = body.avatar ? ownPhotos([body.avatar], user.id)[0] : null;
+        if (body.avatar && !pic) return json({ error: "That profile picture couldn't be used. Please upload it again." }, 400);
+        update.avatar_url = pic;
+      }
       const profile = await store.upsertProfile(update);
       return json({ profile });
     }
@@ -117,17 +137,6 @@ export async function handle(req, deps) {
       const profile = await store.upsertProfile(update);
       const viewer = makeViewer({ user, profile, isAdmin });
       return json({ profile, access: accessSummary(viewer) });
-    }
-
-    /** Keep only photos in the owner's folder of our bucket (direct or via the /sb proxy), stored in canonical form. */
-    function ownPhotos(list, ownerId) {
-      const real = `${env.SUPABASE_URL}/storage/v1/object/public/photos/${ownerId}/`;
-      const proxied = `${url.origin}/sb/storage/v1/object/public/photos/${ownerId}/`;
-      return (Array.isArray(list) ? list : [])
-        .filter((u) => typeof u === "string" && !u.includes("..") && u.length < 400)
-        .map((u) => (u.startsWith(proxied) ? real + u.slice(proxied.length) : u))
-        .filter((u) => u.startsWith(real))
-        .slice(0, LIMITS.maxPhotos);
     }
 
     const profile = await store.getProfile(user.id);

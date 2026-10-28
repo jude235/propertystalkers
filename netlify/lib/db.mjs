@@ -21,6 +21,12 @@ export function makeStore({ url, serviceKey }) {
     async upsertProfile(profile) {
       return must(await sb.from("profiles").upsert(profile).select().single());
     },
+    async avatarsFor(userIds) {
+      if (!userIds.length) return {};
+      const { data, error } = await sb.from("profiles").select("id, avatar_url").in("id", userIds).not("avatar_url", "is", null);
+      if (error) return {}; // pictures are optional; never break the map over them
+      return Object.fromEntries(data.map((r) => [r.id, r.avatar_url]));
+    },
     async activePosts() {
       return must(await sb.from("posts").select("*").eq("status", "active")
         .order("created_at", { ascending: false }).limit(5000));
