@@ -8,7 +8,9 @@ const GEO = {
   "skyview, sector 7, gurugram": { lat: 28.4700, lng: 77.0300, precision: "building", place_id: "SKY" },
   "sector 7, gurugram": { lat: 28.4710, lng: 77.0320, precision: "area" },
   "palm court, sector 7, gurugram": { lat: 28.4800, lng: 77.0400, precision: "building", place_id: "PALM" },
-  "sector 150, noida": { lat: 28.42, lng: 77.48, precision: "area" }
+  "sector 150, noida": { lat: 28.42, lng: 77.48, precision: "area" },
+  "marina vista, dubai marina, dubai": { lat: 25.08, lng: 55.14, precision: "building", place_id: "MV" },
+  "business bay, dubai": { lat: 25.18, lng: 55.27, precision: "area" }
 };
 
 function setup() {
@@ -337,4 +339,37 @@ test("profile: email and mobile required, licence optional and checked", async (
   await call("POST", "/me/role", { token: u.token, body: { role: "broker", licence: "BRN 12345" } });
   r = await call("POST", "/me", { token: u.token, body: { name: "Ravi", phone: "+919876543210", rera: "" } });
   assert.equal(r.status, 400);
+});
+
+test("admin DLD import: admins only, creates developer listings once, skips unplaceable", async () => {
+  const { call, person, feed, store } = setup();
+  const admin = await person("admin@ps.in", "Admin", "971501234567");
+  const other = await person("x@ps.in");
+  const projects = [
+    { id: 101, name: "Marina Vista", area: "Dubai Marina", developer: "Emaar", completion: "Dec 2027", status: "Active", percent: 42.4, units: 120, villas: 0 },
+    { id: 102, name: "Nowhere Tower", area: "Business Bay", developer: "Damac", completion: "2028", status: "Active", percent: 5 },
+    { id: 103, name: "Lost One", area: "Atlantis Zone", developer: "Someone", status: "Active" },
+    { id: 104, name: "", area: "Business Bay", developer: "Nobody" }
+  ];
+  assert.equal((await call("POST", "/admin/import-projects", { token: other.token, body: { projects } })).status, 403);
+  const r = await call("POST", "/admin/import-projects", { token: admin.token, body: { projects } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.created, 2);
+  assert.deepEqual(r.body.unplaced, ["103"]);
+  const again = await call("POST", "/admin/import-projects", { token: admin.token, body: { projects } });
+  assert.equal(again.body.created, 0);
+  assert.equal(again.body.skipped, 2);
+  const posts = (await feed(null)).posts.filter((p) => p.source === "dld");
+  assert.equal(posts.length, 2);
+  const mv = posts.find((p) => p.building === "Marina Vista");
+  assert.equal(mv.poster_type, "developer");
+  assert.equal(mv.company, "Emaar");
+  assert.equal(mv.possession, "Dec 2027");
+  assert.equal(mv.price, null);
+  assert.equal(mv.configs, "120 units");
+  assert.equal(mv.property_type, "apartment");
+  assert.match(mv.description, /42% built/);
+  assert.equal(mv.contact_name, "Property Stalkers enquiries");
+  assert.equal(posts.find((p) => p.building === "Nowhere Tower").precision, "area");
+  assert.equal(store._posts.filter((p) => p.building_key === "dld:101").length, 1);
 });
