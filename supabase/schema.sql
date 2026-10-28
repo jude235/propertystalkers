@@ -55,6 +55,8 @@ alter table public.posts add constraint posts_poster_type_check
 alter table public.posts add column if not exists configs text;
 alter table public.profiles add column if not exists role text;
 alter table public.profiles add column if not exists company text;
+-- Profile picture (safe to re-run).
+alter table public.profiles add column if not exists avatar_url text;
 
 create index if not exists posts_status_kind_idx on public.posts (status, kind);
 create index if not exists posts_user_idx on public.posts (user_id);
