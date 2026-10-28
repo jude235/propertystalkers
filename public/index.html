@@ -293,6 +293,7 @@
   .photo-pick { position: relative; overflow: hidden; }
   .photo-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; font-size: 0; }
   .edit-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
+  .claim-btn { width: 100%; display: flex; justify-content: center; margin-top: 10px; border: 1px solid var(--brass); color: var(--brass-ink); background: transparent; }
   .edit-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
   .edit-thumbs .et { position: relative; }
   .edit-thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; display: block; }
@@ -866,6 +867,8 @@ function openDetails(id, opts = {}) {
         </div>`}
       </div>
       ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.</p>` : ""}
+      ${p.source === "dld" && !p.mine ? `<div class="claim"><p class="hint">Listed from Dubai Land Department project records.</p>
+        <a class="btn claim-btn" id="claim-post" href="${esc(waHref(p.contact_phone, `Hi, I represent ${p.company || "the developer"} and would like to claim the project "${p.building}" on Property Stalkers: ${location.origin}/#p=${p.id}`))}" target="_blank" rel="noopener">Developer? Claim this project</a></div>` : ""}
       ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
       ${p.removable ? `<button class="link-btn" id="remove-post">${p.mine ? "Remove my post" : "Remove post (admin)"}</button>` : ""}
     </div>`;
