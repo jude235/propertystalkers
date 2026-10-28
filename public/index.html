@@ -56,7 +56,9 @@
   .account.profile-btn { display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 4px; position: relative; }
   .pav { width: 30px; height: 30px; border-radius: 50%; background: var(--brass); color: var(--brand); display: grid; place-items: center; font-size: 13px; font-weight: 500; }
   .pdot { position: absolute; top: 2px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: #e0583c; border: 2px solid var(--brand); }
-  @media (max-width: 380px) { .plabel { display: none; } .account.profile-btn { padding: 0 4px; } }
+  .plabel-s { display: none; }
+  @media (max-width: 400px) { .plabel { display: none; } .plabel-s { display: inline; } .account.profile-btn { padding: 0 10px 0 4px; gap: 6px; } .brand-name { font-size: 18px; } }
+  @media (max-width: 340px) { .plabel-s { display: none; } .account.profile-btn { padding: 0 4px; } }
   .account.avatar-btn { padding: 0; width: 38px; background: var(--brass); border-color: var(--brass); color: var(--brand); font-weight: 500; }
 
   /* Properties / Requests switch */
@@ -193,6 +195,7 @@
     .panel { left: 0; right: 0; bottom: 0; max-height: 86vh; border-radius: 20px 20px 0 0; transform: translateY(105%); padding-bottom: env(safe-area-inset-bottom); }
   }
   .panel.open { transform: none; }
+  .panel:not(.open) { pointer-events: none; }
   .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 8px auto 0; }
   .icon-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; background: rgba(251, 247, 239, .94);
     box-shadow: 0 2px 8px rgba(0,0,0,.2); display: grid; place-items: center; flex: 0 0 auto; }
@@ -201,6 +204,11 @@
   .slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; aspect-ratio: 4 / 3; background: var(--soft); }
   .slides::-webkit-scrollbar { display: none; }
   .slides img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
+  .g-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(251, 247, 239, .92); color: var(--brand); font-size: 24px; line-height: 34px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+  .g-nav.prev { left: 10px; } .g-nav.next { right: 10px; }
+  .title-row { display: flex; align-items: flex-start; gap: 10px; }
+  .title-row .title { flex: 1; }
+  .share-btn { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fffdf8; color: var(--brand); font-size: 13px; font-weight: 500; cursor: pointer; }
   .counter { position: absolute; left: 12px; bottom: 12px; background: rgba(15, 59, 46, .8); color: var(--brand-ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; }
   .req-head { background: var(--req); color: var(--brand-ink); padding: 56px 18px 20px; border-bottom: 2px solid var(--brass); }
   .req-head .big { font-family: var(--serif); font-size: 15px; letter-spacing: .14em; text-transform: uppercase; }
@@ -243,6 +251,7 @@
   @media (max-width: 759px) {
     .sheet { left: 0; right: 0; bottom: 0; height: 92vh; height: 92dvh; border-radius: 20px 20px 0 0; transform: translateY(105%); overflow: hidden; }
     .sheet.open { transform: none; }
+    .sheet:not(.open) { pointer-events: none; }
   }
   .sheet-head { display: flex; align-items: center; gap: 10px; padding: 16px 14px 14px 18px; background: var(--brand); color: var(--brand-ink); border-bottom: 2px solid var(--brass); }
   .sheet-head h2 { font-family: var(--serif); font-weight: 400; font-size: 19px; letter-spacing: .02em; margin: 0; flex: 1; }
@@ -645,16 +654,19 @@ $("#maptype").addEventListener("click", () => {
 
 /* ---------------- account ---------------- */
 async function refreshMe() {
-  S.me = null;
   if (S.session) {
     try { S.me = await api("/me"); }
-    catch (e) { if (e.status === 401) { const { data } = await S.sb.auth.getSession(); if (!data.session) S.session = null; } }
-  }
+    catch (e) { if (e.status === 401) { const { data } = await S.sb.auth.getSession(); if (!data.session) { S.session = null; S.me = null; } } }
+  } else S.me = null;
+  renderAccountButton();
+}
+
+function renderAccountButton() {
   updateFab();
   const b = $("#account");
   if (S.me) {
     b.className = "account profile-btn";
-    b.innerHTML = `<span class="pav">${esc(initials((S.me.profile && S.me.profile.name) || S.me.email || "Me"))}</span><span class="plabel">My profile</span>${profileComplete() ? "" : `<span class="pdot" aria-label="Profile incomplete"></span>`}`;
+    b.innerHTML = `<span class="pav">${esc(initials((S.me.profile && S.me.profile.name) || S.me.email || "Me"))}</span><span class="plabel">My profile</span><span class="plabel-s">Profile</span>${profileComplete() ? "" : `<span class="pdot" aria-label="Profile incomplete"></span>`}`;
     b.setAttribute("aria-label", "My profile");
   } else {
     b.className = "account";
@@ -822,11 +834,13 @@ function openDetails(id, opts = {}) {
     ${isReq ? `<div class="req-head"><div class="big">${esc(POSTER[p.poster_type])} request</div></div>` : `
     <div class="gallery">
       <div class="slides" id="slides">${photos.map((src, i) => `<img src="${esc(src)}" alt="Photo ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>
-      ${photos.length > 1 ? `<span class="counter" id="counter">1 / ${photos.length}</span>` : ""}
+      ${photos.length > 1 ? `<span class="counter" id="counter">1 / ${photos.length}</span>
+        <button class="g-nav prev" id="g-prev" aria-label="Previous photo">&#8249;</button>
+        <button class="g-nav next" id="g-next" aria-label="Next photo">&#8250;</button>` : ""}
     </div>`}
     <div class="body">
       <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "rent" ? "Wants to rent" : "Wants to buy") : isDev(p) ? "New project" : (p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
-      <h1 class="title">${esc(titleOf(p))}</h1>
+      <div class="title-row"><h1 class="title">${esc(titleOf(p))}</h1><button class="share-btn" id="share-post" aria-label="Share this post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</button></div>
       <p class="loc">${esc(placeOf(p))}</p>
       <p class="price">${esc(priceOf(p))}</p>
       ${isDev(p) ? `<div class="facts">
@@ -857,9 +871,28 @@ function openDetails(id, opts = {}) {
     </div>`;
 
   const slides = $("#slides"), counter = $("#counter");
-  if (slides && counter) slides.addEventListener("scroll", () => {
-    counter.textContent = `${Math.round(slides.scrollLeft / slides.clientWidth) + 1} / ${photos.length}`;
-  }, { passive: true });
+  const showCount = () => { if (counter) counter.textContent = `${Math.min(photos.length, Math.round(slides.scrollLeft / slides.clientWidth) + 1)} / ${photos.length}`; };
+  if (slides && counter) {
+    slides.addEventListener("scroll", showCount, { passive: true });
+    slides.addEventListener("scrollend", showCount);
+    const go = (d) => {
+      const i = Math.round(slides.scrollLeft / slides.clientWidth);
+      const n = (i + d + photos.length) % photos.length;
+      slides.scrollTo({ left: n * slides.clientWidth, behavior: "smooth" });
+      counter.textContent = `${n + 1} / ${photos.length}`;
+    };
+    $("#g-prev").addEventListener("click", () => go(-1));
+    $("#g-next").addEventListener("click", () => go(1));
+  }
+  $("#share-post").addEventListener("click", async () => {
+    const link = location.origin + "/#p=" + encodeURIComponent(p.id);
+    const text = `${titleOf(p)} in ${placeOf(p)}${p.price ? " · " + priceOf(p) : ""} on Property Stalkers`;
+    try {
+      if (navigator.share) { await navigator.share({ title: titleOf(p), text, url: link }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(link); toast("Link copied."); }
+    catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + link), "_blank", "noopener"); }
+  });
   const rm = $("#remove-post");
   if (rm) rm.addEventListener("click", () => removePost(p.id));
   const ed = $("#edit-post");
@@ -882,6 +915,7 @@ function closeDetails() {
 }
 $("#panel-close").addEventListener("click", closeDetails);
 
+window.addEventListener("hashchange", () => { if (S.map && /p=/.test(location.hash)) openFromHash(); });
 function openFromHash() {
   const id = new URLSearchParams(location.hash.slice(1)).get("p");
   if (id && !openDetails(id, { zoom: 15 })) toast("That post is no longer available, or only visible to some members.");
@@ -1215,6 +1249,7 @@ function renderRolePicker(switching) {
   showExtra();
   document.querySelectorAll(".role-card").forEach((c) => c.addEventListener("click", () => {
     chosen = c.dataset.role;
+    $("#role-err").hidden = true;
     document.querySelectorAll(".role-card").forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
     showExtra();
   }));
@@ -1224,10 +1259,11 @@ function renderRolePicker(switching) {
     const btn = $("#role-save"); btn.disabled = true; btn.textContent = "Saving…";
     try {
       const changed = chosen !== prof.role;
-      await api("/me/role", { method: "POST", body: JSON.stringify({ role: chosen, licence: $("#r-licence").value, company: $("#r-company").value }) });
+      const r = await api("/me/role", { method: "POST", body: JSON.stringify({ role: chosen, licence: $("#r-licence").value, company: $("#r-company").value }) });
       if (changed) { S.chat = []; S.draft = null; S.devForm = null; }
-      await refreshMe();
-      await loadFeed();
+      if (S.me && r.profile) { S.me.profile = r.profile; if (r.access) S.me.access = r.access; renderAccountButton(); }
+      else await refreshMe();
+      loadFeed();
       toast(`You're now posting as ${ROLES[chosen].label}.`);
       if (switching) closeSheet(); else startPosting();
     } catch (e) {
