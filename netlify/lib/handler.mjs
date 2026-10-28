@@ -296,7 +296,13 @@ export async function handle(req, deps) {
       for (const r of rows) {
         if (existing.has(`dld:${r.id}`)) { result.skipped++; continue; }
         existing.add(`dld:${r.id}`);
-        const place = await geo.locate({ building: r.name, locality: r.area, city: "Dubai", country: "United Arab Emirates" });
+        const where = { city: "Dubai", country: "United Arab Emirates" };
+        let place = await geo.locate({ building: r.name, locality: r.area, ...where });
+        // Project names often match a sales office elsewhere; trust a building pin only if it's in the project's area.
+        const squash = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (place && place.precision === "building" && r.area && !squash(place.address).includes(squash(r.area))) {
+          place = r.area ? await geo.locate({ locality: r.area, ...where }) : null;
+        }
         if (!place || !/dubai/i.test(place.address || "")) { result.unplaced.push(r.id); continue; }
         const bits = [`Off-plan project by ${r.developer}${r.master ? `, part of ${r.master}` : ""}.`];
         if (r.status) bits.push(`Status: ${r.status}${r.percent != null ? `, ${r.percent}% built` : ""}.`);
