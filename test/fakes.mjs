@@ -18,7 +18,7 @@ export function memoryStore() {
     async getPost(id) { return posts.find((p) => p.id === id) || null; },
     async createPost(p) { const v = { id: randomUUID(), created_at: new Date().toISOString(), ...p }; posts.push(v); return v; },
     async createPosts(list) { return list.map((p) => { const v = { id: randomUUID(), created_at: new Date().toISOString(), ...p }; posts.push(v); return { id: v.id }; }); },
-    async existingBuildingKeys(keys) { return posts.filter((p) => keys.includes(p.building_key)).map((p) => p.building_key); },
+    async existingBuildingKeys(keys) { return posts.filter((p) => p.status === "active" && keys.includes(p.building_key)).map((p) => p.building_key); },
     async updatePost(id, patch) { const p = posts.find((x) => x.id === id); Object.assign(p, patch); return p; },
     async setPostStatus(id, status) { const p = posts.find((x) => x.id === id); if (p) p.status = status; },
     async countPostsSince(uid, since) { return posts.filter((p) => p.user_id === uid && p.created_at >= since).length; },

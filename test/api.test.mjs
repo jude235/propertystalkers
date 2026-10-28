@@ -10,7 +10,9 @@ const GEO = {
   "palm court, sector 7, gurugram": { lat: 28.4800, lng: 77.0400, precision: "building", place_id: "PALM" },
   "sector 150, noida": { lat: 28.42, lng: 77.48, precision: "area" },
   "marina vista, dubai marina, dubai": { lat: 25.08, lng: 55.14, precision: "building", place_id: "MV" },
-  "business bay, dubai": { lat: 25.18, lng: 55.27, precision: "area" }
+  "business bay, dubai": { lat: 25.18, lng: 55.27, precision: "area" },
+  "far tower, wadi al safa 7, dubai": { lat: 25.18, lng: 55.27, precision: "building", place_id: "OFFICE", address: "Ontario Tower, Business Bay, Dubai" },
+  "wadi al safa 7, dubai": { lat: 25.05, lng: 55.40, precision: "area" }
 };
 
 function setup() {
@@ -349,18 +351,19 @@ test("admin DLD import: admins only, creates developer listings once, skips unpl
     { id: 101, name: "Marina Vista", area: "Dubai Marina", developer: "Emaar", completion: "Dec 2027", status: "Active", percent: 42.4, units: 120, villas: 0 },
     { id: 102, name: "Nowhere Tower", area: "Business Bay", developer: "Damac", completion: "2028", status: "Active", percent: 5 },
     { id: 103, name: "Lost One", area: "Atlantis Zone", developer: "Someone", status: "Active" },
-    { id: 104, name: "", area: "Business Bay", developer: "Nobody" }
+    { id: 104, name: "", area: "Business Bay", developer: "Nobody" },
+    { id: 105, name: "Far Tower", area: "Wadi Al Safa 7", developer: "Mayfair" }
   ];
   assert.equal((await call("POST", "/admin/import-projects", { token: other.token, body: { projects } })).status, 403);
   const r = await call("POST", "/admin/import-projects", { token: admin.token, body: { projects } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.equal(r.body.created, 2);
+  assert.equal(r.body.created, 3);
   assert.deepEqual(r.body.unplaced, ["103"]);
   const again = await call("POST", "/admin/import-projects", { token: admin.token, body: { projects } });
   assert.equal(again.body.created, 0);
-  assert.equal(again.body.skipped, 2);
+  assert.equal(again.body.skipped, 3);
   const posts = (await feed(null)).posts.filter((p) => p.source === "dld");
-  assert.equal(posts.length, 2);
+  assert.equal(posts.length, 3);
   const mv = posts.find((p) => p.building === "Marina Vista");
   assert.equal(mv.poster_type, "developer");
   assert.equal(mv.company, "Emaar");
@@ -371,5 +374,8 @@ test("admin DLD import: admins only, creates developer listings once, skips unpl
   assert.match(mv.description, /42% built/);
   assert.equal(mv.contact_name, "Property Stalkers enquiries");
   assert.equal(posts.find((p) => p.building === "Nowhere Tower").precision, "area");
+  const far = posts.find((p) => p.building === "Far Tower");
+  assert.equal(far.precision, "area");
+  assert.equal(far.lat, 25.05);
   assert.equal(store._posts.filter((p) => p.building_key === "dld:101").length, 1);
 });
