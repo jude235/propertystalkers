@@ -379,3 +379,24 @@ test("admin DLD import: admins only, creates developer listings once, skips unpl
   assert.equal(far.lat, 25.05);
   assert.equal(store._posts.filter((p) => p.building_key === "dld:101").length, 1);
 });
+
+test("licence numbers: short BRNs accepted; profile picture must be the user's own upload", async () => {
+  assert.equal(cleanRera("45530"), "45530");
+  assert.equal(cleanRera("brn 45530"), "BRN 45530");
+  assert.equal(cleanRera("ab"), null);
+  assert.equal(cleanRera("abcdef"), null);
+  const { call, person, post, feed } = setup();
+  const u = await person("pic@ps.in");
+  const own = `${ENV.SUPABASE_URL}/storage/v1/object/public/photos/${u.id}/me.jpg`;
+  const base = { name: "Pic Person", phone: "9876543210", email: "pic@ps.in" };
+  const bad = await call("POST", "/me", { token: u.token, body: { ...base, avatar: "https://evil.example/x.jpg" } });
+  assert.equal(bad.status, 400);
+  const ok = await call("POST", "/me", { token: u.token, body: { ...base, avatar: own, rera: "45530" } });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.profile.avatar_url, own);
+  assert.equal(ok.body.profile.rera_number, "45530");
+  const p = await post(u, landlordSale);
+  assert.equal((await feed(null)).posts.find((x) => x.id === p.id).contact_avatar, own);
+  const cleared = await call("POST", "/me", { token: u.token, body: { ...base, avatar: "" } });
+  assert.equal(cleared.body.profile.avatar_url, null);
+});

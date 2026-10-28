@@ -13,6 +13,7 @@ export function memoryStore() {
     async getUser(t) { return users.get(t) || null; },
     async getProfile(id) { return profiles.get(id) || null; },
     async upsertProfile(p) { const v = { ...(profiles.get(p.id) || {}), ...p }; profiles.set(p.id, v); return v; },
+    async avatarsFor(ids) { const o = {}; for (const id of ids) { const p = profiles.get(id); if (p && p.avatar_url) o[id] = p.avatar_url; } return o; },
     async activePosts() { return posts.filter((p) => p.status === "active"); },
     async postsByUser(uid) { return posts.filter((p) => p.user_id === uid); },
     async getPost(id) { return posts.find((p) => p.id === id) || null; },
