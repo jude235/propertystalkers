@@ -146,6 +146,36 @@
   .role-pill b { font-weight: 500; color: var(--brand); }
   .role-pill span { color: var(--brass-ink); font-weight: 500; margin-left: 6px; }
   .role-pill[hidden] { display: none; }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .bell { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(243, 235, 221, .35); background: transparent; color: var(--brand-ink); display: grid; place-items: center; cursor: pointer; }
+  .bell[hidden] { display: none; }
+  .bell-n { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #c0392b; color: #fff; font-size: 11px; font-weight: 600; display: grid; place-items: center; }
+  .ask-fab { position: fixed; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--brass); background: var(--bg); color: var(--brand);
+    font-size: 14px; font-weight: 500; padding: 9px 13px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(15, 59, 46, .2); }
+  .ask-fab svg { color: var(--brass-ink); }
+  .ask-card { align-self: stretch; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; padding: 10px 12px; }
+  .ask-card .litem { width: 100%; }
+  .ac-title { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--brass-ink); margin: 2px 0 8px; }
+  .ac-text { font-size: 15px; line-height: 1.5; margin: 6px 0 10px; white-space: pre-wrap; }
+  .ac-row { display: flex; gap: 8px; font-size: 14px; line-height: 1.5; }
+  .ask-card .actions, .ni-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ni-actions .btn, .ask-card .actions .btn { padding: 9px 14px; font-size: 13px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 999px; background: var(--soft); color: var(--brand); margin: 6px 6px 0 0; }
+  .badge.good { background: #e3f1e6; color: #1d5b33; }
+  .badge.cut { background: #fbe9d6; color: #8a4b12; }
+  .warn-box { background: #fdecea; border: 1px solid #f2b8b0; color: #7a2316; border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.5; margin: 12px 0 0; }
+  .warn-box b { display: block; margin-bottom: 2px; }
+  .confirm-banner { background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 10px 12px; font-size: 14px; margin: 12px 0 0; display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+  .act-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 0; }
+  .act-row .btn { font-size: 13px; padding: 10px 8px; }
+  .note-item { border-bottom: 1px solid var(--line); padding: 12px 0; }
+  .note-item.unread .ni-title::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c0392b; margin-right: 6px; vertical-align: middle; }
+  .ni-title { font-weight: 500; font-size: 15px; }
+  .ni-body { font-size: 14px; color: var(--ink); margin-top: 4px; line-height: 1.45; }
+  .ni-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .ni-actions { margin-top: 8px; }
+  .cam { flex: 0 0 auto; display: grid; place-items: center; width: 44px; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; cursor: pointer; font-size: 18px; }
+  .chip-check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 10px 0 0; }
   .maptype { position: fixed; left: 12px; bottom: calc(34px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line);
     background: var(--bg); color: var(--ink); font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: 10px; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0, 0, 0, .25); display: flex; align-items: center; gap: 6px; }
@@ -362,7 +392,10 @@
         </div>
         <div class="brand-name">property<span>stalkers</span></div>
       </div>
-      <button class="account" id="account">Sign in</button>
+      <div class="top-actions">
+        <button class="bell" id="bell" aria-label="Notifications" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bell-n" id="bell-n" hidden></span></button>
+        <button class="account" id="account">Sign in</button>
+      </div>
     </div>
     <div class="search" role="search">
       <span class="s-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>
@@ -392,6 +425,7 @@
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
   <span id="fab-label">Sign in to post</span>
 </button>
+<button class="ask-fab" id="ask" aria-label="Ask Stalker"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg><span>Ask</span></button>
 <button class="maptype" id="maptype" aria-label="Switch map style">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
   <span id="maptype-label">Map</span>
@@ -445,7 +479,7 @@ const roleOf = () => (S.me && S.me.profile && S.me.profile.role) || null;
 
 const S = {
   cfg: null, sb: null, session: null, me: null,
-  posts: [], access: null, signedIn: false, contacts: {}, prefill: false,
+  posts: [], access: null, signedIn: false, contacts: {}, prefill: false, inbox: null, ask: null, chatPics: [], pendingPics: [],
   tab: "listing", filter: "all", map: null, Marker: null, clusterer: null, plain: [], pinEls: new Map(),
   activeId: null, chat: [], draft: null, draftPhotos: [], busy: false, fitted: false, userId: null
 };
@@ -676,6 +710,7 @@ async function refreshMe() {
     catch (e) { if (e.status === 401) { const { data } = await S.sb.auth.getSession(); if (!data.session) { S.session = null; S.me = null; } } }
   } else S.me = null;
   renderAccountButton();
+  refreshBell();
 }
 
 function renderAccountButton() {
@@ -865,6 +900,9 @@ function openDetails(id, opts = {}) {
       <div class="title-row"><h1 class="title">${esc(titleOf(p))}</h1><button class="share-btn" id="share-post" aria-label="Share this post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</button></div>
       <p class="loc">${esc(placeOf(p))}</p>
       <p class="price">${esc(priceOf(p))}</p>
+      ${badgeHtml(p)}
+      ${p.needs_confirm ? `<div class="confirm-banner"><span>Is this still available?</span><button class="btn accent" id="still-here">Yes, still available</button></div>` : ""}
+      ${(p.warnings || []).length ? `<div class="warn-box"><b>${p.mine ? "Please check" : "Safety check"}</b>${p.warnings.map(esc).join("<br>")}</div>` : ""}
       ${isDev(p) ? `<div class="facts">
         <div class="fact"><b>Developer</b><span>${esc(p.company || "—")}</span></div>
         <div class="fact"><b>Possession</b><span>${esc(p.possession || "—")}</span></div>
@@ -892,7 +930,14 @@ function openDetails(id, opts = {}) {
           <a class="btn wa" href="${esc(waHref(contactOf(p).phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
         </div>`}`}
       </div>
-      ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.</p>` : ""}
+      ${!p.mine && p.kind === "listing" ? `<div class="act-row">
+        <button class="btn" id="watch-btn" aria-pressed="${!!p.watched}">${p.watched ? "★ Watching price" : "☆ Watch price"}</button>
+        <button class="btn" id="ask-about">Ask about this</button>
+        <button class="btn" id="viewing-btn">Request a viewing</button>
+        ${p.cobroke ? `<button class="btn" id="cobroke-btn">Co-broke</button>` : `<button class="btn" id="check-btn">Fair price?</button>`}
+      </div>` : ""}
+      ${!p.mine && p.kind === "request" && S.access && S.access.requests ? `<div class="act-row"><button class="btn" id="pitch-btn" style="grid-column:1/-1">Send them one of my listings</button></div>` : ""}
+      ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.${p.mine ? " Add a Google Maps link in Edit for an exact pin." : ""}</p>` : ""}
       ${p.source === "dld" && !p.mine ? `<div class="claim"><p class="hint">Listed from Dubai Land Department project records.</p>
         <a class="btn claim-btn" id="claim-post" href="${esc(waHref(p.contact_phone, `Hi, I represent ${p.company || "the developer"} and would like to claim the project "${p.building}" on Property Stalkers: ${location.origin}/#p=${p.id}`))}" target="_blank" rel="noopener">Developer? Claim this project</a></div>` : ""}
       ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
@@ -923,6 +968,14 @@ function openDetails(id, opts = {}) {
     catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + link), "_blank", "noopener"); }
   });
   document.querySelectorAll("[data-reach]").forEach((b) => b.addEventListener("click", () => reachOut(p, b.dataset.reach, b)));
+  const on = (id, fn) => { const el = $(id); if (el) el.addEventListener("click", fn); };
+  on("#watch-btn", (e) => toggleWatch(p, e.currentTarget));
+  on("#ask-about", () => openAssistant({ post_id: p.id }));
+  on("#viewing-btn", () => openViewingForm(p, "viewing"));
+  on("#cobroke-btn", () => openViewingForm(p, "cobroke"));
+  on("#check-btn", () => { openAssistant({ post_id: p.id }); setTimeout(() => { const m = $("#msg"); if (m) { m.value = "Is the price fair? What should I offer?"; askSend(); } }, 50); });
+  on("#pitch-btn", () => openPitchPicker(p));
+  on("#still-here", async (e) => { e.currentTarget.disabled = true; try { await api(`/posts/${p.id}/confirm`, { method: "POST" }); toast("Thanks! It stays on the map."); await loadFeed(); openDetails(p.id); } catch (err) { toast(err.message); } });
   const rm = $("#remove-post");
   if (rm) rm.addEventListener("click", () => removePost(p.id));
   const ed = $("#edit-post");
@@ -975,9 +1028,12 @@ function closeDetails() {
 }
 $("#panel-close").addEventListener("click", closeDetails);
 
-window.addEventListener("hashchange", () => { if (S.map && /p=/.test(location.hash)) openFromHash(); });
+window.addEventListener("hashchange", () => { if (S.map && /(^#p=|[#&]p=|repair=|^#inbox$)/.test(location.hash)) openFromHash(); });
 function openFromHash() {
-  const id = new URLSearchParams(location.hash.slice(1)).get("p");
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("repair")) return openRepairForm(h.get("repair"));
+  if (location.hash === "#inbox") return openInbox();
+  const id = h.get("p");
   if (id && !openDetails(id, { zoom: 15 })) toast("That post is no longer available, or only visible to some members.");
 }
 
@@ -1026,10 +1082,12 @@ function openEditForm(id) {
       </div>
       ${dev ? `<div class="grid2"><label class="field"><span>Possession</span><input id="e-possession" value="${esc(p.possession)}" placeholder="e.g. Dec 2027"></label>
         <label class="field"><span>Project RERA</span><input id="e-rera" value="${esc(p.rera_number)}"></label></div>` : ""}
-      ${p.poster_type === "broker" ? `<label class="field"><span>Your licence / RERA number</span><input id="e-rera" value="${esc(p.rera_number)}"></label>` : ""}
+      ${p.poster_type === "broker" ? `<label class="field"><span>Your licence / RERA number</span><input id="e-rera" value="${esc(p.rera_number)}"></label>
+        <label class="chip-check"><input type="checkbox" id="e-cobroke" ${p.cobroke ? "checked" : ""}> Open to co-broking with other brokers</label>` : ""}
       <div class="form-section">Location</div>
       ${dev ? "" : `<label class="field"><span>Building or project <span class="opt">(optional)</span></span><input id="e-building" value="${esc(p.building)}"></label>`}
       <label class="field"><span>Area, sector or community</span><input id="e-locality" value="${esc(p.locality)}"></label>
+      ${!isReq ? `<label class="field"><span>Google Maps link for an exact pin <span class="opt">(optional)</span></span><input id="e-maps" inputmode="url" placeholder="In Google Maps: Share → Copy link"></label>` : ""}
       <div class="grid2">
         <label class="field"><span>City</span><input id="e-city" value="${esc(p.city)}"></label>
         <label class="field"><span>Country <span class="opt">(optional)</span></span><input id="e-country" value="${esc(p.country)}"></label>
@@ -1092,6 +1150,8 @@ function openEditForm(id) {
       if ($("#e-possession")) body.possession = val("#e-possession");
       if ($("#e-rera")) body.rera_number = val("#e-rera");
       if ($("#e-unit")) body.unit_number = val("#e-unit");
+      if ($("#e-cobroke")) body.cobroke = $("#e-cobroke").checked;
+      if (val("#e-maps")) body.maps_link = val("#e-maps");
       if ($("#e-size")) body.size_sqft = Number(val("#e-size").replace(/\D/g, ""));
       if (!isReq) body.photos = urls;
       await api("/posts/" + p.id, { method: "PATCH", body: JSON.stringify(body) });
@@ -1581,7 +1641,8 @@ function profileForm(profile, submitLabel) {
       <label class="field"><span>Email</span><input id="pf-email" type="email" maxlength="120" autocomplete="email" value="${esc(email)}" placeholder="you@example.com"></label>
       <label class="field"><span>Mobile number with country code (for calls and WhatsApp)</span><input id="pf-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+971 50 123 4567" value="${esc(phone)}"></label>
       <label class="field"><span>Broker licence / RERA number <span class="opt">(optional)</span></span><input id="pf-rera" maxlength="40" autocomplete="off" value="${esc(profile.rera_number)}" placeholder="e.g. 45530 or BRN 45530"></label>
-      <button class="btn primary" style="width:100%" id="pf-save">${esc(submitLabel)}</button>
+      <label class="chip-check"><input type="checkbox" id="pf-notify" ${profile.notify_email === false ? "" : "checked"}> Email me alerts, enquiries and reminders</label>
+      <button class="btn primary" style="width:100%;margin-top:14px" id="pf-save">${esc(submitLabel)}</button>
       <p class="error" id="pf-err" hidden></p>
     </form>`;
 }
@@ -1619,7 +1680,7 @@ function bindProfileForm(onSaved) {
       if (v("#pf-name").length < 2) throw new Error("Please enter your name.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("#pf-email"))) throw new Error("Please enter a valid email address.");
       if (v("#pf-phone").replace(/\D/g, "").length < 8) throw new Error("Please enter your mobile number with country code.");
-      await api("/me", { method: "POST", body: JSON.stringify({ name: v("#pf-name"), email: v("#pf-email"), phone: v("#pf-phone"), rera: v("#pf-rera"), ...(avatar !== undefined ? { avatar } : {}) }) });
+      await api("/me", { method: "POST", body: JSON.stringify({ name: v("#pf-name"), email: v("#pf-email"), phone: v("#pf-phone"), rera: v("#pf-rera"), notify_email: $("#pf-notify") ? $("#pf-notify").checked : undefined, ...(avatar !== undefined ? { avatar } : {}) }) });
       await refreshMe();
       onSaved();
     } catch (err) {
@@ -1667,8 +1728,10 @@ function renderAccount() {
         <button class="btn" data-edit="${esc(p.id)}">Edit</button>
         <button class="btn" data-remove="${esc(p.id)}">Remove</button>
       </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
+    <div id="extras"></div>
     <button class="btn" style="width:100%;margin-top:24px" id="signout">Sign out</button>`;
   bindProfileForm(() => { toast("Profile saved."); renderAccount(); });
+  renderExtras();
   $("#switch-role").addEventListener("click", () => renderRolePicker(true));
   document.querySelectorAll("#sheet-body button[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
   document.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
@@ -1693,6 +1756,7 @@ function openComposer() {
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
+      ${role === "buyer" || role === "tenant" ? "" : `<label class="cam" title="Add photos" aria-label="Add photos">📷<input type="file" id="chat-pics" accept="image/*" multiple hidden></label>`}
       <div class="msg-wrap"><textarea id="msg" rows="2" placeholder="Describe what you want to post…" aria-label="Message"></textarea><div class="ghost" id="ghost" aria-hidden="true"></div></div>
       <button class="btn accent" id="send" aria-label="Send">Send</button>
     </form>`;
@@ -1703,7 +1767,7 @@ function openComposer() {
     intro.className = "bubble ai";
     const lister = role === "landlord" || role === "broker";
     intro.innerHTML = lister
-      ? `Tell me about the property in your own words. Please include the <b>unit number</b>, the <b>size</b>, the <b>location</b> (building, area and city) and the <b>price</b>.<br><br><span class="muted">Your unit number is never shown to visitors. It only stops the same unit being listed more than 3 times.</span>`
+      ? `Tell me about the property in your own words. Please include the <b>unit number</b>, the <b>size</b>, the <b>location</b> (building, area and city) and the <b>price</b>.<br><br>📷 Add photos and I'll write the listing from them. You can also paste a listing from WhatsApp.<br><br><span class="muted">Your unit number is never shown to visitors. It only stops the same unit being listed more than 3 times.</span>`
       : (role === "buyer" || role === "tenant"
         ? `Tell me what you're looking for, in your own words: the <b>area and city</b>, the type of home and your budget. Licensed brokers will see it and can call or WhatsApp you.`
         : `Tell me about the property, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world, and the price.`)
@@ -1725,6 +1789,18 @@ function openComposer() {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#composer").requestSubmit(); }
   });
   msg.addEventListener("input", () => { ghostUpdate(); autoGrow(); });
+  const pics = $("#chat-pics");
+  if (pics) pics.addEventListener("change", async () => {
+    const files = [...pics.files].slice(0, Math.max(0, 8 - S.chatPics.length - S.pendingPics.length));
+    pics.value = "";
+    if (!files.length) return toast("A listing can have up to 8 photos.");
+    const note = bubble("me", `Uploading ${files.length} photo${files.length > 1 ? "s" : ""}…`);
+    try {
+      for (const f of files) S.pendingPics.push(await uploadPhoto(f));
+      note.innerHTML = `<div class="thumbs">${S.pendingPics.map((u) => `<img src="${esc(shown(u))}" alt="">`).join("")}</div>`;
+      toast("Photos added. Send a message, or just tap Send.");
+    } catch (e) { note.textContent = e.message; }
+  });
   if (S.prefill) { S.prefill = false; msg.value = START; ghostUpdate(); autoGrow(); }
   $("#composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
   if (isDesktop()) msg.focus();
@@ -1775,16 +1851,18 @@ function bubble(kind, text) {
 async function send() {
   const t = $("#msg");
   const text = t.value.trim();
-  if (!text || S.busy) return;
-  if (/^i want to$/i.test(text)) { toast("Please finish the sentence: what, where, unit number, size and price."); t.focus(); return; }
+  if ((!text && !S.pendingPics.length) || S.busy) return;
+  if (/^i want to$/i.test(text) && !S.pendingPics.length) { toast("Please finish the sentence: what, where, unit number, size and price."); t.focus(); return; }
   if (/\[[^\]]*\]/.test(text)) {
     toast("Please replace the [brackets] with your details first.");
     const i = text.indexOf("["); t.focus(); t.setSelectionRange(i, text.indexOf("]", i) + 1);
     return;
   }
   t.value = ""; autoGrow();
-  S.chat.push({ role: "user", content: text });
-  bubble("me", text);
+  const images = S.pendingPics.splice(0);
+  S.chatPics.push(...images);
+  S.chat.push(images.length ? { role: "user", content: text || "Here are photos of the property.", images } : { role: "user", content: text });
+  if (text) bubble("me", text);
   await askAI();
 }
 
@@ -1794,7 +1872,7 @@ async function askAI() {
   const typing = bubble("ai", "");
   typing.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
   try {
-    const r = await api("/chat", { method: "POST", body: JSON.stringify({ messages: S.chat.map(({ role, content }) => ({ role, content })) }) });
+    const r = await api("/chat", { method: "POST", body: JSON.stringify({ messages: S.chat.map(({ role, content, images }) => (images ? { role, content, images } : { role, content })) }) });
     typing.remove();
     if (r.type === "draft") {
       if (r.text) bubble("ai", r.text);
@@ -1840,6 +1918,9 @@ function renderDraft(d) {
       <dt>Contact</dt><dd>${esc(d.contact_name)} · +${esc(d.contact_phone)}</dd>
     </dl>
     ${(d.notes || []).map((n) => `<p class="note">${esc(n)}</p>`).join("")}
+    ${d.precision === "area" && isListing ? `<p class="note">The pin is at the area, not the building. For an exact pin, paste a Google Maps link in the chat.</p>` : ""}
+    ${d.poster_type === "broker" ? `<label class="chip-check"><input type="checkbox" class="d-cobroke"> Open to co-broking with other brokers</label>` : ""}
+    ${S.chatPics.length && isListing ? `<p class="muted" style="font-size:13px">${S.chatPics.length} photo${S.chatPics.length > 1 ? "s" : ""} from the chat will be added.</p>` : ""}
     ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
     ${isListing ? `<label class="photo-pick">Add photos (optional, up to 8)<input type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="thumbs"></div>` : ""}
     <div class="actions">
@@ -1873,8 +1954,9 @@ async function confirmDraft(d, btn) {
       urls.push(await uploadPhoto(S.draftPhotos[i]));
     }
     btn.textContent = "Posting…";
-    const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id, photos: urls }) });
-    S.chat = []; S.draft = null; S.draftPhotos = []; S.devForm = null;
+    const cob = btn.closest(".draft") && btn.closest(".draft").querySelector(".d-cobroke");
+    const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id, photos: [...S.chatPics, ...urls].slice(0, 8), cobroke: !!(cob && cob.checked) }) });
+    S.chat = []; S.draft = null; S.draftPhotos = []; S.devForm = null; S.chatPics = []; S.pendingPics = [];
     closeSheet();
     toast(r.post.kind === "listing" ? "Posted! Your property is on the map." : "Posted! Your request is on the map.");
     await loadFeed();
@@ -1915,6 +1997,392 @@ async function uploadPhoto(file, opts = {}) {
   if (error) throw new Error("A photo couldn't be uploaded. Please try again.");
   return S.sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
 }
+
+/* =====================================================================
+   Ask Stalker (assistant), notifications, alerts, enquiries, viewings,
+   pitches, co-broking, tenancies and repair links.
+   ===================================================================== */
+const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+const needSignIn = (why) => { store.set("ps_resume_ask", "1"); renderSignIn(why); };
+const ready = (why) => {
+  if (!S.session) { renderSignIn(why); return false; }
+  if (!profileComplete()) { renderProfileStepThen(() => { closeSheet(); toast("Profile saved."); }); return false; }
+  return true;
+};
+
+/* ---------------- Ask Stalker ---------------- */
+const ASK_STARTERS = {
+  any: ["Find me a 2 bedroom to rent in Dubai Marina under AED 120k", "Stalk a building: show me everything in Skyview, Gurugram", "Can I afford a AED 1.5M apartment on AED 30k a month?", "Rent or buy: AED 1.2M flat vs AED 7k a month rent", "Show me deals and price cuts in Business Bay", "Off-plan projects handing over in 2027", "Alert me when a 3 bed villa under AED 4M is listed in Dubai Hills"],
+  landlord: ["Score my listing out of 10", "Rewrite my listing description", "Translate my listing into Arabic", "Roast my listing", "Who's looking for a place like mine?", "What's the rental yield on my property?"],
+  broker: ["Find listings open to co-broking in Dubai Marina", "Buyer requests that match my listings", "Score my listings", "Rewrite my listing in plain words"],
+  developer: ["Rewrite my project description", "Translate my project into Hindi", "What are similar projects priced at?"],
+  buyer: ["Is this area's price fair?", "What can I afford?", "Post my request so brokers can find me", "Alert me when something matches"],
+  tenant: ["Find me a rental under my budget", "Rent vs buy for me", "Post my rental request", "Alert me when something matches"]
+};
+
+function openAssistant(context = null) {
+  if (!S.session) return needSignIn("Sign in to use Ask Stalker.");
+  if (!profileComplete()) return renderProfileStep();
+  const ctxId = context && context.post_id;
+  if (!S.ask || S.ask.ctx !== ctxId) S.ask = { ctx: ctxId || null, messages: [] };
+  const here = ctxId && S.posts.find((p) => p.id === ctxId);
+  openSheet("ask", here ? "Ask about this property" : "Ask Stalker");
+  $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
+  $("#sheet-foot").innerHTML = `
+    <form class="composer" id="composer">
+      <div class="msg-wrap"><textarea id="msg" rows="1" placeholder="${here ? "Ask anything about this property…" : "Ask about properties, prices, areas…"}" aria-label="Message"></textarea></div>
+      <button class="btn accent" id="send" aria-label="Send">Send</button>
+    </form>`;
+  if (!S.ask.messages.length) {
+    const intro = document.createElement("div");
+    intro.className = "bubble ai";
+    intro.innerHTML = here
+      ? `Ask me anything about this <b>${esc(titleOf(here).toLowerCase())}</b>: the price, the area, what's included. If I don't know, I'll pass your question to the lister. I can also set up a viewing.`
+      : `Hi${S.me && S.me.profile && S.me.profile.name ? " " + esc(S.me.profile.name.split(" ")[0]) : ""}, I'm Stalker. I can find properties, check if a price is fair, do the maths on buying or renting, stalk a building, write or score your listing, and alert you when something new matches.`;
+    $("#log").appendChild(intro);
+    const ex = document.createElement("div");
+    ex.className = "examples";
+    const starters = here ? ["Is the price fair?", "Any red flags?", "What would the monthly mortgage be?", "I'd like to see it"] : [...(ASK_STARTERS[roleOf()] || []), ...ASK_STARTERS.any].slice(0, 7);
+    ex.innerHTML = starters.map((t) => `<button type="button" class="example"><span>${esc(t)}</span></button>`).join("");
+    $("#log").appendChild(ex);
+    ex.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => { $("#msg").value = b.textContent; askSend(); }));
+  } else {
+    for (const m of S.ask.messages) {
+      if (m.role === "user") bubble("me", m.content);
+      else { if (m.content) bubble("ai", m.content); (m.cards || []).forEach(renderAskCard); }
+    }
+  }
+  const msg = $("#msg");
+  msg.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#composer").requestSubmit(); } });
+  msg.addEventListener("input", autoGrow);
+  $("#composer").addEventListener("submit", (e) => { e.preventDefault(); askSend(); });
+  if (isDesktop()) msg.focus();
+  scrollLog();
+}
+
+async function askSend() {
+  const t = $("#msg");
+  const text = t.value.trim();
+  if (!text || S.busy) return;
+  t.value = ""; autoGrow();
+  document.querySelectorAll("#log .examples").forEach((x) => x.remove());
+  S.ask.messages.push({ role: "user", content: text });
+  bubble("me", text);
+  S.busy = true; $("#send").disabled = true;
+  const typing = bubble("ai", "");
+  typing.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
+  try {
+    const history = S.ask.messages.map((m) => ({ role: m.role, content: m.role === "assistant" ? (m.content || "") + (m.note ? "\n" + m.note : "") : m.content }));
+    const r = await api("/assistant", { method: "POST", body: JSON.stringify({ messages: history, context: S.ask.ctx ? { post_id: S.ask.ctx } : undefined }) });
+    typing.remove();
+    const note = (r.cards || []).map((c) => c.type === "listings" ? `[Showed listings: ${c.ids.join(", ")}]` : c.type === "draft" ? `[Showed a request draft to confirm]` : c.type === "enquiry" ? `[Showed an enquiry card for ${c.post_id}]` : `[Showed a ${c.type} card]`).join(" ");
+    S.ask.messages.push({ role: "assistant", content: r.text, cards: r.cards || [], note });
+    bubble("ai", r.text);
+    (r.cards || []).forEach(renderAskCard);
+  } catch (e) {
+    typing.remove();
+    S.ask.messages.pop();
+    bubble("err", e.code === "profile_required" ? "Please complete your profile first." : e.message);
+  } finally {
+    S.busy = false; const s = $("#send"); if (s) s.disabled = false;
+  }
+}
+
+function badgeHtml(p) {
+  const out = [];
+  if (p.below_market_pct >= 10) out.push(`<span class="badge good">${p.below_market_pct}% below area price</span>`);
+  if (p.price_cut_pct >= 3) out.push(`<span class="badge cut">Price cut ${p.price_cut_pct}%</span>`);
+  if (p.cobroke) out.push(`<span class="badge">Open to co-broking</span>`);
+  return out.join("");
+}
+
+function renderAskCard(c) {
+  const log = $("#log");
+  if (!log) return;
+  const box = document.createElement("div");
+  box.className = "ask-card";
+  if (c.type === "listings") {
+    const items = c.ids.map((id) => S.posts.find((p) => p.id === id)).filter(Boolean);
+    if (!items.length) return;
+    box.innerHTML = `${c.title ? `<div class="ac-title">${esc(c.title)}</div>` : ""}${items.map((p) => `
+      <button class="litem" data-id="${esc(p.id)}">
+        <img src="${esc(thumbOf(p))}" alt="" loading="lazy">
+        <div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))}</small>
+          <span class="lp">${esc(priceOf(p))}${sizeOf(p) ? ` <small class="lsz">· ${esc(sizeOf(p))}</small>` : ""}</span>${badgeHtml(p)}</div>
+      </button>`).join("")}`;
+    box.querySelectorAll(".litem").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.id, { zoom: 15 }); }));
+  } else if (c.type === "description") {
+    box.innerHTML = `<div class="ac-title">${esc(c.label)} · ${esc(c.title)}</div><p class="ac-text">${esc(c.text)}</p>
+      <div class="actions"><button class="btn" data-a="copy">Copy</button><button class="btn accent" data-a="use">Use this description</button></div>`;
+    box.querySelector('[data-a="copy"]').addEventListener("click", async () => { try { await navigator.clipboard.writeText(c.text); toast("Copied."); } catch (e) { toast("Couldn't copy."); } });
+    box.querySelector('[data-a="use"]').addEventListener("click", async (e) => {
+      e.currentTarget.disabled = true;
+      try { await api("/posts/" + c.post_id, { method: "PATCH", body: JSON.stringify({ description: c.text }) }); toast("Description updated."); await loadFeed(); e.currentTarget.textContent = "Applied ✓"; }
+      catch (err) { e.currentTarget.disabled = false; toast(err.message); }
+    });
+  } else if (c.type === "alert") {
+    box.innerHTML = `<div class="ac-row">🔔 <span>Alert saved: <b>${esc(c.label)}</b>. I'll tell you in the bell and by email when something new matches.</span></div>`;
+  } else if (c.type === "watch") {
+    box.innerHTML = `<div class="ac-row">☆ <span>Watching the price of <b>${esc(c.title)}</b>. You'll hear if it drops.</span></div>`;
+    loadFeed();
+  } else if (c.type === "draft") {
+    const d = c.draft;
+    box.innerHTML = `<div class="ac-title">Your request</div><b>${esc(titleOf(d))}</b><div class="muted">${esc(placeOf(d))} · ${esc(priceOf(d))}</div>
+      ${d.description ? `<p class="ac-text">${esc(d.description)}</p>` : ""}
+      <p class="muted" style="font-size:13px">Brokers with a licence will see it, and owners whose listing fits can send it to you. Your number is shared only with people who reach out.</p>
+      <div class="actions"><button class="btn accent" data-a="post">Post my request</button></div>`;
+    box.querySelector('[data-a="post"]').addEventListener("click", async (e) => {
+      const b = e.currentTarget; b.disabled = true; b.textContent = "Posting…";
+      try { const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id }) }); b.textContent = "Posted ✓"; toast("Your request is on the map."); await loadFeed(); }
+      catch (err) { b.disabled = false; b.textContent = "Post my request"; toast(err.message); }
+    });
+  } else if (c.type === "enquiry") {
+    const viewing = c.kind === "viewing";
+    box.innerHTML = `<div class="ac-title">${viewing ? "Viewing request" : "Question for the lister"} · ${esc(c.title)}</div>
+      ${viewing ? `<label class="field"><span>When?</span><input type="datetime-local" class="e-slot" value="${esc(toLocalInput(c.slot))}"></label>` : ""}
+      <label class="field"><span>Message</span><textarea class="e-msg" maxlength="800">${esc(c.message || "")}</textarea></label>
+      ${c.summary ? `<p class="muted" style="font-size:13px">Shared with them: ${esc(c.summary)}</p>` : ""}
+      <p class="muted" style="font-size:13px">They'll get your name and mobile number so they can reply.</p>
+      <div class="actions"><button class="btn accent" data-a="send">Send</button></div>`;
+    box.querySelector('[data-a="send"]').addEventListener("click", async (e) => {
+      const b = e.currentTarget;
+      const slotEl = box.querySelector(".e-slot");
+      const slot = slotEl && slotEl.value ? new Date(slotEl.value).toISOString() : null;
+      if (viewing && !slot) return toast("Please pick a date and time.");
+      b.disabled = true; b.textContent = "Sending…";
+      try { await api(`/posts/${c.post_id}/enquire`, { method: "POST", body: JSON.stringify({ kind: c.kind, slot, message: box.querySelector(".e-msg").value, summary: c.summary }) }); b.textContent = "Sent ✓"; toast(viewing ? "Viewing request sent. You'll be told when they reply." : "Sent. They'll get back to you."); }
+      catch (err) { b.disabled = false; b.textContent = "Send"; toast(err.message); }
+    });
+  } else if (c.type === "pitches") {
+    box.innerHTML = `<div class="ac-title">People looking for a place like yours</div>${c.items.map((it, i) => `
+      <div class="my-post"><div><b>${esc(it.request)}</b><small>Fits your ${esc(it.listing)}${it.budget ? ` · budget ${esc((it.currency || "") + " " + Number(it.budget).toLocaleString("en-US"))}` : ""}</small></div>
+      <button class="btn" data-i="${i}">Send my listing</button></div>`).join("")}`;
+    box.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => pitchListing(c.items[+b.dataset.i].request_id, c.items[+b.dataset.i].post_id, b)));
+  } else return;
+  log.appendChild(box);
+  scrollLog();
+}
+
+function toLocalInput(iso) {
+  if (!iso) return "";
+  const d = new Date(iso); if (isNaN(d)) return "";
+  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return z.toISOString().slice(0, 16);
+}
+
+async function pitchListing(requestId, postId, btn) {
+  if (btn) btn.disabled = true;
+  try { await api(`/requests/${requestId}/pitch`, { method: "POST", body: JSON.stringify({ post_id: postId }) }); if (btn) btn.textContent = "Sent ✓"; toast("Sent. They'll see your listing and your number."); }
+  catch (e) { if (btn) btn.disabled = false; toast(e.message); }
+}
+
+/* ---------------- notifications (the bell) ---------------- */
+async function refreshBell() {
+  const bell = $("#bell");
+  if (!S.session || !S.me) { bell.hidden = true; return; }
+  bell.hidden = false;
+  try {
+    const r = await api("/notifications");
+    S.inbox = r.items;
+    const n = $("#bell-n");
+    n.textContent = r.unread > 9 ? "9+" : String(r.unread);
+    n.hidden = !r.unread;
+  } catch (e) {}
+}
+setInterval(() => { if (document.visibilityState === "visible" && S.session) refreshBell(); }, 90000);
+$("#bell").addEventListener("click", () => openInbox());
+
+async function openInbox() {
+  if (!S.session) return renderSignIn("Sign in to see your notifications.");
+  openSheet("inbox", "Notifications");
+  $("#sheet-body").innerHTML = `<p class="muted">Loading…</p>`;
+  await refreshBell();
+  const items = S.inbox || [];
+  $("#sheet-body").innerHTML = items.length ? items.map(inboxItem).join("") : `<p class="muted">Nothing yet. Alerts, price drops, enquiries and viewing requests will show up here.</p>
+    <button class="btn" id="ib-ask" style="width:100%;margin-top:12px">Set up an alert with Ask Stalker</button>`;
+  const ask = $("#ib-ask"); if (ask) ask.addEventListener("click", () => openAssistant());
+  document.querySelectorAll("#sheet-body [data-act]").forEach((b) => b.addEventListener("click", () => inboxAction(b)));
+  if (items.some((x) => !x.read)) { try { await api("/notifications/read", { method: "POST", body: "{}" }); $("#bell-n").hidden = true; } catch (e) {} }
+}
+
+function contactButtons(person, text) {
+  if (!person || !person.phone) return "";
+  return `<a class="btn primary" href="${esc(telHref(person.phone))}">Call ${esc(person.name.split(" ")[0])}</a><a class="btn wa" href="${esc(waHref(person.phone, text || "Hi, it's about Property Stalkers."))}" target="_blank" rel="noopener">WhatsApp</a>`;
+}
+
+function inboxItem(n) {
+  const e = n.enquiry;
+  const btns = [];
+  if (e && e.incoming && e.kind === "viewing" && e.status === "new") btns.push(`<button class="btn accent" data-act="accept" data-id="${e.id}">Accept</button><button class="btn" data-act="decline" data-id="${e.id}">Decline</button>`);
+  if (e && e.incoming) btns.push(contactButtons(e.from, `Hi ${e.from.name.split(" ")[0]}, it's about your enquiry on Property Stalkers.`));
+  if (e && !e.incoming && e.to && e.to.phone) btns.push(contactButtons(e.to, "Hi, it's about the viewing on Property Stalkers."));
+  if (n.kind === "pitch_invite" && n.ref_id && n.post_id) btns.push(`<button class="btn accent" data-act="pitch" data-req="${n.ref_id}" data-post="${n.post_id}">Send my listing</button>`);
+  if ((n.kind === "stale" || n.kind === "expired") && n.post_id) btns.push(`<button class="btn accent" data-act="confirm" data-post="${n.post_id}">Still available</button><button class="btn" data-act="remove" data-post="${n.post_id}">Remove it</button>`);
+  if (n.post_id && !["stale", "expired"].includes(n.kind)) btns.push(`<button class="btn" data-act="view" data-post="${n.post_id}">View</button>`);
+  const extra = e ? [e.slot ? `🗓 ${when(e.slot)} (your time)` : "", e.status !== "new" && e.kind === "viewing" ? (e.status === "accepted" ? "✓ Accepted" : "Declined") : "", e.summary && e.incoming ? e.summary : "", e.from && e.from.licence && e.kind === "cobroke" ? `Licence ${e.from.licence}` : ""].filter(Boolean).join(" · ") : "";
+  return `<div class="note-item${n.read ? "" : " unread"}">
+    <div class="ni-title">${esc(n.title)}</div>
+    ${n.body ? `<div class="ni-body">${esc(n.body)}</div>` : ""}
+    ${extra ? `<div class="ni-meta">${esc(extra)}</div>` : ""}
+    <div class="ni-meta">${esc(ago(n.created_at))}</div>
+    ${btns.length ? `<div class="ni-actions">${btns.join("")}</div>` : ""}
+  </div>`;
+}
+
+async function inboxAction(b) {
+  const a = b.dataset.act;
+  try {
+    if (a === "view") { closeSheet(); if (!openDetails(b.dataset.post, { zoom: 15 })) toast("That listing isn't on the map any more."); return; }
+    b.disabled = true;
+    if (a === "accept" || a === "decline") { await api("/enquiries/" + b.dataset.id, { method: "POST", body: JSON.stringify({ status: a === "accept" ? "accepted" : "declined" }) }); toast(a === "accept" ? "Viewing confirmed. They've been told." : "Declined. They've been told."); }
+    if (a === "pitch") { await pitchListing(b.dataset.req, b.dataset.post, b); return; }
+    if (a === "confirm") { await api(`/posts/${b.dataset.post}/confirm`, { method: "POST" }); toast("Thanks! It stays on the map."); await loadFeed(); }
+    if (a === "remove") { await api("/posts/" + b.dataset.post, { method: "DELETE" }); toast("Removed."); await loadFeed(); }
+    openInbox();
+  } catch (e) { b.disabled = false; toast(e.message); }
+}
+
+/* ---------------- listing actions: watch, ask, viewing, co-broke, pitch ---------------- */
+async function toggleWatch(p, btn) {
+  if (!ready("Sign in to watch prices.")) return;
+  btn.disabled = true;
+  try {
+    const r = await api(`/posts/${p.id}/watch`, { method: p.watched ? "DELETE" : "POST" });
+    p.watched = r.watching;
+    btn.innerHTML = p.watched ? "★ Watching price" : "☆ Watch price";
+    btn.setAttribute("aria-pressed", String(p.watched));
+    toast(p.watched ? "You'll be told if the price drops." : "Stopped watching.");
+  } catch (e) { toast(e.message); }
+  btn.disabled = false;
+}
+
+function openViewingForm(p, kind = "viewing") {
+  if (!ready(kind === "cobroke" ? "Sign in to co-broke." : "Sign in to request a viewing.")) return;
+  openSheet("viewing", kind === "cobroke" ? "Ask to co-broke" : "Request a viewing");
+  const soon = new Date(Date.now() + 26 * 3600000); soon.setMinutes(0, 0, 0);
+  $("#sheet-body").innerHTML = `
+    <p class="muted">${esc(titleOf(p))} · ${esc(placeOf(p))}</p>
+    ${kind === "viewing" ? `<label class="field"><span>Preferred date and time</span><input type="datetime-local" id="v-slot" value="${esc(toLocalInput(soon.toISOString()))}"></label>` : ""}
+    <label class="field"><span>${kind === "cobroke" ? "About your buyer / tenant" : "Message"} <span class="opt">(optional)</span></span><textarea id="v-msg" maxlength="800" placeholder="${kind === "cobroke" ? "e.g. Cash buyer, ready to view this week. 50/50 split?" : "e.g. Is parking included? I'm a cash buyer."}"></textarea></label>
+    <p class="muted" style="font-size:13px">They'll get your name and mobile number so they can reply. ${kind === "viewing" ? "You'll be told when they accept, with their number." : ""}</p>
+    <button class="btn accent" style="width:100%" id="v-send">Send</button><p class="error" id="v-err" hidden></p>`;
+  $("#v-send").addEventListener("click", async () => {
+    const el = $("#v-slot"), err = $("#v-err"), btn = $("#v-send");
+    const slot = el && el.value ? new Date(el.value).toISOString() : null;
+    if (kind === "viewing" && !slot) { err.hidden = false; err.textContent = "Please pick a time."; return; }
+    btn.disabled = true; btn.textContent = "Sending…";
+    try { await api(`/posts/${p.id}/enquire`, { method: "POST", body: JSON.stringify({ kind, slot, message: $("#v-msg").value }) }); closeSheet(); toast(kind === "viewing" ? "Viewing request sent." : "Co-broke request sent."); }
+    catch (e) { btn.disabled = false; btn.textContent = "Send"; err.hidden = false; err.textContent = e.message; }
+  });
+}
+
+function openPitchPicker(req) {
+  if (!ready("Sign in to send a listing.")) return;
+  const mine = S.posts.filter((p) => p.mine && p.kind === "listing");
+  openSheet("pitch", "Send a listing to this request");
+  $("#sheet-body").innerHTML = `<p class="muted">${esc(titleOf(req))} · ${esc(placeOf(req))} · ${esc(priceOf(req))}</p>
+    ${mine.length ? mine.map((p) => `<div class="my-post"><div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))} · ${esc(priceOf(p))}</small></div><button class="btn" data-post="${p.id}">Send</button></div>`).join("")
+      : `<p class="muted">You don't have any listings yet.</p>`}`;
+  document.querySelectorAll("#sheet-body [data-post]").forEach((b) => b.addEventListener("click", () => pitchListing(req.id, b.dataset.post, b)));
+}
+
+/* ---------------- My profile: alerts, tenancies, admin ---------------- */
+async function renderExtras() {
+  const box = $("#extras");
+  if (!box) return;
+  const [al, tn] = await Promise.all([api("/alerts").catch(() => ({ alerts: [] })), api("/tenancies").catch(() => ({ tenancies: [] }))]);
+  const role = roleOf();
+  box.innerHTML = `
+    <div class="section-title">My alerts</div>
+    ${al.alerts.length ? al.alerts.map((a) => `<div class="my-post"><div><b>${esc(a.label)}</b><small>Since ${esc(ago(a.created_at))}</small></div><button class="btn" data-del-alert="${a.id}">Remove</button></div>`).join("") : `<p class="muted">No alerts yet.</p>`}
+    <button class="btn" id="new-alert" style="width:100%;margin-top:8px">New alert with Ask Stalker</button>
+    ${role === "landlord" || role === "broker" || tn.tenancies.length ? `
+    <div class="section-title">My tenancies</div>
+    <p class="muted" style="font-size:13px">Get rent and renewal reminders, and give your tenant a link to report repairs.</p>
+    ${tn.tenancies.map((t) => `<div class="my-post"><div><b>${esc(t.label)}</b><small>${esc([t.tenant_name, t.rent ? `${t.currency || ""} ${Number(t.rent).toLocaleString("en-US")}/month` : "", t.due_day ? `due on the ${t.due_day}` : "", t.lease_end ? `lease ends ${t.lease_end}` : ""].filter(Boolean).join(" · "))}</small></div>
+      <button class="btn" data-copy-link="${esc(t.repair_token)}">Repair link</button><button class="btn" data-edit-ten="${t.id}">Edit</button></div>`).join("")}
+    <button class="btn" id="new-tenancy" style="width:100%;margin-top:8px">Add a tenancy</button>` : ""}
+    ${S.me && S.me.isAdmin ? `<div class="section-title">Admin</div><button class="btn" id="adm-flags" style="width:100%">Flagged posts</button>
+      <button class="btn" id="adm-jobs" style="width:100%;margin-top:8px">Run reminders and stale checks now</button><div id="adm-out"></div>` : ""}`;
+  box.querySelectorAll("[data-del-alert]").forEach((b) => b.addEventListener("click", async () => { await api("/alerts/" + b.dataset.delAlert, { method: "DELETE" }); renderExtras(); }));
+  $("#new-alert").addEventListener("click", () => { openAssistant(); setTimeout(() => { const m = $("#msg"); if (m) { m.value = "Alert me when "; m.focus(); } }, 50); });
+  const nt = $("#new-tenancy"); if (nt) nt.addEventListener("click", () => openTenancyForm(null));
+  box.querySelectorAll("[data-edit-ten]").forEach((b) => b.addEventListener("click", () => openTenancyForm(tn.tenancies.find((t) => t.id === b.dataset.editTen))));
+  box.querySelectorAll("[data-copy-link]").forEach((b) => b.addEventListener("click", () => shareRepairLink(b.dataset.copyLink)));
+  const af = $("#adm-flags");
+  if (af) af.addEventListener("click", async () => {
+    const r = await api("/admin/flags");
+    $("#adm-out").innerHTML = r.posts.length ? r.posts.map((p) => `<div class="my-post"><div><b>${esc(p.title)}</b><small>${esc(p.flags.join(", "))} · ${esc(p.contact_name || "")}</small></div><button class="btn" data-view="${p.id}">View</button></div>`).join("") : `<p class="muted">Nothing flagged.</p>`;
+    document.querySelectorAll("#adm-out [data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
+  });
+  const aj = $("#adm-jobs");
+  if (aj) aj.addEventListener("click", async () => { const r = await api("/admin/run-jobs", { method: "POST" }); $("#adm-out").innerHTML = `<p class="muted">${esc(Object.entries(r.done).map(([k, v]) => `${k}: ${v}`).join(" · "))}</p>`; });
+}
+
+async function shareRepairLink(token) {
+  const link = `${location.origin}/#repair=${token}`;
+  const text = `Report any repairs for your home here: ${link}`;
+  try { if (navigator.share) { await navigator.share({ title: "Repair requests", text, url: link }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(link); toast("Repair link copied. Send it to your tenant."); }
+  catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener"); }
+}
+
+function openTenancyForm(t) {
+  openSheet("tenancy", t ? "Edit tenancy" : "Add a tenancy");
+  t = t || {};
+  $("#sheet-body").innerHTML = `
+    <form id="ten-form" novalidate>
+      <label class="field"><span>Property</span><input id="t-label" maxlength="80" value="${esc(t.label)}" placeholder="e.g. Skyview 1204"></label>
+      <div class="grid2">
+        <label class="field"><span>Tenant name <span class="opt">(optional)</span></span><input id="t-name" value="${esc(t.tenant_name)}"></label>
+        <label class="field"><span>Tenant mobile <span class="opt">(optional)</span></span><input id="t-phone" type="tel" value="${esc(t.tenant_phone ? "+" + t.tenant_phone : "")}"></label>
+      </div>
+      <label class="field"><span>Tenant email <span class="opt">(optional, for rent reminders)</span></span><input id="t-email" type="email" value="${esc(t.tenant_email)}"></label>
+      <div class="field"><span>Monthly rent</span><div class="price-row"><input id="t-rent" inputmode="numeric" value="${esc(t.rent ? Number(t.rent).toLocaleString("en-US") : "")}">
+        <select id="t-cur">${CURRENCIES.map((c) => `<option${(t.currency || "AED") === c ? " selected" : ""}>${c}</option>`).join("")}</select></div></div>
+      <div class="grid2">
+        <label class="field"><span>Rent due on day</span><input id="t-due" inputmode="numeric" value="${esc(t.due_day || "")}" placeholder="1 to 28"></label>
+        <label class="field"><span>Lease ends</span><input id="t-end" type="date" value="${esc(t.lease_end || "")}"></label>
+      </div>
+      <button class="btn accent" style="width:100%" id="t-save">Save</button>
+      ${t.id ? `<button type="button" class="btn" style="width:100%;margin-top:8px" id="t-newlink">Make a new repair link (the old one stops working)</button><button type="button" class="link-btn" id="t-del">Delete this tenancy</button>` : ""}
+      <p class="error" id="t-err" hidden></p>
+    </form>`;
+  const v = (id) => $(id).value.trim();
+  $("#ten-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = { label: v("#t-label"), tenant_name: v("#t-name"), tenant_phone: v("#t-phone"), tenant_email: v("#t-email"), rent: v("#t-rent").replace(/\D/g, ""), currency: v("#t-cur"), due_day: v("#t-due"), lease_end: v("#t-end") };
+    try { await api(t.id ? "/tenancies/" + t.id : "/tenancies", { method: t.id ? "PATCH" : "POST", body: JSON.stringify(body) }); toast("Saved."); renderAccount(); }
+    catch (err) { const el = $("#t-err"); el.hidden = false; el.textContent = err.message; }
+  });
+  if (t.id) {
+    $("#t-newlink").addEventListener("click", async () => { const r = await api("/tenancies/" + t.id, { method: "PATCH", body: JSON.stringify({ new_link: true }) }); shareRepairLink(r.tenancy.repair_token); });
+    $("#t-del").addEventListener("click", async () => { if (!confirm("Delete this tenancy?")) return; await api("/tenancies/" + t.id, { method: "DELETE" }); renderAccount(); });
+  }
+}
+
+/* ---------------- repair link (tenants, no sign-in) ---------------- */
+async function openRepairForm(token) {
+  openSheet("repair", "Report a repair");
+  $("#sheet-body").innerHTML = `<p class="muted">Loading…</p>`;
+  let info;
+  try { info = await api("/repair/" + token); }
+  catch (e) { $("#sheet-body").innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+  $("#sheet-body").innerHTML = `
+    <p class="muted">For <b>${esc(info.label)}</b>. Your landlord gets this straight away.</p>
+    <label class="field"><span>Your name</span><input id="r-name" value="${esc(info.tenant_name || "")}"></label>
+    <label class="field"><span>Your mobile <span class="opt">(optional)</span></span><input id="r-phone" type="tel"></label>
+    <label class="field"><span>What needs fixing?</span><textarea id="r-msg" maxlength="800" placeholder="e.g. The kitchen tap is leaking since yesterday."></textarea></label>
+    <button class="btn accent" style="width:100%" id="r-send">Send to my landlord</button><p class="error" id="r-err" hidden></p>`;
+  $("#r-send").addEventListener("click", async () => {
+    const b = $("#r-send"); b.disabled = true;
+    try { await api("/repair/" + token, { method: "POST", body: JSON.stringify({ name: $("#r-name").value, phone: $("#r-phone").value, message: $("#r-msg").value }) });
+      $("#sheet-body").innerHTML = `<p>Sent ✓ Your landlord has been told.</p>`; }
+    catch (e) { b.disabled = false; const el = $("#r-err"); el.hidden = false; el.textContent = e.message; }
+  });
+}
+
+$("#ask").addEventListener("click", () => openAssistant());
 
 boot();
 </script>
