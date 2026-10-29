@@ -59,7 +59,8 @@ export function toPin(p, viewer, i = {}, watched = new Set()) {
     interests: Array.isArray(p.interests) ? p.interests : [], amenities: Array.isArray(p.amenities) ? p.amenities : [],
     size_sqft: p.size_sqft ?? null, configs: dev ? p.configs || null : null, company: dev ? p.company || null : null,
     possession: dev ? p.possession || null : null,
-    photo: photos[0] || null, nphotos: photos.length,
+    // All photo links (just short strings), so swiping a card's photos never waits for the full details.
+    photo: photos[0] || null, nphotos: photos.length, photos: photos.slice(0, 8),
     created_at: p.created_at,
     mine: !!viewer && p.user_id === viewer.id,
     watched: watched.has(p.id),
