@@ -105,6 +105,9 @@ export function makeStore({ url, serviceKey }) {
     async createDraft(userId, data) {
       return must(await sb.from("drafts").insert({ user_id: userId, data }).select("id").single()).id;
     },
+    async updateDraft(id, userId, data) {
+      must(await sb.from("drafts").update({ data }).eq("id", id).eq("user_id", userId));
+    },
     async getDraft(id, userId) {
       const row = must(await sb.from("drafts").select("data").eq("id", id).eq("user_id", userId).maybeSingle());
       return row ? row.data : null;

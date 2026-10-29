@@ -55,6 +55,22 @@ export function makeGeo({ apiKey, fetchImpl = fetch }) {
       }
       return null;
     },
+    /** Pin dropped on the map -> address, area, city and country (for filling in a listing). */
+    async reverse(lat, lng) {
+      const u = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+      u.searchParams.set("latlng", `${lat},${lng}`);
+      u.searchParams.set("key", apiKey);
+      const d = await (await fetchImpl(u.toString())).json();
+      if (d.status !== "OK" || !d.results || !d.results.length) return null;
+      const comps = d.results.flatMap((r) => r.address_components || []);
+      const find = (...types) => { const c = comps.find((x) => types.some((t) => (x.types || []).includes(t))); return c ? c.long_name : null; };
+      return {
+        address: d.results[0].formatted_address,
+        locality: find("sublocality_level_1", "sublocality", "neighborhood", "colloquial_area"),
+        city: find("locality", "postal_town", "administrative_area_level_2", "administrative_area_level_1"),
+        country: find("country")
+      };
+    },
     /** For the search bar: any place name -> centre and viewport, or null. */
     async search(q) {
       const r = await geocode(q);

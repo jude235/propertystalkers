@@ -219,8 +219,8 @@ export async function handle(req, deps) {
         else if (!place) return { message: "I couldn't read a location from that map link. Please open the place in Google Maps, tap Share, and paste that link." };
       }
       if (!place) {
-        const where = [v.post.building, v.post.locality, v.post.city].filter(Boolean).join(", ");
-        return { message: `I couldn't find "${where}" on the map. Could you check the spelling, or add the area name or a nearby landmark?` };
+        // Not found: keep the draft and let the person drop the pin themselves.
+        place = { lat: null, lng: null, precision: "building", address: null, place_id: null, needs_pin: true };
       }
       const problem = await unitProblem(unitKey(v.post), v.post.deal);
       if (problem) return { message: problem };
@@ -233,6 +233,27 @@ export async function handle(req, deps) {
       };
       const id = await store.createDraft(user.id, draft);
       return { draft: { id, ...draft, building_key: undefined, place_id: undefined } };
+    }
+
+    /* ---------- set the pin on a draft (dropped on the map or from current location) ---------- */
+    const pinM = path.match(/^\/drafts\/([^/]+)\/pin$/);
+    if (pinM && method === "POST") {
+      if (!isUuid(pinM[1])) return json({ error: "That draft has expired." }, 404);
+      const draft = await store.getDraft(pinM[1], user.id);
+      if (!draft) return json({ error: "That draft has expired. Please describe the post again." }, 404);
+      const b = await readJson(req);
+      const lat = Number(b.lat), lng = Number(b.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (!lat && !lng)) {
+        return json({ error: "That spot isn't valid. Please try again." }, 400);
+      }
+      const where = await geo.reverse(lat, lng).catch(() => null);
+      const next = { ...draft, lat, lng, precision: "building", place_id: null, needs_pin: false,
+        address: (where && where.address) || draft.address || null,
+        locality: draft.locality || (where && where.locality) || null,
+        city: draft.city || (where && where.city) || null,
+        country: draft.country || (where && where.country) || null };
+      await store.updateDraft(pinM[1], user.id, next);
+      return json({ draft: { id: pinM[1], ...next, building_key: undefined, place_id: undefined } });
     }
 
     /* ---------- developer project form (no AI needed) ---------- */
@@ -304,7 +325,8 @@ export async function handle(req, deps) {
       // Photos must be in this user's folder of our own storage bucket.
       const photos = ownPhotos(body.photos, user.id);
 
-      const { notes, ...fields } = draft;
+      const { notes, needs_pin, ...fields } = draft;
+      if (needs_pin || fields.lat == null) return json({ error: "Please set the pin on the map first." }, 400);
       if (draft.kind === "listing" && draft.deal === "share" && body.share_permission !== true) {
         return json({ error: "Please confirm you have permission to share this space (from the owner or landlord)." }, 400);
       }
@@ -371,6 +393,13 @@ export async function handle(req, deps) {
         Object.assign(fields, place, { building_key: buildingKey(fields.building, fields.city) });
       }
       if (pin) Object.assign(fields, { lat: pin.lat, lng: pin.lng, precision: "building" });
+      // "Move the pin": a spot picked on the map.
+      if (b.pin && typeof b.pin === "object") {
+        const lat = Number(b.pin.lat), lng = Number(b.pin.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return json({ error: "That spot isn't valid." }, 400);
+        const where = await geo.reverse(lat, lng).catch(() => null);
+        Object.assign(fields, { lat, lng, precision: "building", place_id: null }, where && where.address ? { address: where.address } : {});
+      }
       if (post.kind === "listing") {
         fields.unit_key = unitKey(fields);
         if (fields.unit_key !== post.unit_key) {
