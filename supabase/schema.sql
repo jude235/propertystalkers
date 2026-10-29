@@ -246,3 +246,12 @@ alter table public.posts add column if not exists guests int;
 alter table public.posts add column if not exists min_nights int;
 alter table public.profiles add column if not exists interests jsonb not null default '[]'::jsonb;
 update public.profiles set role = 'seeker' where role in ('buyer', 'tenant');
+
+-- Listings a person swiped away ("not for me"): hidden from their map and list until they clear them (safe to re-run).
+create table if not exists public.hidden_posts (
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  post_id    uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+alter table public.hidden_posts enable row level security;
