@@ -147,6 +147,23 @@
   .role-pill span { color: var(--brass-ink); font-weight: 500; margin-left: 6px; }
   .role-pill[hidden] { display: none; }
   .top-actions { display: flex; align-items: center; gap: 8px; }
+  /* Set the pin: full-screen map with a fixed pin in the middle. */
+  .picker { position: fixed; inset: 0; z-index: 60; background: #000; }
+  .picker[hidden] { display: none; }
+  #pk-map { position: absolute; inset: 0; }
+  .pk-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; display: flex; gap: 8px; align-items: flex-start; z-index: 2; }
+  .pk-search { flex: 1; position: relative; }
+  .pk-search input { width: 100%; height: 42px; border-radius: 12px; border: 1px solid var(--line); padding: 0 14px; font-size: 16px; background: var(--bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+  .pk-top .icon-btn { width: 42px; height: 42px; flex: 0 0 auto; }
+  .pk-sug { position: absolute; top: 46px; left: 0; right: 0; background: var(--bg); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); overflow: hidden; }
+  .pk-sug button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 12px 14px; font-size: 14px; cursor: pointer; }
+  .pk-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 2; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); }
+  .pk-pin::after { content: ""; position: absolute; left: 50%; bottom: -3px; width: 8px; height: 4px; margin-left: -4px; border-radius: 50%; background: rgba(0, 0, 0, .45); }
+  .pk-hint { position: absolute; left: 50%; top: calc(50% + 14px); transform: translateX(-50%); z-index: 2; background: rgba(15, 59, 46, .88); color: var(--brand-ink); font-size: 13px; padding: 6px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none; }
+  .pk-bottom { position: absolute; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 1.3fr; gap: 10px; z-index: 2; }
+  .pk-bottom .btn { height: 48px; box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
+  .pk-bottom .btn:not(.accent) { background: var(--bg); }
+  .pin-btn { margin-top: 10px; width: 100%; }
   .bell { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(243, 235, 221, .35); background: transparent; color: var(--brand-ink); display: grid; place-items: center; cursor: pointer; }
   .bell[hidden] { display: none; }
   .bell-n { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #c0392b; color: #fff; font-size: 11px; font-weight: 600; display: grid; place-items: center; }
@@ -158,6 +175,14 @@
   @keyframes r-blink { 0%, 44%, 52%, 100% { transform: scaleY(1); } 48% { transform: scaleY(.1); } 88% { opacity: 1; } 91% { opacity: .35; } 94% { opacity: 1; } }
   @keyframes r-glow { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
   @media (prefers-reduced-motion: reduce) { .robot .r-eyes, .robot .r-tip { animation: none; } }
+  /* Phones: a round Stalker button and a slimmer post button, so they never touch. */
+  @media (max-width: 600px) {
+    .ask-fab { padding: 0; width: 52px; height: 52px; justify-content: center; right: 10px; bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .ask-fab span { display: none; }
+    .ask-fab .robot { width: 32px; height: 32px; }
+    .fab { padding: 12px 18px; font-size: 14px; gap: 6px; max-width: calc(100vw - 150px); }
+    .fab #fab-label { overflow: hidden; text-overflow: ellipsis; }
+  }
   .ask-card { align-self: stretch; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; padding: 10px 12px; }
   .ask-card .litem { width: 100%; }
   .ac-title { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--brass-ink); margin: 2px 0 8px; }
@@ -462,6 +487,23 @@
   </div>
   <div class="sheet-body" id="sheet-body"></div>
   <div id="sheet-foot"></div>
+</section>
+
+<section class="picker" id="picker" hidden aria-label="Set the pin">
+  <div id="pk-map"></div>
+  <div class="pk-top">
+    <button class="icon-btn" id="pk-close" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17202a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="pk-search">
+      <input id="pk-q" type="search" placeholder="Search an area or building" autocomplete="off" aria-label="Search an area or building">
+      <div class="pk-sug" id="pk-sug" hidden></div>
+    </div>
+  </div>
+  <div class="pk-pin" aria-hidden="true"><svg width="40" height="48" viewBox="0 0 24 29"><path d="M12 28s-10-9.9-10-16.8a10 10 0 0 1 20 0C22 18.1 12 28 12 28z" fill="#c0392b" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="11.2" r="3.6" fill="#fff"/></svg></div>
+  <div class="pk-hint" id="pk-hint">Move the map so the pin sits on the building</div>
+  <div class="pk-bottom">
+    <button class="btn" id="pk-here">📍 My location</button>
+    <button class="btn accent" id="pk-ok">Use this spot</button>
+  </div>
 </section>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1128,7 +1170,8 @@ function openEditForm(id) {
       <div class="form-section">Location</div>
       ${dev ? "" : `<label class="field"><span>Building or project <span class="opt">(optional)</span></span><input id="e-building" value="${esc(p.building)}"></label>`}
       <label class="field"><span>Area, sector or community</span><input id="e-locality" value="${esc(p.locality)}"></label>
-      ${!isReq ? `<label class="field"><span>Google Maps link for an exact pin <span class="opt">(optional)</span></span><input id="e-maps" inputmode="url" placeholder="In Google Maps: Share → Copy link"></label>` : ""}
+      ${!isReq ? `<button type="button" class="btn pin-btn" id="e-movepin" style="margin:0 0 14px">📍 Move the pin on the map</button>
+      <label class="field"><span>Or paste a Google Maps link <span class="opt">(optional)</span></span><input id="e-maps" inputmode="url" placeholder="In Google Maps: Share → Copy link"></label>` : ""}
       <div class="grid2">
         <label class="field"><span>City</span><input id="e-city" value="${esc(p.city)}"></label>
         <label class="field"><span>Country <span class="opt">(optional)</span></span><input id="e-country" value="${esc(p.country)}"></label>
@@ -1163,6 +1206,14 @@ function openEditForm(id) {
     fi.value = ""; drawThumbs();
   });
   $("#edit-form").addEventListener("input", () => { $("#e-err").hidden = true; });
+  const mp = $("#e-movepin");
+  if (mp) mp.addEventListener("click", async () => {
+    const spot = await openPinPicker({ lat: p.lat, lng: p.lng, zoom: 18 });
+    if (!spot) return;
+    mp.disabled = true; mp.textContent = "Saving…";
+    try { await api("/posts/" + p.id, { method: "PATCH", body: JSON.stringify({ pin: spot }) }); toast("Pin moved."); await loadFeed(); mp.textContent = "✓ Pin moved"; }
+    catch (e) { mp.disabled = false; mp.textContent = "📍 Move the pin on the map"; toast(e.message); }
+  });
   $("#edit-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const val = (id) => { const el = $(id); return el ? el.value.trim() : undefined; };
@@ -1958,11 +2009,13 @@ function renderDraft(d) {
       ${d.size_sqft ? `<dt>Size</dt><dd>${esc(sizeOf(d))}</dd>` : ""}
       ${d.unit_number ? `<dt>Unit</dt><dd>${esc(d.unit_number)}${d.room ? " · " + esc(d.room) : ""} <span class="muted">(only you see this)</span></dd>` : ""}
       ${d.deal === "share" ? `<dt>Suits</dt><dd>${esc(SUITS_TXT[d.suits] || "Anyone")}${d.move_in ? " · moving in " + esc(d.move_in) : ""}</dd>` : ""}
-      <dt>On the map</dt><dd>${esc(d.address || placeOf(d))}${d.precision === "area" ? " (sector / area pin)" : ""}</dd>
+      <dt>On the map</dt><dd>${d.needs_pin ? "<b>Not set yet</b>" : esc(d.address || placeOf(d))}${d.precision === "area" && !d.needs_pin ? " (sector / area pin)" : ""}</dd>
       <dt>Contact</dt><dd>${esc(d.contact_name)} · +${esc(d.contact_phone)}</dd>
     </dl>
     ${(d.notes || []).map((n) => `<p class="note">${esc(n)}</p>`).join("")}
-    ${d.precision === "area" && isListing ? `<p class="note">The pin is at the area, not the building. For an exact pin, paste a Google Maps link in the chat.</p>` : ""}
+    ${d.needs_pin ? `<p class="note">We couldn't find this address on the map. Please set the pin yourself: drag the map to your building, or use your current location.</p>
+      <button class="btn accent pin-btn" data-act="pin">📍 Set the pin on the map</button>`
+      : d.precision === "area" ? `<p class="note">The pin is at the area, not the building.</p><button class="btn pin-btn" data-act="pin">📍 Set the exact pin</button>` : ""}
     ${d.poster_type === "broker" ? `<label class="chip-check"><input type="checkbox" class="d-cobroke"> Open to co-broking with other brokers</label>` : ""}
     ${isListing && d.deal === "share" ? `<p class="note">In many places (including Dubai) you need the owner's or landlord's consent to share or sublet, and partitioned rooms aren't allowed.</p>
       <label class="chip-check" style="margin-bottom:10px"><input type="checkbox" class="d-permit"> I have permission to share this space</label>` : ""}
@@ -1989,9 +2042,23 @@ function renderDraft(d) {
     const t = $("#msg"); t.value = ""; t.placeholder = "Tell me what to change, e.g. price is 1.1 Cr"; t.focus();
   });
   card.querySelector('[data-act="confirm"]').addEventListener("click", (e) => confirmDraft(d, e.currentTarget));
+  const pinBtn = card.querySelector('[data-act="pin"]');
+  if (pinBtn) pinBtn.addEventListener("click", async () => {
+    const start = await startPoint(d);
+    const spot = await openPinPicker(start);
+    if (!spot) return;
+    pinBtn.disabled = true; pinBtn.textContent = "Saving the pin…";
+    try {
+      const r = await api(`/drafts/${d.id}/pin`, { method: "POST", body: JSON.stringify(spot) });
+      S.draft = r.draft;
+      renderDraft(r.draft);
+      toast("Pin set.");
+    } catch (e) { pinBtn.disabled = false; pinBtn.textContent = "📍 Set the pin on the map"; toast(e.message); }
+  });
 }
 
 async function confirmDraft(d, btn) {
+  if (d.needs_pin) return toast("Please set the pin on the map first.");
   btn.disabled = true;
   try {
     const urls = [];
@@ -2439,6 +2506,63 @@ async function openRepairForm(token) {
 }
 
 $("#ask").addEventListener("click", () => openAssistant());
+
+/* ---------------- Set the pin ---------------- */
+/** Where to open the picker: the draft's spot, else its area / city, else the map's current view. */
+async function startPoint(d) {
+  if (d.lat != null && d.lng != null) return { lat: d.lat, lng: d.lng, zoom: 18 };
+  const q = [d.building, d.locality, d.city].filter(Boolean).join(", ");
+  for (const text of [q, [d.locality, d.city].filter(Boolean).join(", "), d.city]) {
+    if (!text) continue;
+    try { const r = await api("/geocode?q=" + encodeURIComponent(text)); if (r.place) return { lat: r.place.lat, lng: r.place.lng, zoom: 15 }; } catch (e) {}
+  }
+  const c = S.map && S.map.getCenter ? S.map.getCenter() : null;
+  return c ? { lat: c.lat(), lng: c.lng(), zoom: Math.max(S.map.getZoom() || 12, 12) } : { lat: 25.2, lng: 55.27, zoom: 11 };
+}
+
+let pkMap = null;
+async function openPinPicker({ lat, lng, zoom = 17 }) {
+  const box = $("#picker");
+  box.hidden = false;
+  const { Map } = await google.maps.importLibrary("maps");
+  if (!pkMap) {
+    pkMap = new Map($("#pk-map"), { center: { lat, lng }, zoom, mapId: S.cfg.mapId, mapTypeId: "hybrid", disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false });
+  } else { pkMap.setCenter({ lat, lng }); pkMap.setZoom(zoom); }
+  const q = $("#pk-q"), sug = $("#pk-sug");
+  q.value = ""; sug.hidden = true;
+  return new Promise((resolve) => {
+    let timer = null;
+    const done = (v) => { box.hidden = true; clearTimeout(timer); q.oninput = null; resolve(v); };
+    $("#pk-close").onclick = () => done(null);
+    $("#pk-ok").onclick = () => { const c = pkMap.getCenter(); done({ lat: +c.lat().toFixed(7), lng: +c.lng().toFixed(7) }); };
+    $("#pk-here").onclick = () => {
+      if (!navigator.geolocation) return toast("Your browser can't share its location.");
+      const b = $("#pk-here"); b.disabled = true; b.textContent = "Finding you…";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { pkMap.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }); pkMap.setZoom(18); b.disabled = false; b.textContent = "📍 My location"; toast("Check the pin is on the right building, then tap Use this spot."); },
+        () => { b.disabled = false; b.textContent = "📍 My location"; toast("Couldn't get your location. Allow location access, or move the map yourself."); },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+    };
+    // Search: one suggestion as you type (a short pause keeps lookups low).
+    q.oninput = () => {
+      clearTimeout(timer);
+      const text = q.value.trim();
+      if (text.length < 3) { sug.hidden = true; return; }
+      timer = setTimeout(async () => {
+        try {
+          const r = await api("/geocode?q=" + encodeURIComponent(text));
+          if (!r.place) { sug.innerHTML = `<button disabled>No match. Try the area name.</button>`; sug.hidden = false; return; }
+          sug.innerHTML = `<button id="pk-go">📍 ${esc(r.place.address || text)}</button>`;
+          sug.hidden = false;
+          $("#pk-go").onclick = () => {
+            if (r.place.viewport) pkMap.fitBounds(r.place.viewport); else { pkMap.setCenter({ lat: r.place.lat, lng: r.place.lng }); pkMap.setZoom(17); }
+            sug.hidden = true; q.blur();
+          };
+        } catch (e) { sug.hidden = true; }
+      }, 650);
+    };
+  });
+}
 
 boot();
 </script>
