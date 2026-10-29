@@ -312,7 +312,13 @@
   .thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
   .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); padding-bottom: calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
-  .composer textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 14px; padding: 11px 13px; font-size: 15px; line-height: 1.4; max-height: 140px; background: #fffdf8; }
+  .msg-wrap { flex: 1; position: relative; display: flex; min-width: 0; }
+  .ghost { position: absolute; inset: 0; border-style: solid; border-color: transparent; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word; overflow: hidden; z-index: 1; }
+  .ghost .gt { color: transparent; }
+  .ghost .gh { color: var(--muted); opacity: .7; }
+  .unit-note { font-size: 13px; color: var(--brass-ink); background: #fbf3e4; border: 1px solid #ecd9b5; border-radius: 10px; padding: 8px 12px; margin: 12px 0 0; }
+  .lsz { font-weight: 400; color: var(--muted); }
+  .composer textarea { flex: 1; min-width: 0; resize: none; border: 1px solid var(--line); border-radius: 14px; padding: 11px 13px; font-size: 15px; line-height: 1.4; max-height: 140px; background: #fffdf8; }
   .composer .btn { flex: 0 0 auto; padding: 0 18px; }
 
   .my-post { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -374,6 +380,8 @@
     <button class="fchip" data-f="sale" aria-pressed="false">For sale</button>
     <button class="fchip" data-f="rent" aria-pressed="false">For rent</button>
     <button class="fchip" data-f="project" aria-pressed="false">New projects</button>
+    <button class="fchip" data-f="commercial" aria-pressed="false">Commercial</button>
+    <button class="fchip" data-f="land" aria-pressed="false">Land / Plots</button>
     <button class="fchip list" id="show-list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>List <span class="n" id="list-n"></span></button>
   </div>
   <div class="banner-row"><div class="banner" id="banner" hidden></div></div>
@@ -437,7 +445,7 @@ const roleOf = () => (S.me && S.me.profile && S.me.profile.role) || null;
 
 const S = {
   cfg: null, sb: null, session: null, me: null,
-  posts: [], access: null, signedIn: false,
+  posts: [], access: null, signedIn: false, contacts: {}, prefill: false,
   tab: "listing", filter: "all", map: null, Marker: null, clusterer: null, plain: [], pinEls: new Map(),
   activeId: null, chat: [], draft: null, draftPhotos: [], busy: false, fitted: false, userId: null
 };
@@ -460,7 +468,10 @@ function money(n) {
   if (n >= 1e3) return trim(n / 1e3) + "K";
   return String(n);
 }
-const TYPE = { apartment: "apartment", villa: "villa", independent_house: "independent house", plot: "plot", office: "office", shop: "shop", other: "" };
+const TYPE = { apartment: "apartment", villa: "villa", independent_house: "independent house", plot: "plot", office: "office", shop: "shop", warehouse: "warehouse", other: "" };
+const COMMERCIAL = ["office", "shop", "warehouse"];
+const LOGO_MINI = `<svg width="22" height="25" viewBox="0 0 24 27" aria-hidden="true"><path d="M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z" fill="#b8894a"/><path d="M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z" fill="#0f3b2e"/><circle cx="12" cy="10.4" r="2.6" fill="#b8894a"/></svg>`;
+const sizeOf = (p) => p.size_sqft ? `${Number(p.size_sqft).toLocaleString("en-US")} sq ft` : "";
 const POSTER = { landlord: "Landlord", broker: "Broker", developer: "Developer", buyer: "Buyer", tenant: "Tenant" };
 const isDev = (p) => p.poster_type === "developer";
 const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
@@ -699,6 +710,8 @@ async function loadFeed() {
 function passFilter(p) {
   if (p.kind !== "listing" || S.filter === "all") return true;
   if (S.filter === "project") return isDev(p);
+  if (S.filter === "commercial") return COMMERCIAL.includes(p.property_type);
+  if (S.filter === "land") return p.property_type === "plot";
   return p.deal === S.filter;
 }
 const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && passFilter(p));
@@ -787,6 +800,8 @@ function renderBanner() {
   } else if (!visiblePosts().length) {
     html = S.filter === "project"
       ? "<b>No new projects listed yet.</b> Developers can sign in, choose <b>Developer</b> and tap <b>List a project</b>."
+      : S.filter === "commercial" ? "<b>No commercial properties listed yet.</b> Offices, shops and warehouses will show here."
+      : S.filter === "land" ? "<b>No land or plots listed yet.</b>"
       : "No properties match this filter yet.";
   }
   el.innerHTML = html;
@@ -835,7 +850,7 @@ function openDetails(id, opts = {}) {
     ? `Hi ${p.contact_name || ""}, I saw your request on Property Stalkers (${titleOf(p).toLowerCase()} in ${placeOf(p)}). I may have something for you.`
     : isDev(p)
     ? `Hi, I'm interested in ${titleOf(p)}${p.company ? " by " + p.company : ""} in ${placeOf(p)}, which I saw on Property Stalkers.`
-    : `Hi ${p.contact_name || ""}, I'm interested in your ${titleOf(p).toLowerCase()} in ${placeOf(p)}, which I saw on Property Stalkers.`;
+    : `Hi ${contactOf(p).name || ""}, I'm interested in your ${titleOf(p).toLowerCase()} in ${placeOf(p)}, which I saw on Property Stalkers.`;
 
   $("#panel-content").innerHTML = `
     ${isReq ? `<div class="req-head"><div class="big">${esc(POSTER[p.poster_type])} request</div></div>` : `
@@ -858,19 +873,24 @@ function openDetails(id, opts = {}) {
       </div>` : `<div class="facts">
         <div class="fact"><b>Type</b><span>${esc(cap(TYPE[p.property_type] || "Any"))}</span></div>
         <div class="fact"><b>Bedrooms</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK") : "—"}</span></div>
-        <div class="fact"><b>Posted by</b><span>${esc(POSTER[p.poster_type])}</span></div>
+        <div class="fact"><b>Size</b><span>${esc(sizeOf(p) || "—")}</span></div>
         <div class="fact"><b>Posted</b><span>${esc(ago(p.created_at))}</span></div>
       </div>`}
+      ${p.unit_number ? `<p class="unit-note">Unit ${esc(p.unit_number)} · ${p.mine ? "only you can see the unit number" : "visible to admins only"}</p>` : ""}
       ${p.description ? `<p class="desc">${esc(p.description)}</p>` : ""}
-      <div class="contact">
-        <div class="contact-head">
-          <div class="avatar">${p.contact_avatar ? `<img src="${esc(shown(p.contact_avatar))}" alt="">` : esc(initials(p.contact_name))}</div>
-          <div><div class="contact-name">${esc(p.contact_name)}</div><div class="contact-sub">${esc(posterLine(p))}</div></div>
+      <div class="contact" id="contact-box">
+        ${p.contact_on_tap && !S.contacts[p.id] ? `<div class="contact-head">
+          <div class="avatar">${LOGO_MINI}</div>
+          <div><div class="contact-name">Contact the ${p.poster_type === "broker" ? "broker" : "owner"}</div><div class="contact-sub">Tap Call or WhatsApp to be connected</div></div>
         </div>
+        <div class="actions">
+          <button class="btn primary" data-reach="call">Call</button>
+          <button class="btn wa" data-reach="wa">WhatsApp</button>
+        </div>` : `${contactHead(p)}
         ${p.mine ? "" : `<div class="actions">
-          <a class="btn primary" href="${esc(telHref(p.contact_phone))}">Call</a>
-          <a class="btn wa" href="${esc(waHref(p.contact_phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
-        </div>`}
+          <a class="btn primary" href="${esc(telHref(contactOf(p).phone))}">Call</a>
+          <a class="btn wa" href="${esc(waHref(contactOf(p).phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
+        </div>`}`}
       </div>
       ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.</p>` : ""}
       ${p.source === "dld" && !p.mine ? `<div class="claim"><p class="hint">Listed from Dubai Land Department project records.</p>
@@ -902,6 +922,7 @@ function openDetails(id, opts = {}) {
     try { await navigator.clipboard.writeText(link); toast("Link copied."); }
     catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + link), "_blank", "noopener"); }
   });
+  document.querySelectorAll("[data-reach]").forEach((b) => b.addEventListener("click", () => reachOut(p, b.dataset.reach, b)));
   const rm = $("#remove-post");
   if (rm) rm.addEventListener("click", () => removePost(p.id));
   const ed = $("#edit-post");
@@ -914,6 +935,36 @@ function openDetails(id, opts = {}) {
   try { history.replaceState(null, "", "#p=" + encodeURIComponent(p.id)); } catch (e) {}
   if (opts.pan || opts.zoom) focusOn(p, opts.zoom);
   return true;
+}
+
+/* Unit listings: the contact is handed out when someone taps, so leads can take turns between listers. */
+function contactOf(p) {
+  const c = S.contacts[p.id];
+  return c || { name: p.contact_name, phone: p.contact_phone, avatar: p.contact_avatar };
+}
+function contactHead(p) {
+  const c = contactOf(p);
+  return `<div class="contact-head">
+          <div class="avatar">${c.avatar ? `<img src="${esc(shown(c.avatar))}" alt="">` : esc(initials(c.name))}</div>
+          <div><div class="contact-name">${esc(c.name)}</div><div class="contact-sub">${esc(posterLine(p))}${S.contacts[p.id] && c.phone ? " · +" + esc(c.phone) : ""}</div></div>
+        </div>`;
+}
+async function reachOut(p, how, btn) {
+  // Open the WhatsApp window straight away (inside the tap), so phones don't block it as a pop-up.
+  const win = how === "wa" ? window.open("", "_blank") : null;
+  btn.disabled = true;
+  try {
+    const r = await api(`/posts/${p.id}/contact`, { method: "POST" });
+    S.contacts[p.id] = r.contact;
+    const msg = `Hi ${r.contact.name || ""}, I'm interested in your ${titleOf(p).toLowerCase()} in ${placeOf(p)}, which I saw on Property Stalkers.`;
+    const href = how === "wa" ? waHref(r.contact.phone, msg) : telHref(r.contact.phone);
+    if (win) win.location.href = href; else location.href = href;
+    openDetails(p.id); // now shows who you're connected with
+  } catch (e) {
+    if (win) win.close();
+    btn.disabled = false;
+    toast(e.message || "Couldn't get the contact. Please try again.");
+  }
 }
 
 function closeDetails() {
@@ -942,7 +993,7 @@ async function removePost(id) {
 }
 
 /* ---------------- edit your own post ---------------- */
-const TYPE_OPTS = [["apartment", "Apartment"], ["villa", "Villa / townhouse"], ["independent_house", "Independent house"], ["plot", "Plot"], ["office", "Office"], ["shop", "Shop / retail"], ["other", "Other"]];
+const TYPE_OPTS = [["apartment", "Apartment"], ["villa", "Villa / townhouse"], ["independent_house", "Independent house"], ["plot", "Plot / land"], ["office", "Office"], ["shop", "Shop / retail"], ["warehouse", "Warehouse"], ["other", "Other"]];
 
 function openEditForm(id) {
   const p = S.posts.find((x) => x.id === id);
@@ -963,6 +1014,10 @@ function openEditForm(id) {
         ${dev ? `<label class="field"><span>Configurations</span><input id="e-configs" value="${esc(p.configs)}" placeholder="e.g. 2, 3 & 4 BHK"></label>`
               : `<label class="field"><span>Bedrooms</span><input id="e-bedrooms" inputmode="numeric" value="${esc(p.bedrooms ?? "")}" placeholder="e.g. 3"></label>`}
       </div>
+      ${!isReq && !dev ? `<div class="grid2">
+        <label class="field"><span>Unit number <span class="opt">(private)</span></span><input id="e-unit" maxlength="30" value="${esc(p.unit_number)}" placeholder="e.g. 1204"></label>
+        <label class="field"><span>Size (sq ft)</span><input id="e-size" inputmode="numeric" value="${esc(p.size_sqft ? Number(p.size_sqft).toLocaleString("en-US") : "")}" placeholder="e.g. 1450"></label>
+      </div>` : ""}
       <div class="field"><span>${isReq ? "Budget" : dev ? "Starting price" : p.deal === "rent" ? "Rent per month" : "Price"}</span>
         <div class="price-row">
           <input id="e-price" inputmode="numeric" value="${esc(p.price ? Number(p.price).toLocaleString("en-US") : "")}">
@@ -1016,6 +1071,8 @@ function openEditForm(id) {
     const price = Number(String(val("#e-price") || "").replace(/[^0-9.]/g, ""));
     if (!val("#e-city")) { err.hidden = false; err.textContent = "Please add the city."; return; }
     if (!val("#e-locality") && !val("#e-building")) { err.hidden = false; err.textContent = "Please add the area or building."; return; }
+    if ($("#e-unit") && !val("#e-unit")) { err.hidden = false; err.textContent = "Please add the unit number. Visitors never see it."; return; }
+    if ($("#e-size") && !Number(String(val("#e-size")).replace(/\D/g, ""))) { err.hidden = false; err.textContent = "Please add the size in sq ft."; return; }
     btn.disabled = true;
     try {
       const urls = [...E.photos];
@@ -1034,6 +1091,8 @@ function openEditForm(id) {
       if ($("#e-company")) body.company = val("#e-company");
       if ($("#e-possession")) body.possession = val("#e-possession");
       if ($("#e-rera")) body.rera_number = val("#e-rera");
+      if ($("#e-unit")) body.unit_number = val("#e-unit");
+      if ($("#e-size")) body.size_sqft = Number(val("#e-size").replace(/\D/g, ""));
       if (!isReq) body.photos = urls;
       await api("/posts/" + p.id, { method: "PATCH", body: JSON.stringify(body) });
       closeSheet();
@@ -1056,7 +1115,7 @@ function thumbOf(p) { return p.photos && p.photos.length ? shown(p.photos[0]) : 
 
 function openList() {
   const items = visiblePosts().filter(inView);
-  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects" }[S.filter] || "properties";
+  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects", commercial: "commercial properties", land: "plots" }[S.filter] || "properties";
   $("#panel-content").innerHTML = `
     <div class="list-head">
       <h2>${items.length} ${esc(items.length === 1 ? label.replace(/ies$/, "y").replace(/s$/, "") : label)} in this view</h2>
@@ -1069,7 +1128,7 @@ function openList() {
           ${isDev(p) ? `<span class="tag dev">New project</span>` : ""}
           <b>${esc(titleOf(p))}</b>
           <small>${esc(placeOf(p))}</small>
-          <span class="lp">${esc(priceOf(p))}</span>
+          <span class="lp">${esc(priceOf(p))}${sizeOf(p) ? ` <small class="lsz">· ${esc(sizeOf(p))}</small>` : ""}</span>
         </div>
       </button>`).join("") || `<p class="hint" style="padding:0 18px">Nothing here yet. Try another area or filter.</p>`}`;
   document.querySelectorAll(".litem").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { pan: true })));
@@ -1634,7 +1693,7 @@ function openComposer() {
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
-      <textarea id="msg" rows="2" placeholder="Describe what you want to post…" aria-label="Message"></textarea>
+      <div class="msg-wrap"><textarea id="msg" rows="2" placeholder="Describe what you want to post…" aria-label="Message"></textarea><div class="ghost" id="ghost" aria-hidden="true"></div></div>
       <button class="btn accent" id="send" aria-label="Send">Send</button>
     </form>`;
 
@@ -1642,14 +1701,18 @@ function openComposer() {
   if (!S.chat.length) {
     const intro = document.createElement("div");
     intro.className = "bubble ai";
-    intro.innerHTML = (role === "buyer" || role === "tenant"
-      ? `Tell me what you're looking for, in your own words: the <b>area and city</b>, the type of home and your budget. Licensed brokers will see it and can call or WhatsApp you.`
-      : `Tell me about the property, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world, and the price.`)
-      + `<br><br>Tap an example and fill in the brackets:`;
+    const lister = role === "landlord" || role === "broker";
+    intro.innerHTML = lister
+      ? `Tell me about the property in your own words. Please include the <b>unit number</b>, the <b>size</b>, the <b>location</b> (building, area and city) and the <b>price</b>.<br><br><span class="muted">Your unit number is never shown to visitors. It only stops the same unit being listed more than 3 times.</span>`
+      : (role === "buyer" || role === "tenant"
+        ? `Tell me what you're looking for, in your own words: the <b>area and city</b>, the type of home and your budget. Licensed brokers will see it and can call or WhatsApp you.`
+        : `Tell me about the property, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world, and the price.`)
+        + `<br><br>Tap an example and fill in the brackets:`;
     log.appendChild(intro);
+    if (lister) S.prefill = true;
     const ex = document.createElement("div");
     ex.className = "examples";
-    ex.innerHTML = EXAMPLES.map((e, i) => (e.role === role || (role === "developer" && e.role === "broker")) ? `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>` : "").join("");
+    ex.innerHTML = EXAMPLES.map((e, i) => (e.role === role || (role === "developer" && e.role === "broker")) && !lister ? `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>` : "").join("");
     log.appendChild(ex);
     ex.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => useExample(EXAMPLES[+b.dataset.i].text)));
   } else {
@@ -1661,13 +1724,32 @@ function openComposer() {
   msg.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#composer").requestSubmit(); }
   });
-  msg.addEventListener("input", autoGrow);
+  msg.addEventListener("input", () => { ghostUpdate(); autoGrow(); });
+  if (S.prefill) { S.prefill = false; msg.value = START; ghostUpdate(); autoGrow(); }
   $("#composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
   if (isDesktop()) msg.focus();
   scrollLog();
 }
 
-function autoGrow() { const t = $("#msg"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 140) + "px"; }
+const START = "I want to ";
+const GHOST = "sell / rent out my apartment, villa, office, shop, plot or land, unit no. …, in [building, area, city] for [price], size … sq ft";
+/* Faded suggestion that follows "I want to " until the person starts typing their own words. */
+function ghostUpdate() {
+  const t = $("#msg"), g = $("#ghost");
+  if (!t || !g) return;
+  const on = /^\s*i want to\s*$/i.test(t.value);
+  g.hidden = !on;
+  if (!on) return;
+  const cs = getComputedStyle(t);
+  for (const k of ["fontFamily", "fontSize", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth"]) g.style[k] = cs[k];
+  g.innerHTML = `<span class="gt">${esc(t.value.endsWith(" ") ? t.value : t.value + " ")}</span><span class="gh">${esc(GHOST)}</span>`;
+}
+function autoGrow() {
+  const t = $("#msg"), g = $("#ghost");
+  t.style.height = "auto";
+  const need = Math.max(t.scrollHeight, g && !g.hidden ? g.scrollHeight : 0);
+  t.style.height = Math.min(need, 140) + "px";
+}
 function scrollLog() { const b = $("#sheet-body"); b.scrollTop = b.scrollHeight; }
 
 function useExample(text) {
@@ -1694,6 +1776,7 @@ async function send() {
   const t = $("#msg");
   const text = t.value.trim();
   if (!text || S.busy) return;
+  if (/^i want to$/i.test(text)) { toast("Please finish the sentence: what, where, unit number, size and price."); t.focus(); return; }
   if (/\[[^\]]*\]/.test(text)) {
     toast("Please replace the [brackets] with your details first.");
     const i = text.indexOf("["); t.focus(); t.setSelectionRange(i, text.indexOf("]", i) + 1);
@@ -1736,7 +1819,7 @@ async function askAI() {
 }
 
 function draftSummary(d) {
-  return [posterLine(d), titleOf(d), placeOf(d), priceOf(d), d.description].filter(Boolean).join(" | ");
+  return [posterLine(d), titleOf(d), placeOf(d), d.unit_number ? "Unit " + d.unit_number : "", sizeOf(d), priceOf(d), d.description].filter(Boolean).join(" | ");
 }
 
 function renderDraft(d) {
@@ -1751,6 +1834,8 @@ function renderDraft(d) {
     <dl>
       <dt>Posting as</dt><dd>${esc(posterLine(d))}</dd>
       <dt>${isListing ? "Price" : "Budget"}</dt><dd>${esc(priceOf(d).replace(/^Budget /, ""))}</dd>
+      ${d.size_sqft ? `<dt>Size</dt><dd>${esc(sizeOf(d))}</dd>` : ""}
+      ${d.unit_number ? `<dt>Unit</dt><dd>${esc(d.unit_number)} <span class="muted">(only you see this)</span></dd>` : ""}
       <dt>On the map</dt><dd>${esc(d.address || placeOf(d))}${d.precision === "area" ? " (sector / area pin)" : ""}</dd>
       <dt>Contact</dt><dd>${esc(d.contact_name)} · +${esc(d.contact_phone)}</dd>
     </dl>
