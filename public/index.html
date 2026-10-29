@@ -575,6 +575,18 @@ const S = {
 const $ = (s, root = document) => root.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const isDesktop = () => window.innerWidth >= 760;
+// True inside the Property Stalkers Android / iPhone app.
+const IN_APP = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+// The phone's own share menu inside the app; the browser's share menu elsewhere. Returns false if neither exists.
+async function shareOut(data) {
+  if (IN_APP && window.Capacitor.isPluginAvailable && window.Capacitor.isPluginAvailable("Share")) {
+    await window.Capacitor.nativePromise("Share", "share", { title: data.title, text: data.text, url: data.url, dialogTitle: "Share" });
+    return true;
+  }
+  if (navigator.share) { await navigator.share(data); return true; }
+  return false;
+}
+const isCancel = (e) => e && (e.name === "AbortError" || /cancel/i.test(e.message || ""));
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
@@ -1109,8 +1121,8 @@ function openDetails(id, opts = {}) {
     const link = location.origin + "/#p=" + encodeURIComponent(p.id);
     const text = `${titleOf(p)} in ${placeOf(p)}${p.price ? " · " + priceOf(p) : ""} on Property Stalkers`;
     try {
-      if (navigator.share) { await navigator.share({ title: titleOf(p), text, url: link }); return; }
-    } catch (e) { if (e && e.name === "AbortError") return; }
+      if (await shareOut({ title: titleOf(p), text, url: link })) return;
+    } catch (e) { if (isCancel(e)) return; }
     try { await navigator.clipboard.writeText(link); toast("Link copied."); }
     catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + link), "_blank", "noopener"); }
   });
@@ -1152,7 +1164,8 @@ function contactHead(p) {
 }
 async function reachOut(p, how, btn) {
   // Open the WhatsApp window straight away (inside the tap), so phones don't block it as a pop-up.
-  const win = how === "wa" ? window.open("", "_blank") : null;
+  // (Not in the app: there the WhatsApp link opens WhatsApp itself, and there is no pop-up blocker.)
+  const win = how === "wa" && !IN_APP ? window.open("", "_blank") : null;
   btn.disabled = true;
   try {
     const r = await api(`/posts/${p.id}/contact`, { method: "POST" });
@@ -1496,6 +1509,23 @@ document.addEventListener("keydown", (e) => {
   if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
 });
 
+/* ---------------- inside the Android / iPhone app ---------------- */
+// The app shows this same page, so one change reaches the site and the app. These bits only run inside the app.
+if (IN_APP) {
+  document.documentElement.classList.add("in-app");
+  try {
+    // Android back button: close whatever is open first, and only then leave the app.
+    window.Capacitor.addListener("App", "backButton", () => {
+      const pick = $("#picker");
+      if (pick && !pick.hidden) { $("#pk-close").click(); return; }
+      if (sheet.classList.contains("open")) { closeSheet(); return; }
+      if (!resultsEl.hidden) { closeResults(); return; }
+      if (panel.classList.contains("open")) { closeDetails(); return; }
+      window.Capacitor.nativePromise("App", "minimizeApp", {}).catch(() => {});
+    });
+  } catch (e) {}
+}
+
 $("#fab").addEventListener("click", () => startPosting());
 $("#role-pill").addEventListener("click", () => renderRolePicker(true));
 
@@ -1705,7 +1735,7 @@ function renderSignIn(reason, mode) {
     </form>`;
   authProviders().then((pv) => {
     const box = $("#oauth");
-    if (box && pv.google) {
+    if (box && pv.google && !IN_APP) { // Google doesn't allow its sign-in inside apps' web views
       box.innerHTML = `<button class="btn oauth-btn" id="google-btn" type="button">${GOOGLE_G}<span>Continue with Google</span></button><div class="or"><span>or</span></div>`;
       $("#google-btn").addEventListener("click", async () => {
         const { error } = await S.sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
@@ -2535,7 +2565,7 @@ async function renderExtras() {
 async function shareRepairLink(token) {
   const link = `${location.origin}/#repair=${token}`;
   const text = `Report any repairs for your home here: ${link}`;
-  try { if (navigator.share) { await navigator.share({ title: "Repair requests", text, url: link }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  try { if (await shareOut({ title: "Repair requests", text, url: link })) return; } catch (e) { if (isCancel(e)) return; }
   try { await navigator.clipboard.writeText(link); toast("Repair link copied. Send it to your tenant."); }
   catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener"); }
 }
