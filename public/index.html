@@ -382,13 +382,21 @@
   .lcard .lc-info { display: flex; align-items: baseline; gap: 8px; border-top: 0; padding: 9px 12px 10px; min-width: 0; }
   .lcard .lc-info .lp { flex: 0 0 auto; font-size: 15px; }
   .lcard .lc-info .lc-what { flex: 1; min-width: 0; font-size: 13px; color: rgba(243, 235, 221, .82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* How many listings are on screen: a half circle on the right edge. Tap for the list. */
-  .count-tab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 19; width: 48px; height: 76px; padding: 0 0 0 6px;
-    border-radius: 38px 0 0 38px; border: 2px solid var(--brass); border-right: 0; background: var(--brand-deep); color: #fcfbf7; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: -4px 4px 14px rgba(0, 0, 0, .25); }
-  .count-tab b { font-size: 15px; font-weight: 800; line-height: 1; }
-  .count-tab svg { color: var(--brass); }
+  /* How many listings are on screen: a small gold-ringed tile on the right. Tap it, or swipe it left, for the list. */
+  .count-tab { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 19; width: 52px; height: 52px; padding: 0;
+    border-radius: 17px; border: 1.5px solid var(--brass); background: linear-gradient(150deg, var(--brand) 0%, var(--brand-deep) 75%); color: var(--brass);
+    display: grid; place-items: center; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .14); transition: transform .2s ease, opacity .2s; }
+  .count-tab b { position: absolute; top: -10px; left: -12px; min-width: 26px; height: 22px; padding: 0 6px; border-radius: 11px; border: 1.5px solid var(--brand-deep);
+    background: var(--brass); color: var(--brand-deep); font-size: 12px; font-weight: 800; line-height: 19px; text-align: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); }
+  .count-tab .li { width: 22px; height: 22px; }
+  .count-tab .chev { position: absolute; left: -15px; top: 50%; margin-top: -7px; opacity: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55)); animation: ct-nudge 3s ease-in-out infinite; }
+  @keyframes ct-nudge { 0%, 55%, 100% { transform: translateX(0); opacity: 0; } 72% { transform: translateX(-6px); opacity: .95; } }
+  .count-tab:active { transform: translateY(-50%) scale(.94); }
+  .count-tab.drag { transition: none; }
   .count-tab.zero { opacity: .75; }
+  .count-tab.zero .chev { display: none; }
+  @media (prefers-reduced-motion: reduce) { .count-tab .chev { animation: none; opacity: .8; } }
   @media (min-width: 760px) { .count-tab { top: 55%; } }
   .cluster.area { border: 0; cursor: pointer; font: inherit; }
   /* Bottom sheets follow the finger when pulled down to close. */
@@ -540,15 +548,41 @@
   @media (max-width: 759px) { input, select, textarea, .field input, .field select, .field textarea, .composer textarea, .search input { font-size: 16px !important; } }
   .thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
-  .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); padding-bottom: calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
+  .composer { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-top: 1px solid var(--line); padding-bottom: calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
+  .crow { display: flex; align-items: flex-end; gap: 8px; }
   .msg-wrap { flex: 1; position: relative; display: flex; min-width: 0; }
   .ghost { position: absolute; inset: 0; border-style: solid; border-color: transparent; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word; overflow: hidden; z-index: 1; }
   .ghost .gt { color: transparent; }
   .ghost .gh { color: var(--muted); opacity: .7; }
   .unit-note { font-size: 13px; color: var(--brass-ink); background: #fbf3e4; border: 1px solid #ecd9b5; border-radius: 10px; padding: 8px 12px; margin: 12px 0 0; }
   .lsz { font-weight: 400; color: var(--muted); }
-  .composer textarea { flex: 1; min-width: 0; resize: none; border: 1px solid var(--line); border-radius: 14px; padding: 11px 13px; font-size: 15px; line-height: 1.4; max-height: 140px; background: #ffffff; }
-  .composer .btn { flex: 0 0 auto; padding: 0 18px; }
+  .composer textarea { flex: 1; min-width: 0; resize: none; border: 1px solid var(--line); border-radius: 24px; padding: 12px 16px; font-size: 15px; line-height: 1.4; min-height: 48px; max-height: 136px; overflow-y: hidden; background: #ffffff; font-family: inherit; }
+  .send-btn { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
+    background: var(--brass); color: var(--brand-deep); box-shadow: 0 4px 12px rgba(0, 0, 0, .28); transition: transform .12s, opacity .2s; }
+  .send-btn:active { transform: scale(.92); }
+  .send-btn:disabled { opacity: .5; cursor: default; }
+  .ideas { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; }
+  .ideas::-webkit-scrollbar { display: none; }
+  .idea { flex: 0 0 auto; border: 1px solid var(--brass); background: transparent; color: inherit; border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .idea[aria-pressed="true"] { background: var(--brass); color: var(--brand-deep); }
+
+  /* Chat screens (post, Stalker): full emerald, gold accents, follow the colour theme. */
+  .sheet[data-view="chat"], .sheet[data-view="ask"] { background: var(--brand-deep); color: #f3ebdd; }
+  .sheet[data-view="chat"] .sheet-head, .sheet[data-view="ask"] .sheet-head { background: var(--brand-deep); border-bottom: 1px solid color-mix(in srgb, var(--brass) 55%, transparent); }
+  .sheet[data-view="chat"] .bubble.ai, .sheet[data-view="ask"] .bubble.ai { background: color-mix(in srgb, var(--brand) 80%, #ffffff 6%); color: #f3ebdd; border: 1px solid color-mix(in srgb, var(--brass) 45%, transparent); }
+  .sheet[data-view="chat"] .bubble.ai b, .sheet[data-view="ask"] .bubble.ai b { color: var(--brass); font-weight: 700; }
+  .sheet[data-view="chat"] .bubble.me, .sheet[data-view="ask"] .bubble.me { background: var(--brass); color: var(--brand-deep); font-weight: 500; }
+  .sheet[data-view="chat"] .bubble .muted, .sheet[data-view="ask"] .bubble .muted { color: rgba(243, 235, 221, .6); font-size: 13px; }
+  .sheet[data-view="chat"] .composer, .sheet[data-view="ask"] .composer { background: var(--brand-deep); border-top: 1px solid color-mix(in srgb, var(--brass) 30%, transparent); color: #f3ebdd; }
+  .sheet[data-view="chat"] .composer textarea, .sheet[data-view="ask"] .composer textarea { background: rgba(243, 235, 221, .08); color: #f3ebdd; border: 1px solid color-mix(in srgb, var(--brass) 70%, transparent); caret-color: var(--brass); }
+  .sheet[data-view="chat"] .composer textarea::placeholder, .sheet[data-view="ask"] .composer textarea::placeholder { color: rgba(243, 235, 221, .42); }
+  .sheet[data-view="chat"] .ghost .gh, .sheet[data-view="ask"] .ghost .gh { color: rgba(243, 235, 221, .4); opacity: 1; }
+  .sheet[data-view="chat"] .cam, .sheet[data-view="ask"] .cam { width: 48px; height: 48px; border-radius: 50%; background: transparent; border: 1px solid color-mix(in srgb, var(--brass) 70%, transparent); }
+  .sheet[data-view="ask"] .example { background: transparent; color: #f3ebdd; border: 1px solid color-mix(in srgb, var(--brass) 55%, transparent); border-radius: 999px; padding: 8px 14px; }
+  .sheet[data-view="ask"] .example span { color: inherit; font-size: 14px; }
+  .sheet[data-view="ask"] .examples { display: flex; flex-wrap: wrap; }
+  .sheet[data-view="chat"] .draft, .sheet[data-view="ask"] .draft, .sheet[data-view="ask"] .ask-card { color: var(--ink); }
+  .sheet[data-view="ask"] .ask-card { border-color: color-mix(in srgb, var(--brass) 60%, transparent); }
 
   .my-post { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .my-post div { flex: 1; min-width: 0; }
@@ -583,7 +617,7 @@
 
 <div id="map-wrap"><div id="map" aria-label="Map of properties and requests"></div></div>
 <div class="bottombar" aria-hidden="true"></div>
-<button class="count-tab" id="show-list" type="button" aria-label="Show the list"><b id="list-n">0</b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+<button class="count-tab" id="show-list" type="button" aria-label="Show the list"><b id="list-n">0</b><svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg><svg class="chev" width="10" height="14" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2L3 7l5 5"/></svg></button>
 
 <div class="topbar">
   <header class="header"><div class="header-in">
@@ -1483,6 +1517,26 @@ document.querySelectorAll(".fchip[data-f]").forEach((c) => c.addEventListener("c
   refreshMap();      // then fetch what's new
 }));
 $("#show-list").addEventListener("click", () => openList("view"));
+/* Swipe the list tile to the left to open the list too (the tile follows the finger a little). */
+(() => {
+  const b = $("#show-list");
+  let x0 = null, y0 = 0, dx = 0;
+  const reset = () => { b.classList.remove("drag"); b.style.transform = ""; x0 = null; dx = 0; };
+  b.addEventListener("touchstart", (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; b.classList.add("drag"); }, { passive: true });
+  b.addEventListener("touchmove", (e) => {
+    if (x0 === null) return;
+    const t = e.touches[0];
+    dx = Math.min(0, t.clientX - x0);
+    if (Math.abs(t.clientY - y0) > 60) return reset();
+    b.style.transform = `translate(${Math.max(dx, -44)}px, -50%)`;
+  }, { passive: true });
+  b.addEventListener("touchend", (e) => {
+    const swiped = x0 !== null && dx < -24;
+    reset();
+    if (swiped) { e.preventDefault(); openList("view"); }
+  });
+  b.addEventListener("touchcancel", reset);
+})();
 $("#banner").addEventListener("click", (e) => { if (e.target.closest("[data-clear-filters]")) clearAdv(); });
 
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
@@ -2802,10 +2856,21 @@ function openComposer() {
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
-      ${role === "seeker" ? "" : `<label class="cam" title="Add photos" aria-label="Add photos">📷<input type="file" id="chat-pics" accept="image/*" multiple hidden></label>`}
-      <div class="msg-wrap"><textarea id="msg" rows="2" placeholder="Describe what you want to post…" aria-label="Message"></textarea><div class="ghost" id="ghost" aria-hidden="true"></div></div>
-      <button class="btn accent" id="send" aria-label="Send">Send</button>
+      ${!S.chat.length && IDEAS[role] ? `<div class="ideas" id="ideas">${IDEAS[role].map((x, i) => `<button type="button" class="idea" data-i="${i}" aria-pressed="false">${esc(x.label)}</button>`).join("")}</div>` : ""}
+      <div class="crow">
+        ${role === "seeker" ? "" : `<label class="cam" title="Add photos" aria-label="Add photos">📷<input type="file" id="chat-pics" accept="image/*" multiple hidden></label>`}
+        <div class="msg-wrap"><textarea id="msg" rows="1" placeholder="Describe what you want to post…" aria-label="Message"></textarea><div class="ghost" id="ghost" aria-hidden="true"></div></div>
+        <button class="send-btn" id="send" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
     </form>`;
+  S.ghost = { base: START, hint: ghostText() };
+  document.querySelectorAll("#ideas .idea").forEach((b) => b.addEventListener("click", () => {
+    const idea = IDEAS[role][+b.dataset.i];
+    document.querySelectorAll("#ideas .idea").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    S.ghost = { base: START + idea.start, hint: idea.hint };
+    const t = $("#msg"); t.value = S.ghost.base; ghostUpdate(); autoGrow();
+    t.focus(); t.setSelectionRange(t.value.length, t.value.length);
+  }));
 
   const log = $("#log");
   if (!S.chat.length) {
@@ -2857,30 +2922,49 @@ function openComposer() {
 }
 
 const START = "I want to ";
+/* One short, realistic example after "I want to ", per role. The idea buttons swap in their own. */
 const GHOSTS = {
-  landlord: "sell / rent out my apartment, villa, office, shop, plot or land, unit no. …, in [building, area, city] for [price], size … sq ft",
-  broker: "sell / rent out an apartment, villa, office, shop, plot or land, unit no. …, in [building, area, city] for [price], size … sq ft",
-  developer: "list my new project [name] in [area, city], [2, 3 & 4 BHK], from [price], handover [date]",
-  seeker: "buy / rent a [2 bedroom] apartment, villa or office / find a room in co-living in [area or building, city], budget [price], moving in [date]",
-  host: "share a [private room] in my flat, unit no. …, in [building, area, city] for [rent] a month, looking for [non-smoking professionals] / list my holiday home for [price] a night, sleeps [4]"
+  landlord: "sell my 2 bedroom apartment, unit 1204, in Marina Vista, Dubai Marina for AED 2.1M, 1,250 sq ft",
+  broker: "sell a 2 bedroom apartment, unit 1204, in Marina Vista, Dubai Marina for AED 2.1M, 1,250 sq ft",
+  developer: "list my new project Palm Heights in JVC, Dubai: 1 to 3 bedrooms from AED 950K, handover end of 2027",
+  seeker: "rent a 2 bedroom apartment in Dubai Marina, budget AED 120K a year, moving in March",
+  host: "rent out a private room in my flat, unit 804, Marina Vista, Dubai Marina, AED 3,500 a month, for non-smoking professionals"
+};
+const IDEA = {
+  sell: { label: "🏷️ Sell", start: "sell my ", hint: "2 bedroom apartment, unit 1204, in Marina Vista, Dubai Marina for AED 2.1M, 1,250 sq ft" },
+  rentOut: { label: "🔑 Rent out", start: "rent out my ", hint: "1 bedroom apartment, unit 907, in Bay Central, Dubai Marina for AED 95K a year, 820 sq ft" },
+  holiday: { label: "🌴 Holiday home", start: "list my holiday home ", hint: "in Marina Vista, Dubai Marina, unit 1204, AED 450 a night, sleeps 4" },
+  room: { label: "👥 Room in co-living", start: "rent out a room in my flat ", hint: "in Marina Vista, Dubai Marina, unit 804, AED 3,500 a month, for non-smoking professionals" },
+  buy: { label: "🏠 Buy", start: "buy a ", hint: "3 bedroom villa in Arabian Ranches, Dubai, budget AED 4M" },
+  rent: { label: "🔑 Rent", start: "rent a ", hint: "2 bedroom apartment in Dubai Marina, budget AED 120K a year, moving in March" },
+  findRoom: { label: "👥 Room in co-living", start: "find a room in co-living ", hint: "in Dubai Marina under AED 4,000 a month. I'm a non-smoker who works from home" }
+};
+const IDEAS = {
+  landlord: [IDEA.sell, IDEA.rentOut, IDEA.holiday],
+  broker: [{ ...IDEA.sell, start: "sell a " }, { ...IDEA.rentOut, start: "rent out a " }, { ...IDEA.holiday, start: "list a holiday home " }],
+  seeker: [IDEA.buy, IDEA.rent, IDEA.findRoom],
+  host: [IDEA.room, IDEA.holiday]
 };
 const ghostText = () => GHOSTS[roleOf()] || GHOSTS.landlord;
 /* Faded suggestion that follows "I want to " until the person starts typing their own words. */
 function ghostUpdate() {
   const t = $("#msg"), g = $("#ghost");
   if (!t || !g) return;
-  const on = /^\s*i want to\s*$/i.test(t.value);
+  const base = (S.ghost && S.ghost.base) || START;
+  const on = t.value.trimEnd().toLowerCase() === base.trimEnd().toLowerCase();
   g.hidden = !on;
   if (!on) return;
   const cs = getComputedStyle(t);
   for (const k of ["fontFamily", "fontSize", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth"]) g.style[k] = cs[k];
-  g.innerHTML = `<span class="gt">${esc(t.value.endsWith(" ") ? t.value : t.value + " ")}</span><span class="gh">${esc(ghostText())}</span>`;
+  g.innerHTML = `<span class="gt">${esc(t.value.endsWith(" ") ? t.value : t.value + " ")}</span><span class="gh">${esc((S.ghost && S.ghost.hint) || ghostText())}</span>`;
 }
 function autoGrow() {
   const t = $("#msg"), g = $("#ghost");
+  if (!t) return;
   t.style.height = "auto";
-  const need = Math.max(t.scrollHeight, g && !g.hidden ? g.scrollHeight : 0);
-  t.style.height = Math.min(need, 140) + "px";
+  const need = Math.max(t.scrollHeight, g && !g.hidden ? g.scrollHeight : 0) + 2;
+  t.style.height = Math.min(need, 136) + "px";
+  t.style.overflowY = need > 136 ? "auto" : "hidden";
 }
 function scrollLog() { const b = $("#sheet-body"); b.scrollTop = b.scrollHeight; }
 
@@ -2908,13 +2992,14 @@ async function send() {
   const t = $("#msg");
   const text = t.value.trim();
   if ((!text && !S.pendingPics.length) || S.busy) return;
-  if (/^i want to$/i.test(text) && !S.pendingPics.length) { toast("Please finish the sentence: what, where, unit number, size and price."); t.focus(); return; }
+  if ([START, S.ghost && S.ghost.base].some((b) => b && text.toLowerCase() === b.trim().toLowerCase()) && !S.pendingPics.length) { toast("Please finish the sentence: what, where, unit number, size and price."); t.focus(); return; }
   if (/\[[^\]]*\]/.test(text)) {
     toast("Please replace the [brackets] with your details first.");
     const i = text.indexOf("["); t.focus(); t.setSelectionRange(i, text.indexOf("]", i) + 1);
     return;
   }
   t.value = ""; autoGrow();
+  const ideas = $("#ideas"); if (ideas) ideas.remove();
   const images = S.pendingPics.splice(0);
   S.chatPics.push(...images);
   S.chat.push(images.length ? { role: "user", content: text || "Here are photos of the property.", images } : { role: "user", content: text });
@@ -3132,8 +3217,10 @@ function openAssistant(context = null) {
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
-      <div class="msg-wrap"><textarea id="msg" rows="1" placeholder="${here ? "Ask anything about this property…" : "Ask about properties, prices, areas…"}" aria-label="Message"></textarea></div>
-      <button class="btn accent" id="send" aria-label="Send">Send</button>
+      <div class="crow">
+        <div class="msg-wrap"><textarea id="msg" rows="1" placeholder="${here ? "Ask anything about this property…" : "Ask about properties, prices, areas…"}" aria-label="Message"></textarea></div>
+        <button class="send-btn" id="send" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
     </form>`;
   if (!S.ask.messages.length) {
     const intro = document.createElement("div");
