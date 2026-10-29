@@ -233,3 +233,16 @@ alter table public.posts add column if not exists move_in text;
 
 -- Amenities chips (safe to re-run).
 alter table public.posts add column if not exists amenities jsonb not null default '[]'::jsonb;
+
+-- Five roles (Buyer / Tenant merged; Co-living / Homestays added), holiday homes by the night,
+-- and co-living interests for matching flatmates (safe to re-run).
+alter table public.posts drop constraint if exists posts_poster_type_check;
+alter table public.posts add constraint posts_poster_type_check
+  check (poster_type in ('landlord', 'broker', 'developer', 'buyer', 'tenant', 'host'));
+alter table public.posts drop constraint if exists posts_deal_check;
+alter table public.posts add constraint posts_deal_check check (deal in ('sale', 'rent', 'share', 'stay'));
+alter table public.posts add column if not exists interests jsonb not null default '[]'::jsonb;
+alter table public.posts add column if not exists guests int;
+alter table public.posts add column if not exists min_nights int;
+alter table public.profiles add column if not exists interests jsonb not null default '[]'::jsonb;
+update public.profiles set role = 'seeker' where role in ('buyer', 'tenant');
