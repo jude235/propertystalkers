@@ -1,7 +1,7 @@
 // All /api/* routes. Dependencies are passed in so the logic can be tested without real services.
 import {
   LIMITS, POSTER_TYPES, isUuid, clean, cleanPhone, cleanRera, buildingKey, validateProposal,
-  makeViewer, canSee, accessSummary, toPublic, sanitizeMessages
+  makeViewer, canSee, accessSummary, toPublic, sanitizeMessages, unitKey, leadPool, collapseUnits
 } from "./core.mjs";
 
 const placeCache = new Map();
@@ -54,7 +54,7 @@ export async function handle(req, deps) {
       const posts = await store.activePosts();
       const avatars = await store.avatarsFor([...new Set(posts.map((p) => p.user_id))]);
       for (const p of posts) p.contact_avatar = avatars[p.user_id] || null;
-      const visible = posts.filter((p) => canSee(p, viewer)).map((p) => toPublic(p, viewer));
+      const visible = collapseUnits(posts, viewer).filter((p) => canSee(p, viewer)).map((p) => toPublic(p, viewer));
       return json({ posts: visible, access: accessSummary(viewer), signedIn: !!viewer });
     }
 
@@ -68,6 +68,26 @@ export async function handle(req, deps) {
         placeCache.set(key, await geo.search(q));
       }
       return json({ place: placeCache.get(key) });
+    }
+
+    /* ---------- contact for a listing: hands out leads in turn (signed in or not) ---------- */
+    const contactM = path.match(/^\/posts\/([^/]+)\/contact$/);
+    if (contactM && method === "POST") {
+      if (!isUuid(contactM[1])) return json({ error: "Not found" }, 404);
+      const post = await store.getPost(contactM[1]);
+      const { viewer } = await loadViewer();
+      if (!post || !canSee(post, viewer)) return json({ error: "That post is no longer available." }, 404);
+      let to = post;
+      if (post.kind === "listing" && post.unit_key) {
+        const pool = leadPool(await store.activeByUnitKey(post.unit_key));
+        if (pool.length > 1) {
+          const n = await store.nextLead(post.unit_key);
+          to = pool[(n - 1) % pool.length];
+        } else if (pool.length === 1) to = pool[0];
+        await store.logLead({ unit_key: post.unit_key, post_id: to.id, viewer_id: user ? user.id : null });
+      }
+      const pic = (await store.avatarsFor([to.user_id]))[to.user_id] || null;
+      return json({ contact: { post_id: to.id, name: to.contact_name, phone: to.contact_phone, avatar: pic } });
     }
 
     if (!user) return json({ error: "sign_in_required" }, 401);
@@ -142,6 +162,16 @@ export async function handle(req, deps) {
     const profile = await store.getProfile(user.id);
     const needsProfile = !profile || !profile.name || !profile.phone || !profile.email;
 
+    /** The same unit may be listed at most 3 times for sale (and 3 for rent), once per person. */
+    async function unitProblem(key, deal, exceptId = null) {
+      if (!key) return null;
+      const others = (await store.activeByUnitKey(key)).filter((p) => p.id !== exceptId);
+      const what = deal === "rent" ? "for rent" : "for sale";
+      if (others.some((p) => p.user_id === user.id)) return `You've already listed this unit ${what}. You can edit that post instead.`;
+      if (others.length >= LIMITS.listingsPerUnit) return `This unit is already listed ${what} ${LIMITS.listingsPerUnit} times, which is the most allowed. It can't be listed again unless one of those is removed.`;
+      return null;
+    }
+
     /** Validate, place on the map and save a draft for the user to confirm. */
     async function makeDraft(proposal) {
       const v = validateProposal(proposal);
@@ -151,6 +181,8 @@ export async function handle(req, deps) {
         const where = [v.post.building, v.post.locality, v.post.city].filter(Boolean).join(", ");
         return { message: `I couldn't find "${where}" on the map. Could you check the spelling, or add the area name or a nearby landmark?` };
       }
+      const problem = await unitProblem(unitKey(v.post), v.post.deal);
+      if (problem) return { message: problem };
       const draft = {
         ...v.post,
         ...place,
@@ -227,8 +259,12 @@ export async function handle(req, deps) {
       const photos = ownPhotos(body.photos, user.id);
 
       const { notes, ...fields } = draft;
+      const unit_key = draft.kind === "listing" ? unitKey(draft) : null;
+      const problem = await unitProblem(unit_key, draft.deal);
+      if (problem) return json({ error: problem }, 409);
       const post = await store.createPost({
         ...fields,
+        unit_key,
         photos: draft.kind === "listing" ? photos : [],
         user_id: user.id,
         contact_name: profile.name,
@@ -256,7 +292,8 @@ export async function handle(req, deps) {
         poster_type: post.poster_type, deal: pick("deal"), property_type: pick("property_type"), bedrooms: pick("bedrooms"),
         price: pick("price"), currency: pick("currency"), building: pick("building"), locality: pick("locality"),
         city: pick("city"), country: pick("country"), rera_number: pick("rera_number"), company: pick("company"),
-        possession: pick("possession"), configs: pick("configs"), description: pick("description")
+        possession: pick("possession"), configs: pick("configs"), description: pick("description"),
+        unit_number: pick("unit_number"), size_sqft: pick("size_sqft")
       });
       if (!v.ok) return json({ error: v.ask }, 400);
       const { notes, kind, poster_type, ...fields } = v.post;
@@ -271,6 +308,13 @@ export async function handle(req, deps) {
           return json({ error: `Couldn't find "${where}" on the map. Check the spelling or add the area name.` }, 400);
         }
         Object.assign(fields, place, { building_key: buildingKey(fields.building, fields.city) });
+      }
+      if (post.kind === "listing") {
+        fields.unit_key = unitKey(fields);
+        if (fields.unit_key !== post.unit_key) {
+          const problem = await unitProblem(fields.unit_key, fields.deal, post.id);
+          if (problem) return json({ error: problem }, 409);
+        }
       }
       if (post.kind === "listing" && Array.isArray(b.photos)) {
         fields.photos = ownPhotos(b.photos, post.user_id);

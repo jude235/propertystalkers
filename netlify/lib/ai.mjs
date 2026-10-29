@@ -13,13 +13,15 @@ What you need before you can propose a post:
 2. For landlords and brokers: whether they want to sell or rent it out. Developers are selling unless they say otherwise.
 3. The location: the building or project name and/or the area, sector or community, AND the city. This is mandatory. Never guess a city. Fill in the country when it is clear from the city (e.g. Dubai -> United Arab Emirates, Gurgaon -> India).
 4. For brokers: their licence / RERA number. If a broker does not have or will not give one, tell them it will be posted as Landlord and continue.
+5. For landlords and brokers: the unit, flat, villa, office or plot number (unit_number), and the size (size_sqft). Both are mandatory. The unit number is never shown to visitors; it only stops the same unit being listed more than 3 times. Say so briefly if they hesitate.
 Also useful (ask once together, but do not insist): property type, bedrooms, and price (or budget for buyers and tenants).
 
 Rules:
 - Ask short, friendly questions, at most two at a time. Reply in the user's language.
 - Never invent details the user did not give. Do not ask for name or phone number; those come from their profile.
 - Price is a whole number in the currency's main unit, with a separate 3-letter currency code. Indian terms: "1.2 cr" = 12000000 INR, "80 lakh" = 8000000 INR. "2.5M AED" = 2500000 AED, "45k per month" = 45000 per month. If the user gives no currency, use the usual currency of the property's country (INR for India, AED for UAE, GBP for UK, USD for USA, etc.). For rent, price is the monthly rent.
-- "3 bedroom" or "3 BHK" means bedrooms = 3. A villa is property_type "villa"; a flat is "apartment". Extra details such as size in sq ft go in the description.
+- "3 bedroom" or "3 BHK" means bedrooms = 3. A villa or townhouse is property_type "villa"; a flat is "apartment"; land or a plot is "plot"; a warehouse is "warehouse".
+- size_sqft is a whole number of square feet. Convert other units: 1 sq m = 10.764 sq ft, 1 sq yd = 9 sq ft, 1 acre = 43560 sq ft. For plots, use the plot area.
 - For developers: building is the project name, company is the developer company, rera_number is the project registration, possession is the handover date as written (e.g. "Dec 2027"), price is the starting price, and bedrooms is the smallest configuration. Put the full configuration list in the description.
 - locality is the area, sector or community (e.g. "Sector 7", "Kharadi", "Damac Lagoons"). building is the building or project name (e.g. "DLF The Camellias", "Portofino").
 - As soon as you have the required details, call propose_post. Do not write a long confirmation first; the app shows the user a summary to confirm.
@@ -30,13 +32,15 @@ Rules:
 
 export const PROPOSE_TOOL = {
   name: "propose_post",
-  description: "Propose the post for the user to confirm. Call only when who they are and the location (building or area, plus city) are known.",
+  description: "Propose the post for the user to confirm. Call only when who they are and the location (building or area, plus city) are known, and for landlords and brokers also the unit number and size.",
   input_schema: {
     type: "object",
     properties: {
       poster_type: { type: "string", enum: ["landlord", "broker", "developer", "buyer", "tenant"] },
       deal: { type: "string", enum: ["sale", "rent"], description: "sale = selling/buying, rent = renting out/renting" },
-      property_type: { type: "string", enum: ["apartment", "villa", "independent_house", "plot", "office", "shop", "other"] },
+      property_type: { type: "string", enum: ["apartment", "villa", "independent_house", "plot", "office", "shop", "warehouse", "other"] },
+      unit_number: { type: ["string", "null"], description: "Unit / flat / villa / office / plot number (landlords and brokers). Private." },
+      size_sqft: { type: ["integer", "null"], description: "Size in square feet (built-up area, or plot area for land)" },
       bedrooms: { type: ["integer", "null"] },
       price: { type: ["integer", "null"], description: "Whole number in the currency's main unit. Asking price, monthly rent, or budget." },
       currency: { type: ["string", "null"], description: "ISO 4217 code, e.g. INR, AED, USD, GBP" },

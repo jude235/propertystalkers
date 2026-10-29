@@ -21,6 +21,16 @@ export function makeStore({ url, serviceKey }) {
     async upsertProfile(profile) {
       return must(await sb.from("profiles").upsert(profile).select().single());
     },
+    async activeByUnitKey(key) {
+      return must(await sb.from("posts").select("*").eq("unit_key", key).eq("status", "active"));
+    },
+    async nextLead(key) {
+      return must(await sb.rpc("next_lead", { k: key }));
+    },
+    async logLead(lead) {
+      const { error } = await sb.from("leads").insert(lead);
+      if (error) console.error("lead log failed", error.message); // never block a caller over the log
+    },
     async avatarsFor(userIds) {
       if (!userIds.length) return {};
       const { data, error } = await sb.from("profiles").select("id, avatar_url").in("id", userIds).not("avatar_url", "is", null);

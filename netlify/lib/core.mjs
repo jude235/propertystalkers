@@ -1,13 +1,15 @@
 // Business rules: validation, who-can-see-what, and what the browser receives.
 
 export const POSTER_TYPES = ["landlord", "broker", "developer", "buyer", "tenant"];
-export const PROPERTY_TYPES = ["apartment", "villa", "independent_house", "plot", "office", "shop", "other"];
+export const PROPERTY_TYPES = ["apartment", "villa", "independent_house", "plot", "office", "shop", "warehouse", "other"];
+export const COMMERCIAL_TYPES = ["office", "shop", "warehouse"];
 
 export const LIMITS = {
   importBatch: 10,       // DLD projects per admin import call (keeps each call under the host's request cap)
   aiCallsPerDay: 40,     // AI messages per user per day
   postsPerDay: 10,       // confirmed posts per user per day
   maxPhotos: 8,
+  listingsPerUnit: 3,    // the same unit can be listed at most this many times for sale, and again for rent
   maxMessages: 24,       // chat history sent to the AI
   maxMessageChars: 1500
 };
@@ -35,6 +37,63 @@ export function cleanRera(r) {
   if (!s) return null;
   const up = s.toUpperCase();
   return RERA_RE.test(up) && /\d/.test(up) ? up : null;
+}
+
+/** Unit / flat / villa number as typed, tidied for display. */
+export function cleanUnit(u) {
+  const s = clean(u, 30);
+  return s && /[A-Za-z0-9]/.test(s) ? s : null;
+}
+
+/** "Unit 1204", "Flat #1204" and "1204" are the same unit. */
+export function unitNorm(u) {
+  return String(u || "").toLowerCase()
+    .replace(/\b(unit|flat|apartment|apt|villa|office|shop|plot|no|number|num)\b\.?/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/** One key per unit and deal: the same unit is counted separately for sale and for rent. */
+export function unitKey({ deal, building, locality, city, unit_number }) {
+  const place = buildingKey(building || locality, city);
+  const n = unitNorm(unit_number);
+  return place && n && deal ? `${deal}|${place}|${n}` : null;
+}
+
+/** Listings of one unit share the map: the cheapest first, then whoever listed first. */
+export function unitOrder(a, b) {
+  const pa = a.price == null ? Infinity : Number(a.price), pb = b.price == null ? Infinity : Number(b.price);
+  if (pa !== pb) return pa - pb;
+  return String(a.created_at).localeCompare(String(b.created_at));
+}
+
+/** Who gets the next lead for a unit: the cheapest listers take turns, in the order they listed. */
+export function leadPool(group) {
+  const sorted = [...group].sort(unitOrder);
+  if (!sorted.length) return [];
+  const best = sorted[0].price;
+  return sorted.filter((p) => p.price === best);
+}
+
+/**
+ * The map shows one listing per unit (the cheapest; on a tie, the earliest).
+ * People who listed the unit see only their own listing of it; admins see all of them.
+ */
+export function collapseUnits(posts, viewer) {
+  if (viewer && viewer.isAdmin) return posts;
+  const groups = new Map();
+  for (const p of posts) {
+    if (p.kind !== "listing" || !p.unit_key || p.status !== "active") continue;
+    if (!groups.has(p.unit_key)) groups.set(p.unit_key, []);
+    groups.get(p.unit_key).push(p);
+  }
+  const hide = new Set();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const mineHere = viewer && group.some((p) => p.user_id === viewer.id);
+    const shown = mineHere ? group.filter((p) => p.user_id === viewer.id) : [group.slice().sort(unitOrder)[0]];
+    for (const p of group) if (!shown.includes(p)) hide.add(p.id);
+  }
+  return posts.filter((p) => !hide.has(p.id));
 }
 
 export function cleanPhone(p) {
@@ -111,6 +170,14 @@ export function validateProposal(input = {}) {
   }
 
   const property_type = PROPERTY_TYPES.includes(input.property_type) ? input.property_type : "other";
+  const size_sqft = toInt(input.size_sqft, 1, 100_000_000);
+  const unit_number = kind === "listing" && poster_type !== "developer" ? cleanUnit(input.unit_number) : null;
+  if (kind === "listing" && poster_type !== "developer") {
+    if (!unit_number) {
+      return { ok: false, ask: "What's the unit, flat or villa number? It's never shown to visitors; it only stops the same unit being listed too many times." };
+    }
+    if (!size_sqft) return { ok: false, ask: "What's the size of the property in sq ft?" };
+  }
   const price = toInt(input.price, 1, 100_000_000_000);
   const currency = cleanCurrency(input.currency) || (price ? "INR" : null);
 
@@ -132,6 +199,8 @@ export function validateProposal(input = {}) {
       company,
       possession: poster_type === "developer" ? clean(input.possession, 40) : null,
       configs: poster_type === "developer" ? clean(input.configs, 80) : null,
+      unit_number,
+      size_sqft,
       description: clean(input.description, 400),
       notes
     }
@@ -172,6 +241,9 @@ export function accessSummary(viewer) {
 /** What the browser receives. Internal fields and user ids never leave the server. */
 export function toPublic(post, viewer) {
   const mine = !!viewer && post.user_id === viewer.id;
+  const insider = mine || !!(viewer && viewer.isAdmin);
+  // Unit listings hand out the contact when someone taps Call or WhatsApp, so leads can take turns.
+  const gated = post.kind === "listing" && !!post.unit_key && !insider;
   return {
     id: post.id,
     kind: post.kind,
@@ -193,11 +265,14 @@ export function toPublic(post, viewer) {
     company: post.company,
     possession: post.possession,
     configs: post.configs,
+    size_sqft: post.size_sqft ?? null,
+    unit_number: insider ? post.unit_number || null : null,
+    contact_on_tap: gated,
     description: post.description,
     photos: Array.isArray(post.photos) ? post.photos : [],
-    contact_name: post.contact_name,
-    contact_phone: post.contact_phone,
-    contact_avatar: post.contact_avatar || null,
+    contact_name: gated ? null : post.contact_name,
+    contact_phone: gated ? null : post.contact_phone,
+    contact_avatar: gated ? null : post.contact_avatar || null,
     created_at: post.created_at,
     source: String(post.building_key || "").startsWith("dld:") ? "dld" : null,
     mine,
