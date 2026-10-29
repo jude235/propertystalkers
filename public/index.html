@@ -44,6 +44,11 @@
     --serif: "Plus Jakarta Sans", system-ui, sans-serif;
   }
   /* Optional colour themes (chosen in My profile / the palette button). */
+  /* A see-through film over the map imagery (pins stay on top), in the theme's colour. */
+  :root { --map-tint: rgba(17, 53, 43, .24); }
+  :root[data-theme="navy"] { --map-tint: rgba(17, 34, 64, .24); }
+  :root[data-theme="slate"] { --map-tint: rgba(39, 39, 42, .22); }
+  :root[data-theme="clay"] { --map-tint: rgba(60, 72, 88, .2); }
   :root[data-theme="navy"] { --brand-deep: #0a192f; --brand: #112240; --brand-soft: #ebf8ff; --brass: #f6ad55; --brass-light: #feebc8; --brass-ink: #a85d0f; --req: #6b4f2a; --bg: #f8fafc; --soft: #f1f5f9; --line: #e2e8f0; --ink: #1a202c; --muted: #64748b; }
   :root[data-theme="slate"] { --brand-deep: #18181b; --brand: #27272a; --brand-soft: #f4f4f5; --brass: #fb923c; --brass-light: #ffedd5; --brass-ink: #b4520f; --req: #7a4a22; --bg: #fafaf9; --soft: #f5f5f4; --line: #e7e5e4; --ink: #1c1917; --muted: #6b6560; }
   :root[data-theme="clay"] { --brand-deep: #2d3748; --brand: #3c4858; --brand-soft: #edf2f7; --brass: #dd6b20; --brass-light: #feebc8; --brass-ink: #a94e12; --req: #7a5a27; --bg: #fbfbf9; --soft: #f4f3ef; --line: #e6e4dc; --ink: #2d3748; --muted: #6b7280; }
@@ -315,6 +320,22 @@
   .panel.open { transform: none; }
   .panel:not(.open) { pointer-events: none; }
   .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 8px auto 0; }
+  /* The list of properties sits on the theme's deep colour (emerald by default). */
+  .map-tint { position: absolute; width: 10000px; height: 10000px; pointer-events: none; background: var(--map-tint); }
+  .panel.list-mode { background: var(--brand-deep); color: #f3ebdd; }
+  .panel.list-mode .grab { background: rgba(243, 235, 221, .3); }
+  .panel.list-mode .list-head h2 { color: #fcfbf7; }
+  .panel.list-mode .list-head p, .panel.list-mode .hint { color: rgba(243, 235, 221, .72); }
+  .panel.list-mode .litem { border-top-color: rgba(243, 235, 221, .12); color: #f3ebdd; }
+  .panel.list-mode .litem:hover, .panel.list-mode .litem:focus-visible { background: rgba(255, 255, 255, .06); }
+  .panel.list-mode .litem b { color: #fcfbf7; }
+  .panel.list-mode .litem small, .panel.list-mode .lsz { color: rgba(243, 235, 221, .66); }
+  .panel.list-mode .litem .lp { color: var(--brass); }
+  .panel.list-mode .badge { background: rgba(243, 235, 221, .12); color: #f3ebdd; }
+  .panel.list-mode .badge.good { background: rgba(88, 180, 120, .22); color: #b6e8c4; }
+  .panel.list-mode .badge.cut { background: rgba(230, 150, 70, .22); color: #f6c996; }
+  .panel.list-mode .tag { color: var(--brass); }
+  .panel.list-mode .match { background: rgba(110, 175, 210, .2); color: #cfe6f0; }
   .icon-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; background: rgba(251, 247, 239, .94);
     box-shadow: 0 2px 8px rgba(0,0,0,.2); display: grid; place-items: center; flex: 0 0 auto; }
   .panel > .icon-btn { position: absolute; top: 12px; right: 12px; z-index: 2; }
@@ -896,12 +917,40 @@ async function initMap() {
     center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || "hybrid",
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
+  addMapTint(S.map);
   S.map.addListener("idle", () => {
     updateListCount();
     // Wide screens: keep the docked list in step with the map.
     if (docked() && S.panelMode === "list") openList();
   });
   updateMapTypeButton();
+}
+
+/* A see-through film in the theme's colour over the map imagery. It lives in the map's lowest layer,
+   so pins, clusters and labels stay crisp on top, and it never blocks taps. */
+async function addMapTint(map) {
+  try {
+    const { OverlayView } = await google.maps.importLibrary("maps");
+    if (!OverlayView) return;
+    class Tint extends OverlayView {
+      onAdd() {
+        this.div = document.createElement("div");
+        this.div.className = "map-tint";
+        this.getPanes().mapPane.appendChild(this.div);
+      }
+      draw() {
+        const pr = this.getProjection(), c = this.getMap() && this.getMap().getCenter();
+        if (!pr || !c || !this.div) return;
+        const px = pr.fromLatLngToDivPixel(c);
+        this.div.style.left = Math.round(px.x - 5000) + "px";
+        this.div.style.top = Math.round(px.y - 5000) + "px";
+      }
+      onRemove() { if (this.div) this.div.remove(); }
+    }
+    const tint = new Tint();
+    tint.setMap(map);
+    map.addListener("idle", () => tint.draw());
+  } catch (e) { /* the map works fine without the film */ }
 }
 
 function updateMapTypeButton() {
@@ -1303,6 +1352,7 @@ function openDetails(id, opts = {}) {
 
   panel.scrollTop = 0;
   S.panelMode = "details";
+  panel.classList.remove("list-mode");
   panel.classList.add("open");
   panel.setAttribute("aria-hidden", "false");
   setActive(p.id);
@@ -1553,6 +1603,7 @@ function openList() {
   document.querySelectorAll(".litem").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { pan: true })));
   if (S.panelMode !== "list") panel.scrollTop = 0;
   S.panelMode = "list";
+  panel.classList.add("list-mode");
   panel.classList.add("open");
   panel.setAttribute("aria-hidden", "false");
   setActive(null);
