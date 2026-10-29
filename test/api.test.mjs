@@ -29,7 +29,11 @@ function setup() {
   async function setRole(u, role, extra = {}) {
     return call("POST", "/me/role", { token: u.token, body: { role, ...extra } });
   }
+  let unitSeq = 0;
   async function post(u, proposal, photos = []) {
+    const needsUnit = ["landlord", "broker"].includes(proposal.poster_type);
+    if (needsUnit && proposal.unit_number === undefined) proposal = { ...proposal, unit_number: `T-${++unitSeq}` };
+    if (needsUnit && proposal.size_sqft === undefined) proposal = { ...proposal, size_sqft: 1200 };
     const role = proposal.poster_type === "broker" && !proposal.rera_number ? "landlord" : proposal.poster_type;
     const rr = await setRole(u, role, { licence: proposal.rera_number, company: proposal.company });
     assert.equal(rr.status, 200, JSON.stringify(rr.body));
@@ -57,13 +61,13 @@ test("config hides server secrets", async () => {
 });
 
 test("validation: broker without RERA becomes landlord; location and city required", () => {
-  const v = validateProposal({ poster_type: "broker", deal: "sale", locality: "Sector 7", city: "Gurugram", rera_number: "" });
+  const v = validateProposal({ poster_type: "broker", deal: "sale", locality: "Sector 7", city: "Gurugram", rera_number: "", unit_number: "12", size_sqft: 900 });
   assert.equal(v.ok, true);
   assert.equal(v.post.poster_type, "landlord");
   assert.equal(v.post.kind, "listing");
   assert.equal(v.post.notes.length, 1);
 
-  const b = validateProposal({ poster_type: "broker", deal: "sale", locality: "Sector 7", city: "Gurugram", rera_number: "rc/rep/harera/ggm/123/2024/45" });
+  const b = validateProposal({ poster_type: "broker", deal: "sale", locality: "Sector 7", city: "Gurugram", rera_number: "rc/rep/harera/ggm/123/2024/45", unit_number: "12", size_sqft: 900 });
   assert.equal(b.post.poster_type, "broker");
   assert.equal(b.post.rera_number, "RC/REP/HARERA/GGM/123/2024/45");
 
@@ -183,12 +187,12 @@ test("chat: plain replies, profile required, ungeocodable location, drafts are p
   assert.deepEqual(r1.body, { type: "message", text: "Which city is it in?" });
   assert.equal(ai.roles[ai.roles.length - 1], "landlord");
 
-  ai.queue.push({ text: "", proposal: { ...landlordSale, building: "Nowhere Towers", locality: "Sector 999", city: "Atlantis" } });
+  ai.queue.push({ text: "", proposal: { ...landlordSale, unit_number: "9", size_sqft: 1000, building: "Nowhere Towers", locality: "Sector 999", city: "Atlantis" } });
   const r2 = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
   assert.equal(r2.body.type, "message");
   assert.match(r2.body.text, /couldn't find/);
 
-  ai.queue.push({ text: "", proposal: landlordSale });
+  ai.queue.push({ text: "", proposal: { ...landlordSale, unit_number: "9", size_sqft: 1000 } });
   const r3 = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
   const other = await person("other@x.in");
   const steal = await call("POST", "/posts", { token: other.token, body: { draftId: r3.body.draft.id } });
@@ -198,7 +202,7 @@ test("chat: plain replies, profile required, ungeocodable location, drafts are p
 
 test("worldwide: currency and country are kept", async () => {
   const v = validateProposal({ poster_type: "landlord", deal: "sale", property_type: "villa", price: 4500000, currency: "aed",
-    building: "Portofino", locality: "Damac Lagoons", city: "Dubai", country: "United Arab Emirates", description: "Villa." });
+    building: "Portofino", locality: "Damac Lagoons", city: "Dubai", country: "United Arab Emirates", description: "Villa.", unit_number: "V-7", size_sqft: 3200 });
   assert.equal(v.post.currency, "AED");
   assert.equal(v.post.country, "United Arab Emirates");
   const d = validateProposal({ poster_type: "buyer", price: 12000000, locality: "Kharadi", city: "Pune", description: "x" });
@@ -257,7 +261,7 @@ test("roles: choose, validate, switch", async () => {
   assert.equal((await feed(u)).posts.filter((p) => p.kind === "request").length, 0);
   // the chosen role overrides whatever the AI guessed
   await setRole(u, "landlord");
-  ai.queue.push({ text: "", proposal: { ...landlordSale, poster_type: "buyer" } });
+  ai.queue.push({ text: "", proposal: { ...landlordSale, poster_type: "buyer", unit_number: "5", size_sqft: 800 } });
   const r = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
   assert.equal(r.body.draft.poster_type, "landlord");
 });
@@ -396,7 +400,62 @@ test("licence numbers: short BRNs accepted; profile picture must be the user's o
   assert.equal(ok.body.profile.avatar_url, own);
   assert.equal(ok.body.profile.rera_number, "45530");
   const p = await post(u, landlordSale);
-  assert.equal((await feed(null)).posts.find((x) => x.id === p.id).contact_avatar, own);
+  assert.equal((await feed(u)).posts.find((x) => x.id === p.id).contact_avatar, own);
+  assert.equal((await call("POST", `/posts/${p.id}/contact`)).body.contact.avatar, own);
   const cleared = await call("POST", "/me", { token: u.token, body: { ...base, avatar: "" } });
   assert.equal(cleared.body.profile.avatar_url, null);
+});
+
+test("units: number and size required, at most 3 per unit per deal, one shown on the map, leads take turns", async () => {
+  const ask = validateProposal({ poster_type: "landlord", deal: "sale", building: "Skyview", locality: "Sector 7", city: "Gurugram", size_sqft: 900 });
+  assert.equal(ask.ok, false);
+  assert.match(ask.ask, /unit/);
+  assert.match(validateProposal({ poster_type: "landlord", deal: "sale", building: "Skyview", locality: "Sector 7", city: "Gurugram", unit_number: "12" }).ask, /size/);
+  assert.equal(validateProposal({ poster_type: "buyer", locality: "Sector 7", city: "Gurugram" }).ok, true); // requests need neither
+
+  const { call, person, post, feed, ai, setRole } = setup();
+  const [a, b, c, d] = [await person("a@u.in"), await person("b@u.in"), await person("c@u.in"), await person("d@u.in")];
+  const admin = await person("admin@ps.in");
+  const unit = { ...landlordSale, price: 15000000 };
+  const pa = await post(a, { ...unit, unit_number: "Unit 1204" });
+  const pb = await post(b, { ...unit, unit_number: "1204" });
+  const pc = await post(c, { ...unit, unit_number: "Flat #1204" });
+
+  // A 4th listing of the same unit for sale is refused; the same person can't list it twice.
+  await setRole(d, "landlord");
+  ai.queue.push({ text: "", proposal: { ...unit, unit_number: "1204", size_sqft: 1200 } });
+  const fourth = await call("POST", "/chat", { token: d.token, body: { messages: [{ role: "user", content: "x" }] } });
+  assert.match(fourth.body.text, /already listed for sale 3 times/);
+  ai.queue.push({ text: "", proposal: { ...unit, unit_number: "1204", size_sqft: 1200 } });
+  assert.match((await call("POST", "/chat", { token: a.token, body: { messages: [{ role: "user", content: "x" }] } })).body.text, /already listed this unit/);
+  // Renting the same unit out is counted separately.
+  const rent = await post(d, { ...unit, deal: "rent", price: 90000, unit_number: "1204" });
+  assert.ok(rent.id);
+
+  // Visitors see one listing of the unit (equal prices: the first), with no unit number or phone.
+  const pub = (await feed(null)).posts.filter((p) => p.deal === "sale");
+  assert.deepEqual(pub.map((p) => p.id), [pa.id]);
+  assert.equal(pub[0].unit_number, null);
+  assert.equal(pub[0].contact_phone, null);
+  assert.equal(pub[0].contact_on_tap, true);
+  // Each lister sees only their own; the admin sees all three.
+  assert.deepEqual((await feed(b)).posts.filter((p) => p.deal === "sale").map((p) => p.id), [pb.id]);
+  assert.equal((await feed(b)).posts.find((p) => p.id === pb.id).unit_number, "1204");
+  assert.equal((await feed(admin)).posts.filter((p) => p.deal === "sale").length, 3);
+
+  // Equal prices: leads go to the 1st, 2nd and 3rd lister in turn, then start again.
+  const lead = async () => (await call("POST", `/posts/${pa.id}/contact`)).body.contact.post_id;
+  assert.deepEqual([await lead(), await lead(), await lead(), await lead()], [pa.id, pb.id, pc.id, pa.id]);
+
+  // A cheaper listing takes the map spot and every lead.
+  await call("PATCH", `/posts/${pc.id}`, { token: c.token, body: { price: 14000000 } });
+  assert.deepEqual((await feed(null)).posts.filter((p) => p.deal === "sale").map((p) => p.id), [pc.id]);
+  assert.deepEqual([await lead(), await lead()], [pc.id, pc.id]);
+  const shown = (await call("POST", `/posts/${pc.id}/contact`)).body.contact;
+  assert.equal(shown.phone, "919876543210");
+
+  // Moving a listing onto a full unit by editing is refused too.
+  const other = await post(d, { ...unit, unit_number: "77" });
+  const moved = await call("PATCH", `/posts/${other.id}`, { token: d.token, body: { unit_number: "1204" } });
+  assert.equal(moved.status, 409);
 });
