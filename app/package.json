@@ -1,0 +1,22 @@
+{
+  "name": "propertystalkers-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Property Stalkers for Android and iPhone. The app shows the same site as propertystalkers.com, so changes reach both.",
+  "scripts": {
+    "sync": "cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.6.0"
+  }
+}

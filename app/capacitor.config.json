@@ -1,0 +1,31 @@
+{
+  "appId": "com.propertystalkers.app",
+  "appName": "Property Stalkers",
+  "webDir": "www",
+  "appendUserAgent": "PropertyStalkersApp",
+  "backgroundColor": "#11352b",
+  "server": {
+    "url": "https://propertystalkers.com",
+    "cleartext": false,
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#11352b",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#11352b"
+    }
+  }
+}
