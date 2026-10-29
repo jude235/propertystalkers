@@ -1,5 +1,6 @@
 // Shared server set-up used by both Netlify and Cloudflare.
 import { handle } from "./handler.mjs";
+import { handlePublic } from "./seo.mjs";
 import { makeStore } from "./db.mjs";
 import { makeAI } from "./ai.mjs";
 import { makeGeo } from "./geo.mjs";
@@ -23,14 +24,7 @@ export function tidyEnv(raw) {
 }
 
 let cached = null;
-export async function serve(req, rawEnv, ctx = null) {
-  const env = tidyEnv(rawEnv);
-  const missing = REQUIRED.filter((k) => !env[k]);
-  if (missing.length) {
-    return new Response(JSON.stringify({ error: "not_configured", missing }), {
-      status: 503, headers: { "content-type": "application/json" }
-    });
-  }
+function depsFor(env) {
   const key = [...REQUIRED, "BREVO_API_KEY", "MAIL_FROM", "AI_MODEL"].map((k) => env[k] || "").join("|");
   if (!cached || cached.key !== key) {
     cached = { key, deps: {
@@ -41,7 +35,31 @@ export async function serve(req, rawEnv, ctx = null) {
       mail: makeMailer({ apiKey: env.BREVO_API_KEY, from: env.MAIL_FROM || "alerts@propertystalkers.com", site: env.SITE_URL || "https://propertystalkers.com" })
     } };
   }
+  return cached.deps;
+}
+const notConfigured = (missing) => new Response(JSON.stringify({ error: "not_configured", missing }), {
+  status: 503, headers: { "content-type": "application/json" }
+});
+
+export async function serve(req, rawEnv, ctx = null) {
+  const env = tidyEnv(rawEnv);
+  const missing = REQUIRED.filter((k) => !env[k]);
+  if (missing.length) return notConfigured(missing);
+  const deps = depsFor(env);
   // On Cloudflare, background work (alerts, emails, jobs) finishes after the reply is sent.
   const defer = ctx && typeof ctx.waitUntil === "function" ? (p) => ctx.waitUntil(p) : null;
-  return handle(req, defer ? { ...cached.deps, defer } : cached.deps);
+  return handle(req, defer ? { ...deps, defer } : deps);
+}
+
+/** Public pages: /property/<id> and /sitemap.xml. */
+export async function servePublic(req, rawEnv) {
+  const env = tidyEnv(rawEnv);
+  const missing = REQUIRED.filter((k) => !env[k]);
+  if (missing.length) return notConfigured(missing);
+  try {
+    return (await handlePublic(req, depsFor(env))) || new Response("Not found", { status: 404 });
+  } catch (e) {
+    console.error("Public page failed", e);
+    return new Response("Sorry, this page couldn't load. Please try again.", { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } });
+  }
 }
