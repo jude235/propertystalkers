@@ -31,6 +31,10 @@
     --shadow: 0 10px 30px rgba(15, 59, 46, .18);
     --serif: Marcellus, Georgia, "Times New Roman", serif;
   }
+  /* Optional colour themes (chosen in My profile / the palette button). */
+  :root[data-theme="navy"] { --brand: #0f2240; --brand-ink: #f1ece2; --brass: #e2a756; --brass-ink: #a96a1c; --req: #6b4f2a; --bg: #f8fafc; --soft: #eef2f7; --line: #dbe3ec; --ink: #18243a; --muted: #5d6b80; }
+  :root[data-theme="slate"] { --brand: #232327; --brand-ink: #f4f1ec; --brass: #e58a3c; --brass-ink: #b05f1c; --req: #7a4a22; --bg: #fafaf9; --soft: #f1f0ee; --line: #e2dfdb; --ink: #1c1917; --muted: #6b6560; }
+  :root[data-theme="clay"] { --brand: #3a4a42; --brand-ink: #fbf8f1; --brass: #c8673a; --brass-ink: #9d4c25; --req: #7a5a27; --bg: #fdfbf6; --soft: #f3efe5; --line: #e4ddcd; --ink: #2a2f2c; --muted: #6e6a5f; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--soft); color: var(--ink);
     font-family: Jost, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -287,7 +291,37 @@
   .loc { color: var(--muted); font-size: 14px; margin: 0; }
   .price { font-family: var(--serif); font-weight: 400; font-size: 23px; margin: 14px 0 0; color: var(--brand); }
   .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
-  .fact { background: var(--soft); border-radius: 12px; padding: 10px 12px; }
+  .fact { background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .fact > i { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; background: var(--bg); color: var(--brand); display: grid; place-items: center; margin-top: 1px; }
+  .fact > div { min-width: 0; }
+  .sec-h { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 18px 0 8px; }
+  .amen { display: flex; flex-wrap: wrap; gap: 6px; }
+  .amen span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
+  .amen span svg { color: var(--brand); }
+  .amen-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .amen-pick button { font-size: 13px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: #fffdf8; cursor: pointer; }
+  .amen-pick button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .panel-cta { position: sticky; bottom: 0; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); box-shadow: 0 -6px 16px rgba(0, 0, 0, .06); }
+  .panel-cta.one { grid-template-columns: 1fr; }
+  .pin .ptag { margin-left: 5px; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; background: rgba(255, 255, 255, .22); padding: 1px 5px; border-radius: 6px; }
+  .locate { position: fixed; left: 12px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 19; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--brand); display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 14px rgba(15, 59, 46, .18); }
+  @media (max-width: 759px) { .locate { bottom: calc(196px + env(safe-area-inset-bottom)); } }
+  .palette-btn { display: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(243, 235, 221, .35); background: transparent; color: var(--brand-ink); cursor: pointer; place-items: center; }
+  @media (min-width: 760px) { .palette-btn { display: grid; } }
+  .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .themes button { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: #fffdf8; cursor: pointer; font-size: 13px; text-align: left; }
+  .themes button[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+  .themes i { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
+  /* Wide screens: the details / list panel stays docked on the right, like a property portal. */
+  @media (min-width: 1100px) {
+    #map-wrap { right: 420px; }
+    .panel { top: 76px; right: 0; bottom: 0; width: 420px; border-radius: 0; transform: none !important; box-shadow: -8px 0 24px rgba(15, 59, 46, .08); border-left: 1px solid var(--line); }
+    .topbar .filters, .banner-row { margin-right: 420px; }
+    .fab { left: calc((100% - 420px) / 2); }
+    .role-pill { left: calc((100% - 420px) / 2); }
+    .ask-fab { right: 436px; }
+    .toast { left: calc((100% - 420px) / 2); }
+  }
   .fact b { display: block; font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 3px; }
   .fact span { font-size: 14px; font-weight: 500; }
   .desc { font-size: 15px; line-height: 1.6; color: #3c4640; margin: 0 0 16px; white-space: pre-line; }
@@ -406,7 +440,9 @@
     .search { order: 2; max-width: 460px; }
     .tabs { order: 3; width: 300px; }
     .account { order: 4; }
+    .top-actions { order: 4; margin-left: auto; }
     .panel { top: 84px; }
+    @media (min-width: 1100px) { .panel { top: 76px; } }
   }
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 27'%3E%3Cpath d='M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z' fill='%23b8894a'/%3E%3Cpath d='M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z' fill='%230f3b2e'/%3E%3Ccircle cx='12' cy='10.4' r='2.6' fill='%23b8894a'/%3E%3C/svg%3E">
@@ -425,6 +461,7 @@
         <div class="brand-name">property<span>stalkers</span></div>
       </div>
       <div class="top-actions">
+        <button class="palette-btn" id="palette" aria-label="Colour theme" title="Colour theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.3"/><circle cx="17.5" cy="10.5" r="1.3"/><circle cx="8.5" cy="7.5" r="1.3"/><circle cx="6.5" cy="12.5" r="1.3"/><path d="M12 2a10 10 0 0 0 0 20c1 0 1.6-.8 1.6-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.8-1.7 1.7-1.7H16a6 6 0 0 0 6-6C22 6 17.5 2 12 2z"/></svg></button>
         <button class="bell" id="bell" aria-label="Notifications" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bell-n" id="bell-n" hidden></span></button>
         <button class="account" id="account">Sign in</button>
       </div>
@@ -464,6 +501,7 @@
   <rect x="8.5" y="12" width="15" height="9" rx="4.5" fill="#0b2c22"/>
   <g class="r-eyes"><circle cx="12.5" cy="16.5" r="2.2" fill="#fff"/><circle cx="19.5" cy="16.5" r="2.2" fill="#fff"/></g>
   <rect x="12" y="22.5" width="8" height="1.6" rx=".8" fill="#0b2c22"/></svg><span>Stalker</span></button>
+<button class="locate" id="locate" aria-label="Show where I am" title="Show where I am"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
 <button class="maptype" id="maptype" aria-label="Switch map style">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
   <span id="maptype-label">Map</span>
@@ -564,6 +602,41 @@ const COMMERCIAL = ["office", "shop", "warehouse"];
 const LOGO_MINI = `<svg width="22" height="25" viewBox="0 0 24 27" aria-hidden="true"><path d="M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z" fill="#b8894a"/><path d="M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z" fill="#0f3b2e"/><circle cx="12" cy="10.4" r="2.6" fill="#b8894a"/></svg>`;
 const ROOM = { private_room: "Private room", shared_room: "Shared room", bed_space: "Bed space", whole_unit: "Flat to share" };
 const SUITS_TXT = { any: "Anyone", male: "Men", female: "Women", couples: "Couples" };
+const SVG = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICON = {
+  home: SVG('<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
+  bed: SVG('<path d="M3 18v-7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7M3 14h18M7 9V6h4v3"/>'),
+  ruler: SVG('<path d="M3 17 17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'),
+  clock: SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  users: SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>'),
+  receipt: SVG('<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6"/>'),
+  calendar: SVG('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+  building: SVG('<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>'),
+  key: SVG('<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>'),
+  badge: SVG('<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>'),
+  check: SVG('<path d="m5 12 5 5 9-10"/>')
+};
+const fact = (icon, label, value) => `<div class="fact"><i>${ICON[icon]}</i><div><b>${esc(label)}</b><span>${value}</span></div></div>`;
+const AMENITIES = { wifi: "WiFi", ac: "AC", furnished: "Furnished", parking: "Parking", pool: "Pool", gym: "Gym", security: "24/7 security",
+  balcony: "Balcony", lift: "Lift", power_backup: "Power backup", kitchen: "Modular kitchen", maid: "Housekeeping", laundry: "Laundry",
+  meals: "Meals", pets: "Pet friendly", metro: "Near metro", garden: "Garden", view: "View" };
+const THEMES = [["emerald", "Emerald & Gold", "#0f3b2e", "#b8894a"], ["navy", "Navy & Champagne", "#0f2240", "#e2a756"],
+  ["slate", "Slate & Bronze", "#232327", "#e58a3c"], ["clay", "Sage & Clay", "#3a4a42", "#c8673a"]];
+function applyTheme(t) {
+  if (!t || t === "emerald") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+}
+applyTheme(store.get("ps_theme"));
+function themePicker() {
+  const cur = store.get("ps_theme") || "emerald";
+  return `<div class="themes">${THEMES.map(([k, label, a, b]) => `<button type="button" data-theme-pick="${k}" aria-pressed="${cur === k}"><i style="background:linear-gradient(135deg,${a} 55%,${b} 55%)"></i>${esc(label)}</button>`).join("")}</div>`;
+}
+function bindThemePicker(root) {
+  root.querySelectorAll("[data-theme-pick]").forEach((b) => b.addEventListener("click", () => {
+    store.set("ps_theme", b.dataset.themePick);
+    applyTheme(b.dataset.themePick);
+    root.querySelectorAll("[data-theme-pick]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+}
 const sizeOf = (p) => p.size_sqft ? `${Number(p.size_sqft).toLocaleString("en-US")} sq ft` : "";
 const POSTER = { landlord: "Landlord", broker: "Broker", developer: "Developer", buyer: "Buyer", tenant: "Tenant" };
 const isDev = (p) => p.poster_type === "developer";
@@ -724,6 +797,7 @@ async function boot() {
   await refreshMe();
   await loadFeed();
   openFromHash();
+  if (docked() && S.panelMode !== "details") openList();
   if (S.session && store.get("ps_resume")) { store.del("ps_resume"); startPosting(); }
 }
 
@@ -756,7 +830,11 @@ async function initMap() {
     center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || "hybrid",
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
-  S.map.addListener("idle", updateListCount);
+  S.map.addListener("idle", () => {
+    updateListCount();
+    // Wide screens: keep the docked list in step with the map.
+    if (docked() && S.panelMode === "list") openList();
+  });
   updateMapTypeButton();
 }
 
@@ -852,7 +930,8 @@ function renderMarkers() {
   const markers = shown.map((p) => {
     const el = document.createElement("button");
     el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.deal === "share" && p.kind === "listing" ? " share" : "") + (p.id === S.activeId ? " active" : "");
-    el.textContent = pinLabel(p);
+    el.textContent = pinLabel(p).replace(/ · share$/, "");
+    if (p.deal === "share" && p.kind === "listing") el.insertAdjacentHTML("beforeend", `<span class="ptag">Share</span>`);
     el.setAttribute("aria-label", `${titleOf(p)}, ${placeOf(p)}`);
     el.addEventListener("click", (e) => { e.stopPropagation(); openDetails(p.id, { pan: true }); });
     S.pinEls.set(p.id, el);
@@ -974,36 +1053,30 @@ function openDetails(id, opts = {}) {
       ${p.needs_confirm ? `<div class="confirm-banner"><span>Is this still available?</span><button class="btn accent" id="still-here">Yes, still available</button></div>` : ""}
       ${(p.warnings || []).length ? `<div class="warn-box"><b>${p.mine ? "Please check" : "Safety check"}</b>${p.warnings.map(esc).join("<br>")}</div>` : ""}
       ${isDev(p) ? `<div class="facts">
-        <div class="fact"><b>Developer</b><span>${esc(p.company || "—")}</span></div>
-        <div class="fact"><b>Possession</b><span>${esc(p.possession || "—")}</span></div>
-        <div class="fact"><b>Configuration</b><span>${esc(p.configs || (p.bedrooms ? p.bedrooms + " BHK onwards" : cap(TYPE[p.property_type] || "—")))}</span></div>
-        <div class="fact"><b>Project RERA</b><span>${esc(p.rera_number || "—")}</span></div>
+        ${fact("building", "Developer", esc(p.company || "—"))}
+        ${fact("key", "Possession", esc(p.possession || "—"))}
+        ${fact("bed", "Configuration", esc(p.configs || (p.bedrooms ? p.bedrooms + " BHK onwards" : cap(TYPE[p.property_type] || "—"))))}
+        ${fact("badge", "Project RERA", esc(p.rera_number || "—"))}
       </div>` : p.deal === "share" ? `<div class="facts">
-        <div class="fact"><b>Space</b><span>${esc(ROOM[p.room_type] || "Room")}</span></div>
-        <div class="fact"><b>Suits</b><span>${esc(SUITS_TXT[p.suits] || "Anyone")}</span></div>
-        <div class="fact"><b>Bills</b><span>${p.bills_included === true ? "Included" : p.bills_included === false ? "Not included" : "—"}</span></div>
-        <div class="fact"><b>Move in</b><span>${esc(p.move_in || "—")}</span></div>
+        ${fact("home", "Space", esc(ROOM[p.room_type] || "Room"))}
+        ${fact("users", "Suits", esc(SUITS_TXT[p.suits] || "Anyone"))}
+        ${fact("receipt", "Bills", p.bills_included === true ? "Included" : p.bills_included === false ? "Not included" : "—")}
+        ${fact("calendar", "Move in", esc(p.move_in || "—"))}
       </div>` : `<div class="facts">
-        <div class="fact"><b>Type</b><span>${esc(cap(TYPE[p.property_type] || "Any"))}</span></div>
-        <div class="fact"><b>Bedrooms</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK") : "—"}</span></div>
-        <div class="fact"><b>Size</b><span>${esc(sizeOf(p) || "—")}</span></div>
-        <div class="fact"><b>Posted</b><span>${esc(ago(p.created_at))}</span></div>
+        ${fact("home", "Type", esc(cap(TYPE[p.property_type] || "Any")))}
+        ${fact("bed", "Bedrooms", p.bedrooms ? esc(p.bedrooms + " BHK") : "—")}
+        ${fact("ruler", "Size", esc(sizeOf(p) || "—"))}
+        ${fact("clock", "Posted", esc(ago(p.created_at)))}
       </div>`}
       ${p.unit_number ? `<p class="unit-note">Unit ${esc(p.unit_number)} · ${p.mine ? "only you can see the unit number" : "visible to admins only"}</p>` : ""}
-      ${p.description ? `<p class="desc">${esc(p.description)}</p>` : ""}
+      ${p.description ? `<div class="sec-h">${p.deal === "share" ? "About the space" : "About"}</div><p class="desc">${esc(p.description)}</p>` : ""}
+      ${(p.amenities || []).length ? `<div class="sec-h">Amenities</div><div class="amen">${p.amenities.map((a) => `<span>${ICON.check}${esc(AMENITIES[a] || a)}</span>`).join("")}</div>` : ""}
       <div class="contact" id="contact-box">
         ${p.contact_on_tap && !S.contacts[p.id] ? `<div class="contact-head">
           <div class="avatar">${LOGO_MINI}</div>
           <div><div class="contact-name">Contact the ${p.poster_type === "broker" ? "broker" : "owner"}</div><div class="contact-sub">Tap Call or WhatsApp to be connected</div></div>
         </div>
-        <div class="actions">
-          <button class="btn primary" data-reach="call">Call</button>
-          <button class="btn wa" data-reach="wa">WhatsApp</button>
-        </div>` : `${contactHead(p)}
-        ${p.mine ? "" : `<div class="actions">
-          <a class="btn primary" href="${esc(telHref(contactOf(p).phone))}">Call</a>
-          <a class="btn wa" href="${esc(waHref(contactOf(p).phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
-        </div>`}`}
+        ` : `${contactHead(p)}`}
       </div>
       ${!p.mine && p.kind === "listing" ? `<div class="act-row">
         <button class="btn" id="watch-btn" aria-pressed="${!!p.watched}">${p.watched ? "★ Watching price" : "☆ Watch price"}</button>
@@ -1017,7 +1090,14 @@ function openDetails(id, opts = {}) {
         <a class="btn claim-btn" id="claim-post" href="${esc(waHref(p.contact_phone, `Hi, I represent ${p.company || "the developer"} and would like to claim the project "${p.building}" on Property Stalkers: ${location.origin}/#p=${p.id}`))}" target="_blank" rel="noopener">Developer? Claim this project</a></div>` : ""}
       ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
       ${p.removable ? `<button class="link-btn" id="remove-post">${p.mine ? "Remove my post" : "Remove post (admin)"}</button>` : ""}
-    </div>`;
+    </div>
+    ${p.mine ? "" : p.contact_on_tap && !S.contacts[p.id] ? `<div class="panel-cta">
+      <button class="btn primary" data-reach="call">Call</button>
+      <button class="btn wa" data-reach="wa">WhatsApp</button>
+    </div>` : contactOf(p).phone ? `<div class="panel-cta">
+      <a class="btn primary" href="${esc(telHref(contactOf(p).phone))}">Call</a>
+      <a class="btn wa" href="${esc(waHref(contactOf(p).phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
+    </div>` : ""}`;
 
   const slides = $("#slides"), counter = $("#counter");
   const showCount = () => { if (counter) counter.textContent = `${Math.min(photos.length, Math.round(slides.scrollLeft / slides.clientWidth) + 1)} / ${photos.length}`; };
@@ -1057,6 +1137,7 @@ function openDetails(id, opts = {}) {
   if (ed) ed.addEventListener("click", () => openEditForm(p.id));
 
   panel.scrollTop = 0;
+  S.panelMode = "details";
   panel.classList.add("open");
   panel.setAttribute("aria-hidden", "false");
   setActive(p.id);
@@ -1095,7 +1176,9 @@ async function reachOut(p, how, btn) {
   }
 }
 
+const docked = () => window.matchMedia("(min-width: 1100px)").matches;
 function closeDetails() {
+  if (docked() && S.map) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} return openList(); }
   panel.classList.remove("open");
   panel.setAttribute("aria-hidden", "true");
   setActive(null);
@@ -1177,6 +1260,7 @@ function openEditForm(id) {
         <label class="field"><span>Country <span class="opt">(optional)</span></span><input id="e-country" value="${esc(p.country)}"></label>
       </div>
       <label class="field"><span>Description <span class="opt">(optional)</span></span><textarea id="e-desc" maxlength="400">${esc(p.description)}</textarea></label>
+      ${!isReq ? `<div class="field"><span>Amenities</span><div class="amen-pick" id="e-amen">${Object.entries(AMENITIES).map(([k, l]) => `<button type="button" data-am="${k}" aria-pressed="${(p.amenities || []).includes(k)}">${esc(l)}</button>`).join("")}</div></div>` : ""}
       ${isReq ? "" : `<div class="form-section">Photos</div>
         <div class="edit-thumbs" id="e-thumbs"></div>
         <label class="photo-pick">Add photos (up to 8 in total)<input type="file" id="e-files" accept="image/jpeg,image/png,image/webp" multiple></label>`}
@@ -1206,6 +1290,7 @@ function openEditForm(id) {
     fi.value = ""; drawThumbs();
   });
   $("#edit-form").addEventListener("input", () => { $("#e-err").hidden = true; });
+  document.querySelectorAll("#e-amen [data-am]").forEach((b) => b.addEventListener("click", () => b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"))));
   const mp = $("#e-movepin");
   if (mp) mp.addEventListener("click", async () => {
     const spot = await openPinPicker({ lat: p.lat, lng: p.lng, zoom: 18 });
@@ -1243,6 +1328,7 @@ function openEditForm(id) {
       if ($("#e-rera")) body.rera_number = val("#e-rera");
       if ($("#e-unit")) body.unit_number = val("#e-unit");
       if ($("#e-cobroke")) body.cobroke = $("#e-cobroke").checked;
+      if ($("#e-amen")) body.amenities = [...document.querySelectorAll('#e-amen [aria-pressed="true"]')].map((b) => b.dataset.am);
       if ($("#e-roomtype")) Object.assign(body, { room_type: val("#e-roomtype"), suits: val("#e-suits"), move_in: val("#e-movein"),
         bills_included: val("#e-bills") === "yes" ? true : val("#e-bills") === "no" ? false : null });
       if (val("#e-maps")) body.maps_link = val("#e-maps");
@@ -1282,11 +1368,12 @@ function openList() {
           ${isDev(p) ? `<span class="tag dev">New project</span>` : ""}
           <b>${esc(titleOf(p))}</b>
           <small>${esc(placeOf(p))}</small>
-          <span class="lp">${esc(priceOf(p))}${sizeOf(p) ? ` <small class="lsz">· ${esc(sizeOf(p))}</small>` : ""}</span>
+          <span class="lp">${esc(priceOf(p))}${sizeOf(p) ? ` <small class="lsz">· ${esc(sizeOf(p))}</small>` : ""}</span>${badgeHtml(p)}
         </div>
       </button>`).join("") || `<p class="hint" style="padding:0 18px">Nothing here yet. Try another area or filter.</p>`}`;
   document.querySelectorAll(".litem").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { pan: true })));
-  panel.scrollTop = 0;
+  if (S.panelMode !== "list") panel.scrollTop = 0;
+  S.panelMode = "list";
   panel.classList.add("open");
   panel.setAttribute("aria-hidden", "false");
   setActive(null);
@@ -1822,9 +1909,12 @@ function renderAccount() {
         <button class="btn" data-edit="${esc(p.id)}">Edit</button>
         <button class="btn" data-remove="${esc(p.id)}">Remove</button>
       </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
+    <div class="section-title">Colour theme</div>
+    ${themePicker()}
     <div id="extras"></div>
     <button class="btn" style="width:100%;margin-top:24px" id="signout">Sign out</button>`;
   bindProfileForm(() => { toast("Profile saved."); renderAccount(); });
+  bindThemePicker($("#sheet-body"));
   renderExtras();
   $("#switch-role").addEventListener("click", () => renderRolePicker(true));
   document.querySelectorAll("#sheet-body button[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
@@ -2021,6 +2111,7 @@ function renderDraft(d) {
       <label class="chip-check" style="margin-bottom:10px"><input type="checkbox" class="d-permit"> I have permission to share this space</label>` : ""}
     ${S.chatPics.length && isListing ? `<p class="muted" style="font-size:13px">${S.chatPics.length} photo${S.chatPics.length > 1 ? "s" : ""} from the chat will be added.</p>` : ""}
     ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
+    ${(d.amenities || []).length ? `<div class="amen" style="margin:0 0 12px">${d.amenities.map((a) => `<span>${ICON.check}${esc(AMENITIES[a] || a)}</span>`).join("")}</div>` : ""}
     ${isListing ? `<label class="photo-pick">Add photos (optional, up to 8)<input type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="thumbs"></div>` : ""}
     <div class="actions">
       <button class="btn" data-act="change">Change something</button>
@@ -2506,6 +2597,16 @@ async function openRepairForm(token) {
 }
 
 $("#ask").addEventListener("click", () => openAssistant());
+$("#locate").addEventListener("click", () => {
+  if (!navigator.geolocation || !S.map) return toast("Your browser can't share its location.");
+  navigator.geolocation.getCurrentPosition((pos) => { S.map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude }); S.map.setZoom(15); },
+    () => toast("Couldn't get your location. Please allow location access."), { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+});
+$("#palette").addEventListener("click", () => {
+  openSheet("theme", "Colour theme");
+  $("#sheet-body").innerHTML = `<p class="muted">Pick the look you like. It's saved on this device.</p>${themePicker()}`;
+  bindThemePicker($("#sheet-body"));
+});
 
 /* ---------------- Set the pin ---------------- */
 /** Where to open the picker: the draft's spot, else its area / city, else the map's current view. */
