@@ -90,7 +90,7 @@
   .row { display: flex; align-items: center; gap: 12px; }
   .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
   .brand-mark { width: 30px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; }
-  .brand-name { font-family: "Plus Jakarta Sans", sans-serif; font-weight: 800; font-size: clamp(18px, 5.2vw, 22px); letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; }
+  .brand-name { font-family: "Plus Jakarta Sans", sans-serif; font-weight: 800; font-size: clamp(18px, 5.2vw, 22px); letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; padding-bottom: 1px; }
   .brand-name span { color: var(--brass); }
   .account { border: 1px solid rgba(243, 235, 221, .5); cursor: pointer; background: transparent; color: var(--brand-ink);
     height: 38px; min-width: 38px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; flex: 0 0 auto; }
@@ -1389,9 +1389,9 @@ $("#filter-btn").addEventListener("click", (e) => { e.preventDefault(); closeRes
 function passChips(p) {
   if (p.kind !== "listing") return true;
   const deals = [...S.chips].filter((c) => DEAL_CHIPS.includes(c)), cats = [...S.chips].filter((c) => CAT_CHIPS.includes(c));
-  if (deals.length && !deals.includes(p.deal)) return false;
-  if (cats.length && !((cats.includes("project") && isDev(p)) || (cats.includes("commercial") && COMMERCIAL.includes(p.property_type)) || (cats.includes("land") && p.property_type === "plot"))) return false;
-  return true;
+  // Chips add up: each one adds its listings to the map, none hides another's.
+  if (!deals.length && !cats.length) return true;
+  return deals.includes(p.deal) || (cats.includes("project") && isDev(p)) || (cats.includes("commercial") && COMMERCIAL.includes(p.property_type)) || (cats.includes("land") && p.property_type === "plot");
 }
 function passFilter(p, adv = S.adv) { return passAdv(p, adv) && passChips(p); }
 const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && !p.hidden && passFilter(p));
