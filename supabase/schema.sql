@@ -55,6 +55,31 @@ alter table public.posts add constraint posts_poster_type_check
 alter table public.posts add column if not exists configs text;
 alter table public.profiles add column if not exists role text;
 alter table public.profiles add column if not exists company text;
+-- Unit numbers, sizes and lead rotation (safe to re-run).
+alter table public.posts add column if not exists unit_number text;   -- never shown to visitors
+alter table public.posts add column if not exists unit_key text;      -- deal | building+city | unit, for the 3-per-unit rule
+alter table public.posts add column if not exists size_sqft bigint;
+create index if not exists posts_unit_idx on public.posts (unit_key) where status = 'active';
+create table if not exists public.unit_leads (
+  unit_key text primary key,
+  leads    int not null default 0
+);
+create table if not exists public.leads (
+  id         bigint generated always as identity primary key,
+  unit_key   text not null,
+  post_id    uuid not null references public.posts(id) on delete cascade,
+  viewer_id  uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create or replace function public.next_lead(k text) returns int
+language sql as $$
+  insert into public.unit_leads (unit_key, leads) values (k, 1)
+  on conflict (unit_key) do update set leads = public.unit_leads.leads + 1
+  returning leads;
+$$;
+revoke execute on function public.next_lead(text) from public, anon, authenticated;
+alter table public.unit_leads enable row level security;
+alter table public.leads enable row level security;
 -- Profile picture (safe to re-run).
 alter table public.profiles add column if not exists avatar_url text;
 
