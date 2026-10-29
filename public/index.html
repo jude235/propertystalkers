@@ -70,12 +70,13 @@
     .fab { bottom: calc(11px + env(safe-area-inset-bottom)) !important; box-shadow: none; }
     .ask-fab { bottom: calc(7px + env(safe-area-inset-bottom)) !important; box-shadow: none; }
     .role-pill { display: none !important; }  /* on phones the Switch button in the bar does this */
-    .switch-btn:not([hidden]) { display: flex; position: fixed; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 20; height: 48px; min-width: 78px; max-width: 96px;
-      padding: 0 10px; border-radius: 999px; border: 1px solid var(--brass); background: transparent; color: var(--brand-ink); cursor: pointer;
+    .switch-btn:not([hidden]) { display: flex; position: fixed; left: 10px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 20; height: 44px; width: 72px;
+      padding: 0 4px; border-radius: 999px; border: 1px solid var(--brass); background: transparent; color: var(--brand-ink); cursor: pointer;
       flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
-    .switch-btn b { font-size: 13px; font-weight: 700; }
-    .switch-btn small { font-size: 10px; color: var(--brass); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .switch-btn:not([hidden]) ~ .fab { left: 114px; right: 72px; transform: none; justify-content: center; max-width: none; }
+    .switch-btn b { font-size: 12px; font-weight: 700; }
+    .switch-btn small { font-size: 9px; color: var(--brass); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Centred between Switch (72px wide) and Stalker (52px): the middle of that gap is 10px right of centre. */
+    .switch-btn:not([hidden]) ~ .fab { left: calc(50% + 10px); max-width: calc(100vw - 180px); }
   }
   .switch-btn { display: none; }
 
@@ -93,7 +94,9 @@
   .account { border: 1px solid rgba(243, 235, 221, .5); cursor: pointer; background: transparent; color: var(--brand-ink);
     height: 38px; min-width: 38px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; letter-spacing: .02em; flex: 0 0 auto; }
   .banner-inline { background: #fff3e6; border: 1px solid #f0c48a; color: #7a4a10; border-radius: 12px; padding: 10px 12px; font-size: 14px; margin: 0 0 12px; }
-  .account.profile-btn { display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 4px; position: relative; }
+  /* Signed in: just the round picture (or initials). */
+  button.account.profile-btn { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 42px; width: 42px; height: 42px; padding: 0; border-radius: 50%; position: relative; }
+  button.account.profile-btn .pav { flex: 0 0 auto; width: 36px; height: 36px; font-size: 14px; }
   .pav { width: 30px; height: 30px; border-radius: 50%; background: var(--brass); color: var(--brand); display: grid; place-items: center; font-size: 13px; font-weight: 500; overflow: hidden; }
   .pav img, .avatar img, .pf-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pf-pic-row { display: flex; align-items: center; gap: 14px; margin: 4px 0 16px; }
@@ -340,43 +343,56 @@
   .panel:not(.open) { pointer-events: none; }
   .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 8px auto 0; }
   /* The list of properties sits on the theme's deep colour (emerald by default). */
-  /* Swipe cards in the list: about three to a screen. */
-  .panel { --lc-photo: max(96px, calc((100vh - 24px - 150px) / 3 - 98px)); }
+  /* Swipe cards in the list: three to a screen, big photo, one line of details. */
+  .panel { --lc-photo: max(140px, calc((100vh - 24px - 120px) / 3 - 52px)); }
   @media (max-width: 759px) {
     .panel.list-mode { max-height: 92vh; max-height: 92dvh; }
-    .panel { --lc-photo: max(84px, calc((92vh - 150px) / 3 - 98px)); --lc-photo: max(84px, calc((92dvh - 150px) / 3 - 98px)); }
+    .panel { --lc-photo: max(120px, calc((92vh - 120px) / 3 - 52px)); --lc-photo: max(120px, calc((92dvh - 120px) / 3 - 52px)); }
   }
-  .panel.list-mode .list-head { padding: 14px 14px 8px; }
-  .panel.list-mode .list-head h2 { font-size: 18px; margin: 0 0 2px; }
-  .panel.list-mode .list-head p { font-size: 12px; }
-  .list-tabs { display: flex; gap: 6px; margin: 0 0 12px; padding-right: 44px; }
+  .panel.list-mode .list-head { padding: 14px 14px 6px; }
+  .list-tabs { display: flex; gap: 6px; margin: 0 0 8px; padding-right: 44px; }
   .list-tabs button { flex: 1; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(243, 235, 221, .28); background: none; color: #f3ebdd; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
   .list-tabs button[aria-pressed="true"] { background: var(--brass); color: var(--brand-deep); border-color: var(--brass); }
-  .panel.list-mode .swipe-hint { font-size: 12px; color: var(--brass); margin-top: 6px; }
-  .lh-hidden { display: block; margin-top: 6px; font-size: 12px; color: rgba(243, 235, 221, .85); }
-  .lcard { position: relative; margin: 0 12px 12px; border-radius: 16px; }
-  .lc-under { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 22px; border-radius: 16px; font-weight: 800; font-size: 16px;
+  .panel.list-mode .lh-line { margin: 0; font-size: 12px; color: rgba(243, 235, 221, .72); }
+  .panel.list-mode .swipe-hint { font-size: 12px; color: var(--brass); margin: 4px 0 0; }
+  .lh-hidden { font-size: 12px; color: rgba(243, 235, 221, .9); margin-left: 4px; }
+  .lcard { position: relative; margin: 0 10px 12px; border-radius: 16px; }
+  .lc-under { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 22px; border-radius: 16px; font-weight: 800; font-size: 18px;
     color: #fff; background: #2e7d4f; opacity: 0; transition: opacity .15s; }
   .lc-under .lc-no { display: none; margin-left: auto; }
   .lcard.go-no .lc-under { background: #5b6560; }
   .lcard.go-no .lc-yes { display: none; } .lcard.go-no .lc-no { display: inline; }
   .lcard.dragging .lc-under, .lcard.leaving .lc-under { opacity: 1; }
   .lcard.armed .lc-under span { transform: scale(1.18); transition: transform .12s; }
-  .lc-front { position: relative; background: var(--brand); border: 1px solid rgba(243, 235, 221, .12); border-radius: 16px; overflow: hidden; transition: transform .25s ease; }
+  .lc-front { position: relative; background: var(--brand); border: 1px solid rgba(243, 235, 221, .12); border-radius: 16px; overflow: hidden;
+    transition: transform .25s ease; touch-action: pan-y; cursor: pointer; user-select: none; -webkit-user-select: none; }
   .lcard.dragging .lc-front { transition: none; }
   .lcard.pulse .lc-heart { animation: lc-pop .5s; }
   @keyframes lc-pop { 40% { transform: scale(1.35); } }
   .lcard.collapse { overflow: hidden; margin-bottom: 0; transition: height .25s ease, margin .25s ease; }
-  .lc-photos { display: flex; height: var(--lc-photo); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; background: rgba(0, 0, 0, .25); cursor: pointer; }
-  .lc-photos::-webkit-scrollbar { display: none; }
-  .lc-photos img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; user-select: none; -webkit-user-drag: none; }
-  .lc-count { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; pointer-events: none; }
-  .lc-heart { position: absolute; top: 8px; right: 8px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+  .lc-photos { height: var(--lc-photo); overflow: hidden; background: rgba(0, 0, 0, .25); }
+  .lc-track { display: flex; height: 100%; transition: transform .25s ease; }
+  .lc-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; background: rgba(0, 0, 0, .2); }
+  .lc-count { position: absolute; right: 10px; bottom: 48px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; pointer-events: none; }
+  .lc-tag { position: absolute; left: 10px; bottom: 48px; background: rgba(0, 0, 0, .55); color: var(--brass); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; pointer-events: none; }
+  .lc-heart, .lc-x { position: absolute; top: 8px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .45); color: #fff; line-height: 1; cursor: pointer; }
+  .lc-heart { right: 8px; font-size: 19px; }
+  .lc-x { left: 8px; font-size: 14px; }
   .lc-heart[aria-pressed="true"] { background: #fff; color: #d6336c; }
-  .lcard .lc-info { display: flex; align-items: flex-start; gap: 10px; border-top: 0; padding: 10px 12px 12px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-  .lcard .lc-info > div { flex: 1; min-width: 0; }
-  .lcard .lc-info b, .lcard .lc-info > div > small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lc-x { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(243, 235, 221, .28); background: none; color: rgba(243, 235, 221, .85); font-size: 14px; cursor: pointer; }
+  .lcard .lc-info { display: flex; align-items: baseline; gap: 8px; border-top: 0; padding: 9px 12px 10px; min-width: 0; }
+  .lcard .lc-info .lp { flex: 0 0 auto; font-size: 15px; }
+  .lcard .lc-info .lc-what { flex: 1; min-width: 0; font-size: 13px; color: rgba(243, 235, 221, .82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* How many listings are on screen: a half circle on the right edge. Tap for the list. */
+  .count-tab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 19; width: 48px; height: 76px; padding: 0 0 0 6px;
+    border-radius: 38px 0 0 38px; border: 2px solid var(--brass); border-right: 0; background: var(--brand-deep); color: #fcfbf7; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: -4px 4px 14px rgba(0, 0, 0, .25); }
+  .count-tab b { font-size: 15px; font-weight: 800; line-height: 1; }
+  .count-tab svg { color: var(--brass); }
+  .count-tab.zero { opacity: .75; }
+  @media (min-width: 760px) { .count-tab { top: 55%; } }
+  .cluster.area { border: 0; cursor: pointer; font: inherit; }
+  /* Bottom sheets follow the finger when pulled down to close. */
+  .panel.pulling, .sheet.pulling { transition: none !important; }
   .hidden-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--soft); font-size: 13px; color: var(--muted); }
   .toast-undo { margin-left: 12px; border: 1px solid var(--brass); background: none; color: var(--brass); border-radius: 999px; padding: 3px 12px; font-weight: 700; cursor: pointer; }
   .toast.show { pointer-events: auto; }
@@ -567,6 +583,7 @@
 
 <div id="map-wrap"><div id="map" aria-label="Map of properties and requests"></div></div>
 <div class="bottombar" aria-hidden="true"></div>
+<button class="count-tab" id="show-list" type="button" aria-label="Show the list"><b id="list-n">0</b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
 
 <div class="topbar">
   <header class="header"><div class="header-in">
@@ -596,15 +613,13 @@
     </div>
   </div></header>
   <div class="filters" id="filters" role="toolbar" aria-label="Filter properties">
-    <button class="fchip" data-f="all" aria-pressed="true">All</button>
-    <button class="fchip" data-f="sale" aria-pressed="false">For sale</button>
-    <button class="fchip" data-f="rent" aria-pressed="false">For rent</button>
+    <button class="fchip" data-f="sale" aria-pressed="true">Sale</button>
+    <button class="fchip" data-f="rent" aria-pressed="false">Rent</button>
     <button class="fchip share" data-f="share" aria-pressed="false">Co-living</button>
     <button class="fchip stay" data-f="stay" aria-pressed="false">Holiday homes</button>
     <button class="fchip" data-f="project" aria-pressed="false">New projects</button>
     <button class="fchip" data-f="commercial" aria-pressed="false">Commercial</button>
     <button class="fchip" data-f="land" aria-pressed="false">Land / Plots</button>
-    <button class="fchip list" id="show-list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>List <span class="n" id="list-n"></span></button>
   </div>
   <div class="banner-row"><div class="banner" id="banner" hidden></div></div>
 </div>
@@ -974,13 +989,18 @@ async function initMap() {
   const { Map } = await google.maps.importLibrary("maps");
   const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
   S.Marker = AdvancedMarkerElement;
+  let start = { lat: 24, lng: 64, zoom: 4 };
+  try { const v = JSON.parse(store.get("ps_view") || "null"); if (v && Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom)) start = v; } catch (e) {}
   S.map = new Map($("#map"), {
-    center: { lat: 22, lng: 79 }, zoom: 5, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || "hybrid",
+    center: { lat: start.lat, lng: start.lng }, zoom: start.zoom, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || "hybrid",
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
   addMapTint(S.map);
   S.map.addListener("idle", () => {
     updateListCount();
+    renderBanner();
+    scheduleMap();
+    try { const c = S.map.getCenter(); store.set("ps_view", JSON.stringify({ lat: +c.lat().toFixed(5), lng: +c.lng().toFixed(5), zoom: Math.round(S.map.getZoom()) })); } catch (e) {}
     // Wide screens: keep the docked list in step with the map.
     if (docked() && S.panelMode === "list") openList();
   });
@@ -1042,7 +1062,7 @@ function renderAccountButton() {
   if (S.me) {
     b.className = "account profile-btn";
     const pic = S.me.profile && S.me.profile.avatar_url;
-    b.innerHTML = `<span class="pav">${pic ? `<img src="${esc(shown(pic))}" alt="">` : esc(initials((S.me.profile && S.me.profile.name) || S.me.email || "Me"))}</span><span class="plabel">My profile</span><span class="plabel-s">Profile</span>${profileComplete() ? "" : `<span class="pdot" aria-label="Profile incomplete"></span>`}`;
+    b.innerHTML = `<span class="pav">${pic ? `<img src="${esc(shown(pic))}" alt="">` : esc(initials((S.me.profile && S.me.profile.name) || S.me.email || "Me"))}</span>${profileComplete() ? "" : `<span class="pdot" aria-label="Profile incomplete"></span>`}`;
     b.setAttribute("aria-label", "My profile");
   } else {
     b.className = "account";
@@ -1059,6 +1079,12 @@ const LOCAL = {
   set(k, v) { store.set(k, JSON.stringify([...new Set(v)].slice(-300))); }
 };
 const canSave = (p) => !!p && p.kind === "listing" && !p.mine;
+/** How many listings are shortlisted / hidden (from the account when signed in, else this device). */
+function savedCount(k) {
+  if (S.signedIn && S.me && S.me.counts) return Math.max(0, S.me.counts[k] || 0);
+  return LOCAL.get(k === "shortlist" ? "ps_short" : "ps_hidden").length;
+}
+function bumpCount(k, d) { if (S.signedIn && S.me && S.me.counts) S.me.counts[k] = Math.max(0, (S.me.counts[k] || 0) + d); }
 function applyLocalSaved() {
   const sl = new Set(LOCAL.get("ps_short")), hd = new Set(LOCAL.get("ps_hidden"));
   S.posts.forEach((p) => { if (p.kind === "listing") { p.watched = sl.has(p.id); p.hidden = hd.has(p.id); } });
@@ -1075,7 +1101,9 @@ async function mergeLocalSaved() {
 async function setShortlist(p, on) {
   if (S.signedIn) await api(`/posts/${p.id}/watch`, { method: on ? "POST" : "DELETE" });
   else LOCAL.set("ps_short", on ? [...LOCAL.get("ps_short"), p.id] : LOCAL.get("ps_short").filter((x) => x !== p.id));
+  if (!!p.watched !== on) bumpCount("shortlist", on ? 1 : -1);
   p.watched = on;
+  const c = getPost(p.id); if (c && c !== p) c.watched = on;
 }
 async function setHiddenId(id, on) {
   if (S.signedIn) await api(`/posts/${id}/hide`, { method: on ? "POST" : "DELETE" });
@@ -1083,8 +1111,9 @@ async function setHiddenId(id, on) {
     LOCAL.set("ps_hidden", on ? [...LOCAL.get("ps_hidden"), id] : LOCAL.get("ps_hidden").filter((x) => x !== id));
     if (on) LOCAL.set("ps_short", LOCAL.get("ps_short").filter((x) => x !== id));
   }
-  const p = S.posts.find((x) => x.id === id);
+  const p = getPost(id);
   if (p) { p.hidden = on; if (on) p.watched = false; }
+  bumpCount("hidden", on ? 1 : -1);
 }
 function undoToast(msg, undo) {
   const t = $("#toast");
@@ -1095,20 +1124,133 @@ function undoToast(msg, undo) {
   t.querySelector(".toast-undo").addEventListener("click", () => { t.classList.remove("show"); undo(); });
 }
 
-/* ---------------- feed and markers ---------------- */
-async function loadFeed() {
+/* ---------------- the map's data: only what's on screen ----------------
+   The server sends pins for the visible area, or counts per area when zoomed out.
+   Requests wait until the map stops moving, older answers never overwrite newer ones,
+   and recent answers are reused for 30 seconds. */
+const DEAL_CHIPS = ["sale", "rent", "share", "stay"], CAT_CHIPS = ["project", "commercial", "land"];
+S.chips = (() => {
   try {
-    const f = await api("/feed");
-    S.posts = f.posts;
-    S.access = f.access;
-    S.signedIn = f.signedIn;
-  } catch (e) {
-    toast("Couldn't load the map posts. Please reload.");
-    return;
+    const c = JSON.parse(store.get("ps_chips") || "null");
+    const ok = Array.isArray(c) ? c.filter((x) => DEAL_CHIPS.includes(x) || CAT_CHIPS.includes(x)) : [];
+    if (ok.length) return new Set(ok);
+  } catch (e) {}
+  return new Set(["sale"]);
+})();
+const saveChips = () => store.set("ps_chips", JSON.stringify([...S.chips]));
+S.cache = new Map();          // id -> post: a lean pin, or the full post once it's been opened
+S.mapMode = "pins"; S.clusters = []; S.total = 0;
+S.markers = new Map();        // id -> { marker, el, sig }
+S.areaMarks = [];
+const getPost = (id) => S.cache.get(id) || null;
+function cachePut(p) {
+  const v = { ...(S.cache.get(p.id) || {}), ...p };
+  S.cache.set(p.id, v);
+  return v;
+}
+async function loadFull(id) {
+  const c = S.cache.get(id);
+  if (c && c._full) return c;
+  try {
+    const { post } = await api("/posts/" + encodeURIComponent(id));
+    const v = cachePut({ ...post, _full: true });
+    if (!S.signedIn) { v.watched = LOCAL.get("ps_short").includes(v.id); v.hidden = LOCAL.get("ps_hidden").includes(v.id); }
+    return v;
+  } catch (e) { return null; }
+}
+function chipQuery() {
+  const a = S.adv, q = new URLSearchParams();
+  q.set("kind", S.tab);
+  if (S.tab === "listing") {
+    const deals = [...S.chips].filter((c) => DEAL_CHIPS.includes(c)), cats = [...S.chips].filter((c) => CAT_CHIPS.includes(c));
+    if (deals.length) q.set("deals", deals.join(","));
+    if (cats.length) q.set("cats", cats.join(","));
   }
+  if (a.types.length) q.set("types", a.types.join(","));
+  if (a.beds) q.set("beds", a.beds);
+  if (num(a.min)) q.set("pmin", num(a.min));
+  if (num(a.max)) q.set("pmax", num(a.max));
+  if (num(a.smin)) q.set("smin", num(a.smin));
+  if (num(a.smax)) q.set("smax", num(a.smax));
+  if (S.tab === "listing") {
+    if (a.by.length) q.set("by", a.by.join(","));
+    if (a.amen.length) q.set("amen", a.amen.join(","));
+    if (a.photos) q.set("photos", "1");
+  }
+  return q;
+}
+/** The visible area, a little bigger and snapped to a grid, so small moves reuse the last answer. */
+function viewBox(pad = 0.25) {
+  const b = S.map && S.map.getBounds && S.map.getBounds();
+  if (!b || !b.getNorthEast) return null;
+  const ne = b.getNorthEast(), sw = b.getSouthWest();
+  let n = ne.lat(), s = sw.lat(), e = ne.lng(), w = sw.lng();
+  const z = Math.round(S.map.getZoom());
+  const step = Math.max(360 / Math.pow(2, z) / 2, 0.0005);
+  const span = e >= w ? e - w : e + 360 - w;
+  const latPad = (n - s) * pad, lngPad = span * pad;
+  n = Math.min(85, Math.ceil((n + latPad) / step) * step);
+  s = Math.max(-85, Math.floor((s - latPad) / step) * step);
+  if (span + 2 * lngPad >= 360) { w = -180; e = 180; }
+  else {
+    w = Math.floor((w - lngPad) / step) * step; e = Math.ceil((e + lngPad) / step) * step;
+    if (w < -180) w += 360;
+    if (e > 180) e -= 360;
+  }
+  const r = (x) => +x.toFixed(5);
+  return { w: r(w), s: r(s), e: r(e), n: r(n), z };
+}
+/** Exactly what's on screen, as map query parameters. */
+function screenQuery(q) {
+  const b = S.map.getBounds(), ne = b.getNorthEast(), sw = b.getSouthWest();
+  const cl = (v, m) => Math.max(-m, Math.min(m, v));
+  q.set("w", cl(sw.lng(), 180)); q.set("e", cl(ne.lng(), 180)); q.set("s", cl(sw.lat(), 85)); q.set("n", cl(ne.lat(), 85)); q.set("z", Math.round(S.map.getZoom()));
+  return q;
+}
+let mapSeq = 0, mapAbort = null, mapTimer = null;
+const mapMemo = new Map();
+function scheduleMap(delay = 300) { clearTimeout(mapTimer); mapTimer = setTimeout(() => refreshMap(), delay); }
+async function refreshMap(force = false) {
+  if (!S.map) return;
+  const box = viewBox();
+  if (!box) return;
+  const q = chipQuery();
+  Object.entries(box).forEach(([k, v]) => q.set(k, v));
+  const path = "/map?" + q.toString();
+  const seq = ++mapSeq;
+  if (force) mapMemo.clear();
+  let data;
+  const hit = mapMemo.get(path);
+  if (hit && Date.now() - hit.t < 30000) data = hit.data;
+  else {
+    if (mapAbort) mapAbort.abort();
+    const ctl = (mapAbort = new AbortController());
+    try { data = await api(path, { signal: ctl.signal }); }
+    catch (e) {
+      if (e.name === "AbortError" || seq !== mapSeq) return;
+      return toast("Couldn't load the map. Please check your connection.");
+    }
+    mapMemo.set(path, { t: Date.now(), data });
+    if (mapMemo.size > 60) mapMemo.delete(mapMemo.keys().next().value);
+  }
+  if (seq !== mapSeq) return; // a newer view is already on its way
+  S.access = data.access;
+  S.signedIn = data.signedIn;
+  if (S.signedIn && await mergeLocalSaved()) return refreshMap(true);
+  S.mapMode = data.mode;
+  S.total = data.total;
+  S.clusters = data.mode === "clusters" ? data.clusters : [];
+  S.posts = data.mode === "pins" ? data.pins.map(cachePut) : [];
   if (!S.signedIn) applyLocalSaved();
-  else if (await mergeLocalSaved()) return loadFeed();
+  S.loaded = true;
   renderMarkers();
+  if (panel.classList.contains("open") && S.panelMode === "list" && S.listMode !== "short") openList();
+}
+/** After posting, editing, removing or signing in: fetch the view again, ignoring anything remembered. */
+async function loadFeed() {
+  S.cache.forEach((p) => { p._full = false; });  // opened listings may have changed
+  if (S.session) await refreshMe();
+  return refreshMap(true);
 }
 
 /* ---------------- more filters (the button in the search bar) ---------------- */
@@ -1135,7 +1277,7 @@ function passAdv(p, a = S.adv) {
   if (p.kind === "listing") {
     if (a.by.length && !a.by.includes(p.poster_type)) return false;
     if (a.amen.length && !a.amen.every((x) => (p.amenities || []).includes(x))) return false;
-    if (a.photos && !(p.photos && p.photos.length)) return false;
+    if (a.photos && !(p.nphotos || (p.photos && p.photos.length))) return false;
   }
   return true;
 }
@@ -1147,7 +1289,7 @@ function updateFilterBadge() {
   $("#filter-btn").setAttribute("aria-label", n ? `Filters, ${n} on` : "Filters");
 }
 function saveAdv() { store.set("ps_filters", JSON.stringify(S.adv)); }
-function clearAdv() { S.adv = ADV0(); saveAdv(); renderMarkers(); }
+function clearAdv() { S.adv = ADV0(); saveAdv(); renderMarkers(); refreshMap(); }
 
 function openFilters() {
   const f = JSON.parse(JSON.stringify(S.adv));
@@ -1170,10 +1312,21 @@ function openFilters() {
     <div class="fsec"><h3>Photos</h3>${opts("photos", [[false, "Any"], [true, "With photos only"]], false)}</div>`}`;
   $("#sheet-foot").innerHTML = `<div class="ffoot"><button class="btn" id="f-clear" type="button">Clear all</button><button class="btn accent" id="f-show" type="button"></button></div>`;
   const body = $("#sheet-body");
+  let countTimer, countSeq = 0;
   const count = () => {
-    const n = S.posts.filter((p) => p.kind === S.tab && passFilter(p, f)).length;
-    const what = req ? (n === 1 ? "request" : "requests") : (n === 1 ? "property" : "properties");
-    $("#f-show").textContent = n ? `Show ${n} ${what}` : `No ${what} match`;
+    clearTimeout(countTimer);
+    countTimer = setTimeout(async () => {
+      const seq = ++countSeq, keep = S.adv;
+      S.adv = f; const q = chipQuery(); S.adv = keep;
+      if (!S.map) return;
+      screenQuery(q).set("mode", "count");
+      try {
+        const { total: n } = await api("/map?" + q.toString());
+        if (seq !== countSeq || !$("#f-show")) return;
+        const what = req ? (n === 1 ? "request" : "requests") : (n === 1 ? "property" : "properties");
+        $("#f-show").textContent = n ? `Show ${shortNum(n)} ${what}` : `No ${what} match here`;
+      } catch (e) { if ($("#f-show")) $("#f-show").textContent = "Show results"; }
+    }, 250);
   };
   body.querySelectorAll(".fopts").forEach((g) => g.addEventListener("click", (e) => {
     const b = e.target.closest(".fopt"); if (!b) return;
@@ -1190,62 +1343,87 @@ function openFilters() {
   [["#f-min", "min"], ["#f-max", "max"], ["#f-smin", "smin"], ["#f-smax", "smax"]].forEach(([id, key]) =>
     $(id).addEventListener("input", (e) => { f[key] = e.target.value; count(); }));
   $("#f-clear").addEventListener("click", () => { clearAdv(); closeSheet(); toast("Filters cleared."); });
-  $("#f-show").addEventListener("click", () => { S.adv = f; saveAdv(); closeSheet(); closeDetails(); renderMarkers(); });
+  $("#f-show").addEventListener("click", () => { S.adv = f; saveAdv(); closeSheet(); closeDetails(); renderMarkers(); refreshMap(); });
   count();
 }
 $("#filter-btn").addEventListener("click", (e) => { e.preventDefault(); closeResults(); openFilters(); });
 
-function passFilter(p, adv = S.adv) {
-  if (!passAdv(p, adv)) return false;
-  if (p.kind !== "listing" || S.filter === "all") return true;
-  if (S.filter === "project") return isDev(p);
-  if (S.filter === "commercial") return COMMERCIAL.includes(p.property_type);
-  if (S.filter === "land") return p.property_type === "plot";
-  return p.deal === S.filter;
+function passChips(p) {
+  if (p.kind !== "listing") return true;
+  const deals = [...S.chips].filter((c) => DEAL_CHIPS.includes(c)), cats = [...S.chips].filter((c) => CAT_CHIPS.includes(c));
+  if (deals.length && !deals.includes(p.deal)) return false;
+  if (cats.length && !((cats.includes("project") && isDev(p)) || (cats.includes("commercial") && COMMERCIAL.includes(p.property_type)) || (cats.includes("land") && p.property_type === "plot"))) return false;
+  return true;
 }
+function passFilter(p, adv = S.adv) { return passAdv(p, adv) && passChips(p); }
 const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && !p.hidden && passFilter(p));
 
 function inView(p) {
   const b = S.map && S.map.getBounds && S.map.getBounds();
   return !b || b.contains({ lat: p.lat, lng: p.lng });
 }
+/** How many listings are on screen (pins, or the sum of the area counts when zoomed out). */
+function viewCount() {
+  if (S.mapMode === "clusters") return S.clusters.filter(inView).reduce((t, c) => t + c.n, 0);
+  return visiblePosts().filter(inView).length;
+}
+const shortNum = (n) => (n >= 10000 ? Math.round(n / 1000) + "k" : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n));
 function updateListCount() {
-  const n = visiblePosts().filter(inView).length;
-  $("#list-n").textContent = n ? `(${n})` : "";
+  const n = viewCount();
+  $("#list-n").textContent = shortNum(n);
+  $("#show-list").setAttribute("aria-label", `${n} listing${n === 1 ? "" : "s"} in view. Show the list`);
+  $("#show-list").classList.toggle("zero", !n);
+}
+
+function pinSig(p) { return [pinLabel(p), p.kind, p.deal, isDev(p), commonWith(p).length].join("|"); }
+function makePin(p) {
+  const el = document.createElement("button");
+  el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.deal === "share" && p.kind === "listing" ? " share" : "") + (p.deal === "stay" && p.kind === "listing" ? " stay" : "") + (p.id === S.activeId ? " active" : "");
+  el.textContent = pinLabel(p).replace(/ · share$/, "");
+  if (p.deal === "share" && p.kind === "listing") el.insertAdjacentHTML("beforeend", `<span class="ptag">${commonWith(p).length ? "♥" + commonWith(p).length : "Co-living"}</span>`);
+  el.setAttribute("aria-label", `${titleOf(p)}, ${placeOf(p)}`);
+  el.addEventListener("click", (e) => { e.stopPropagation(); openDetails(p.id, { pan: true }); });
+  return { el, sig: pinSig(p), marker: new S.Marker({ position: { lat: p.lat, lng: p.lng }, content: el, title: titleOf(p) }) };
+}
+/** Counts per area (zoomed out): tap one to zoom in there. */
+function makeAreaMark(c) {
+  const d = document.createElement("button");
+  const size = c.n < 10 ? 40 : c.n < 100 ? 48 : c.n < 1000 ? 56 : 64;
+  d.className = "cluster area" + (S.tab === "request" ? " req" : "");
+  d.style.width = d.style.height = size + "px";
+  d.textContent = shortNum(c.n);
+  d.setAttribute("aria-label", `${c.n} listings here. Zoom in`);
+  d.addEventListener("click", (e) => { e.stopPropagation(); S.map.setCenter({ lat: c.lat, lng: c.lng }); S.map.setZoom(Math.min(Math.round(S.map.getZoom()) + 3, 17)); });
+  const m = new S.Marker({ position: { lat: c.lat, lng: c.lng }, content: d, zIndex: 1000 + c.n });
+  m.map = S.map;
+  return m;
 }
 
 function renderMarkers() {
-  const canSeeRequests = !!(S.access && S.access.requests) || S.posts.some((p) => p.kind === "request");
+  const canSeeRequests = !!(S.access && S.access.requests) || !!(S.me && S.me.counts && S.me.counts.requests);
   $(".tabs").hidden = !canSeeRequests;
   if (!canSeeRequests && S.tab === "request") S.tab = "listing";
   $("#filters").hidden = S.tab !== "listing";
-  document.querySelectorAll(".fchip[data-f]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.f === S.filter)));
-  const counts = { listing: 0, request: 0 };
-  S.posts.forEach((p) => counts[p.kind]++);
-  $("#n-listing").textContent = counts.listing ? String(counts.listing) : "";
-  $("#n-request").textContent = counts.request ? String(counts.request) : "";
+  document.querySelectorAll(".fchip[data-f]").forEach((c) => c.setAttribute("aria-pressed", String(S.chips.has(c.dataset.f))));
+  $("#n-listing").textContent = "";
+  $("#n-request").textContent = "";
   document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === S.tab)));
   renderBanner();
   updateFilterBadge();
   if (!S.map) return;
 
-  if (S.clusterer) S.clusterer.clearMarkers();
-  S.plain.forEach((m) => (m.map = null));
-  S.plain = [];
-  S.pinEls.clear();
-
-  const shown = visiblePosts();
-  const markers = shown.map((p) => {
-    const el = document.createElement("button");
-    el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.deal === "share" && p.kind === "listing" ? " share" : "") + (p.deal === "stay" && p.kind === "listing" ? " stay" : "") + (p.id === S.activeId ? " active" : "");
-    el.textContent = pinLabel(p).replace(/ · share$/, "");
-    if (p.deal === "share" && p.kind === "listing") el.insertAdjacentHTML("beforeend", `<span class="ptag">${commonWith(p).length ? "♥" + commonWith(p).length : "Co-living"}</span>`);
-    el.setAttribute("aria-label", `${titleOf(p)}, ${placeOf(p)}`);
-    el.addEventListener("click", (e) => { e.stopPropagation(); openDetails(p.id, { pan: true }); });
-    S.pinEls.set(p.id, el);
-    return new S.Marker({ position: { lat: p.lat, lng: p.lng }, content: el, title: titleOf(p) });
-  });
-
+  // Pins: add what's new, drop what's gone, keep the rest as they are.
+  const want = new Map((S.mapMode === "pins" ? visiblePosts() : []).map((p) => [p.id, p]));
+  const drop = [], add = [];
+  for (const [id, m] of S.markers) {
+    const p = want.get(id);
+    if (!p || m.sig !== pinSig(p)) { drop.push(m.marker); S.markers.delete(id); S.pinEls.delete(id); }
+  }
+  for (const p of want.values()) {
+    if (S.markers.has(p.id)) continue;
+    const m = makePin(p);
+    S.markers.set(p.id, m); S.pinEls.set(p.id, m.el); add.push(m.marker);
+  }
   if (window.markerClusterer) {
     if (!S.clusterer) {
       S.clusterer = new markerClusterer.MarkerClusterer({
@@ -1263,19 +1441,16 @@ function renderMarkers() {
         }
       });
     }
-    S.clusterer.addMarkers(markers);
+    if (drop.length) S.clusterer.removeMarkers(drop, true);
+    if (add.length) S.clusterer.addMarkers(add, true);
+    if (drop.length || add.length) S.clusterer.render();
   } else {
-    markers.forEach((m) => (m.map = S.map));
-    S.plain = markers;
+    drop.forEach((m) => (m.map = null));
+    add.forEach((m) => (m.map = S.map));
   }
-
-  if (!S.fitted && shown.length) {
-    S.fitted = true;
-    const b = new google.maps.LatLngBounds();
-    shown.forEach((p) => b.extend({ lat: p.lat, lng: p.lng }));
-    S.map.fitBounds(b, 80);
-    google.maps.event.addListenerOnce(S.map, "idle", () => { if (S.map.getZoom() > 13) S.map.setZoom(13); });
-  }
+  // Counts per area when zoomed out.
+  S.areaMarks.forEach((m) => (m.map = null));
+  S.areaMarks = S.mapMode === "clusters" ? S.clusters.map(makeAreaMark) : [];
   updateListCount();
 }
 
@@ -1286,36 +1461,37 @@ function renderBanner() {
     html = S.access && S.access.requests
       ? (S.access.share_only ? "You can see people looking for a room to share, because you're sharing a space." : "You can see all buyer and tenant requests.")
       : "You can see your own requests. Buyer and tenant requests are visible only to <b>brokers with a licence / RERA number</b>.";
-  } else if (!S.posts.some((p) => p.kind === "listing")) {
-    html = "<b>No properties listed yet.</b> Be the first: sign in and list yours.";
-  } else if (!visiblePosts().length && advCount()) {
-    html = `<b>No properties match your filters.</b> <button type="button" class="linkish" data-clear-filters>Clear filters</button>`;
-  } else if (!visiblePosts().length) {
-    html = S.filter === "project"
-      ? "<b>No new projects listed yet.</b> Developers can sign in, choose <b>Developer</b> and tap <b>List a project</b>."
-      : S.filter === "commercial" ? "<b>No commercial properties listed yet.</b> Offices, shops and warehouses will show here."
-      : S.filter === "land" ? "<b>No land or plots listed yet.</b>"
-      : S.filter === "share" ? "<b>No co-living rooms here yet.</b> Sharing your home? Choose <b>Co-living / Homestays</b> and tap <b>List my space</b>."
-      : S.filter === "stay" ? "<b>No holiday homes here yet.</b> Hosts can choose <b>Co-living / Homestays</b> and list one by the night."
-      : "No properties match this filter yet.";
+  } else if (S.loaded && !viewCount() && advCount()) {
+    html = `<b>Nothing here matches your filters.</b> <button type="button" class="linkish" data-clear-filters>Clear filters</button>`;
+  } else if (S.loaded && !viewCount()) {
+    const names = [...document.querySelectorAll(".fchip[data-f]")].filter((c) => S.chips.has(c.dataset.f)).map((c) => c.textContent.trim());
+    html = `<b>No ${esc(names.join(" / "))} listings in this area yet.</b> Zoom out, or tap more options above.`;
   }
   el.innerHTML = html;
   el.hidden = !html;
 }
 
 document.querySelectorAll(".fchip[data-f]").forEach((c) => c.addEventListener("click", () => {
-  S.filter = c.dataset.f;
+  const k = c.dataset.f;
+  if (S.chips.has(k)) {
+    if (S.chips.size === 1) return toast("Keep at least one option on.");
+    S.chips.delete(k);
+  } else S.chips.add(k);
+  saveChips();
   closeDetails();
-  renderMarkers();
+  renderMarkers();   // instant: hide what no longer fits
+  refreshMap();      // then fetch what's new
 }));
-$("#show-list").addEventListener("click", () => openList());
+$("#show-list").addEventListener("click", () => openList("view"));
 $("#banner").addEventListener("click", (e) => { if (e.target.closest("[data-clear-filters]")) clearAdv(); });
 
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
   if (S.tab === t.dataset.tab) return;
   S.tab = t.dataset.tab;
   closeDetails();
+  S.posts = []; S.clusters = [];
   renderMarkers();
+  refreshMap();
 }));
 
 /* ---------------- details panel ---------------- */
@@ -1336,10 +1512,16 @@ function focusOn(p, zoom) {
   });
 }
 
-function openDetails(id, opts = {}) {
-  const p = S.posts.find((x) => x.id === id);
+async function openDetails(id, opts = {}) {
+  const p = await loadFull(id);
   if (!p) return false;
-  if (p.kind !== S.tab || !passFilter(p)) { S.tab = p.kind; S.filter = "all"; renderMarkers(); }
+  if (p.kind !== S.tab) { S.tab = p.kind; S.posts = []; renderMarkers(); refreshMap(); }
+  else if (p.kind === "listing" && !passChips(p)) {
+    // Opened from a link or search while its type is switched off: switch it on so its pin shows.
+    if (!S.chips.has(p.deal)) S.chips.add(p.deal);
+    if (!passChips(p)) [...S.chips].filter((c) => CAT_CHIPS.includes(c)).forEach((c) => S.chips.delete(c));
+    saveChips(); renderMarkers(); refreshMap();
+  }
   const isReq = p.kind === "request";
   const photos = p.photos && p.photos.length ? p.photos.map(shown) : (isReq ? [] : [placeholder(p.id)]);
   const msg = isReq
@@ -1511,13 +1693,50 @@ function closeDetails() {
 }
 $("#panel-close").addEventListener("click", closeDetails);
 
+/* Phones: pull a bottom sheet down to close it. Pulling only starts when its content is scrolled to the top,
+   so scrolling up through a long listing never closes it by accident. */
+function pullToClose(el, close) {
+  let y0 = null, x0 = 0, dy = 0, pulling = false;
+  const scrolledDown = (t) => { for (let n = t; n && n.nodeType === 1; n = n.parentNode) { if (n.scrollTop > 0) return true; if (n === el) break; } return false; };
+  el.addEventListener("touchstart", (e) => {
+    y0 = null;
+    if (isDesktop() || e.touches.length !== 1 || e.target.closest("input, textarea, select, #pk-map")) return;
+    if (scrolledDown(e.target)) return;
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = 0; pulling = false;
+  }, { passive: true });
+  el.addEventListener("touchmove", (e) => {
+    if (y0 === null) return;
+    const t = e.touches[0], my = t.clientY - y0, mx = t.clientX - x0;
+    if (!pulling) {
+      if (Math.abs(my) < 8 && Math.abs(mx) < 8) return;
+      if (my <= 0 || Math.abs(mx) > Math.abs(my)) { y0 = null; return; }
+      pulling = true; el.classList.add("pulling");
+    }
+    dy = Math.max(0, my);
+    el.style.transform = `translateY(${dy}px)`;
+    e.preventDefault();
+  }, { passive: false });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null;
+    if (!pulling) return;
+    pulling = false;
+    el.classList.remove("pulling");
+    el.style.transform = "";
+    if (dy > Math.min(140, el.clientHeight * 0.22)) close();
+  };
+  el.addEventListener("touchend", end);
+  el.addEventListener("touchcancel", end);
+}
+pullToClose(panel, closeDetails);
+
 window.addEventListener("hashchange", () => { if (S.map && /(^#p=|[#&]p=|repair=|^#inbox$)/.test(location.hash)) openFromHash(); });
 function openFromHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get("repair")) return openRepairForm(h.get("repair"));
   if (location.hash === "#inbox") return openInbox();
   const id = h.get("p");
-  if (id && !openDetails(id, { zoom: 15 })) toast("That post is no longer available, or only visible to some members.");
+  if (id) openDetails(id, { zoom: 15 }).then((ok) => { if (!ok) toast("That post is no longer available, or only visible to some members."); });
 }
 
 async function removePost(id) {
@@ -1534,9 +1753,9 @@ async function removePost(id) {
 /* ---------------- edit your own post ---------------- */
 const TYPE_OPTS = [["apartment", "Apartment"], ["villa", "Villa / townhouse"], ["independent_house", "Independent house"], ["plot", "Plot / land"], ["office", "Office"], ["shop", "Shop / retail"], ["warehouse", "Warehouse"], ["other", "Other"]];
 
-function openEditForm(id) {
-  const p = S.posts.find((x) => x.id === id);
-  if (!p) return;
+async function openEditForm(id) {
+  const p = await loadFull(id);
+  if (!p) return toast("Couldn't open that post. Please try again.");
   const isReq = p.kind === "request", dev = isDev(p);
   const E = { photos: [...(p.photos || [])], files: [] };
   openSheet("edit", "Edit your post");
@@ -1685,55 +1904,84 @@ function shown(u) {
   const real = S.cfg && S.cfg.supabaseUrl;
   return real && S.sbBase && typeof u === "string" && u.startsWith(real + "/storage/") ? S.sbBase + u.slice(real.length) : u;
 }
-function thumbOf(p) { return p.photos && p.photos.length ? shown(p.photos[0]) : placeholder(p.id); }
+/* Photo sizes. Each upload is saved as the full photo (up to 1600px), a card size (_m, 800px) and a thumbnail (_s, 240px).
+   Older photos only have the full size, so a missing smaller one falls back to it (see the image error handler). */
+const sized = (u, k) => (typeof u === "string" && /\/storage\/v1\/object\/public\/photos\/[^?#]+\.jpg$/.test(u) ? u.replace(/\.jpg$/, `_${k}.webp`) : u);
+const cardPhoto = (u) => shown(sized(u, "m"));
+const thumbPhoto = (u) => shown(sized(u, "s"));
+document.addEventListener("error", (e) => {
+  const img = e.target;
+  if (img && img.tagName === "IMG" && /_[ms]\.webp$/.test(img.currentSrc || img.src) && !img.dataset.fellBack) {
+    img.dataset.fellBack = "1";
+    img.src = (img.currentSrc || img.src).replace(/_[ms]\.webp$/, ".jpg");
+  }
+}, true);
+function thumbOf(p) { const u = p.photo || (p.photos && p.photos[0]); return u ? thumbPhoto(u) : placeholder(p.id); }
+function cardOf(p) { const u = p.photo || (p.photos && p.photos[0]); return u ? cardPhoto(u) : placeholder(p.id); }
 
+/* ---------------- the list: three big-photo cards a screen ----------------
+   On a card: a short sideways swipe flips photos, a long swipe (past 40%) shortlists (right) or hides (left).
+   Tap anywhere else on the card to open it. */
+const shortTitle = (p) => titleOf(p).replace(/ for (sale|rent)$/i, "");
+const shortPlace = (p) => [isDev(p) ? p.building : null, p.locality, p.city].filter(Boolean).join(", ");
+function photoCount(p) { return Math.max(p.nphotos || 0, (p.photos || []).length); }
 function listCard(p) {
-  const photos = (p.photos || []).length ? p.photos.map(shown) : [placeholder(p.id)];
+  const n = photoCount(p);
   const can = canSave(p);
+  const first = cardOf(p);
+  const slots = n > 1 ? [first, ...Array(n - 1).fill("")] : [first];
+  const tag = isDev(p) ? "New project" : commonWith(p).length ? `♥ ${commonWith(p).length} in common` : p.good_deal ? "Good deal" : p.price_cut_pct ? `Price cut ${p.price_cut_pct}%` : "";
   return `<div class="lcard" data-id="${esc(p.id)}">
     ${can ? `<div class="lc-under" aria-hidden="true"><span class="lc-yes">♥ Shortlist</span><span class="lc-no">Hide ✕</span></div>` : ""}
     <div class="lc-front">
-      <div class="lc-photos">${photos.map((src) => `<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`).join("")}</div>
-      ${photos.length > 1 ? `<span class="lc-count">1 / ${photos.length}</span>` : ""}
-      ${can ? `<button type="button" class="lc-heart" aria-pressed="${!!p.watched}" aria-label="${p.watched ? "Remove from shortlist" : "Add to shortlist"}">${p.watched ? "♥" : "♡"}</button>` : ""}
-      <div class="litem lc-info" role="button" tabindex="0" data-id="${esc(p.id)}">
-        <div>
-          ${isDev(p) ? `<span class="tag dev">New project</span>` : ""}
-          <b>${esc(titleOf(p))}</b>
-          <small>${esc(placeOf(p))}</small>
-          <span class="lp">${esc(priceOf(p))}${sizeOf(p) ? ` <small class="lsz">· ${esc(sizeOf(p))}</small>` : ""}</span>${badgeHtml(p)}
-          ${commonWith(p).length ? `<span class="match">♥ ${commonWith(p).length} in common</span>` : ""}
-        </div>
-        ${can ? `<button type="button" class="lc-x" aria-label="Hide this listing">✕</button>` : ""}
-      </div>
+      <div class="lc-photos"><div class="lc-track">${slots.map((src, i) => `<img ${src ? `src="${esc(src)}"` : ""} data-k="${i}" alt="" loading="lazy" draggable="false">`).join("")}</div></div>
+      ${n > 1 ? `<span class="lc-count">1 / ${n}</span>` : ""}
+      ${tag ? `<span class="lc-tag">${esc(tag)}</span>` : ""}
+      ${can ? `<button type="button" class="lc-x" aria-label="Hide this listing">✕</button>
+      <button type="button" class="lc-heart" aria-pressed="${!!p.watched}" aria-label="${p.watched ? "Remove from shortlist" : "Add to shortlist"}">${p.watched ? "♥" : "♡"}</button>` : ""}
+      <div class="litem lc-info" data-id="${esc(p.id)}"><span class="lp">${esc(priceOf(p))}</span><span class="lc-what">${esc(shortTitle(p))}${shortPlace(p) ? " · " + esc(shortPlace(p)) : ""}</span></div>
     </div>
   </div>`;
 }
 
-function openList(mode) {
+async function openList(mode) {
   if (mode) S.listMode = mode;
   const short = S.listMode === "short";
-  let items = short ? S.posts.filter((p) => p.watched && !p.hidden && p.kind === "listing") : visiblePosts().filter(inView);
-  // Co-living: the homes you have most in common with come first.
-  const ranked = !short && S.filter === "share" && myInterests().length;
+  const seq = (S.listSeq = (S.listSeq || 0) + 1);
+  let items, note = "", total;
+  if (short) {
+    items = await shortlistPins();
+  } else if (S.mapMode === "clusters") {
+    // Zoomed out: show the newest few in view; zooming in shows them all.
+    const q = screenQuery(chipQuery());
+    q.set("mode", "list"); q.set("lim", "30");
+    try {
+      const r = await api("/map?" + q.toString());
+      items = r.pins.map(cachePut).filter((p) => !p.hidden);
+      if (!S.signedIn) { const hd = LOCAL.get("ps_hidden"); items = items.filter((p) => !hd.includes(p.id)); }
+      total = r.total;
+      note = `Newest ${items.length} of ${shortNum(total)}. Zoom in to see them all.`;
+    } catch (e) { items = []; }
+  } else {
+    items = visiblePosts().filter(inView);
+  }
+  if (seq !== S.listSeq) return;
+  if (total === undefined) total = items.length;
+  const ranked = !short && S.chips.has("share") && myInterests().length;
   if (ranked) items = items.slice().sort((a, b) => commonWith(b).length - commonWith(a).length);
-  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects", commercial: "commercial properties", land: "plots", share: "co-living rooms", stay: "holiday homes" }[S.filter] || "properties";
-  const inViewN = short ? visiblePosts().filter(inView).length : items.length;
-  const nShort = S.posts.filter((p) => p.watched && !p.hidden && p.kind === "listing").length;
-  const nHidden = S.posts.filter((p) => p.hidden).length;
+  const nHidden = savedCount("hidden");
   $("#panel-content").innerHTML = `
     <div class="list-head">
       <div class="list-tabs" role="tablist">
-        <button type="button" role="tab" data-lm="view" aria-pressed="${!short}">In this view (${inViewN})</button>
-        <button type="button" role="tab" data-lm="short" aria-pressed="${short}">♥ Shortlisted (${nShort})</button>
+        <button type="button" role="tab" data-lm="view" aria-pressed="${!short}">In this view (${shortNum(short ? viewCount() : total)})</button>
+        <button type="button" role="tab" data-lm="short" aria-pressed="${short}">♥ Shortlisted (${savedCount("shortlist")})</button>
       </div>
-      <h2>${short ? "Your shortlist" : `${items.length} ${esc(items.length === 1 ? label.replace(/ies$/, "y").replace(/s$/, "") : label)} in this view`}</h2>
-      <p>${short ? (S.signedIn ? "You'll be told if any of these drop in price." : "Kept on this device. Sign in to keep them everywhere and get price-drop alerts.")
-        : `${ranked ? "Sorted by what you have in common. " : S.filter === "share" ? "Add your interests in My profile to see the best matches first. " : ""}Move the map to see more.`}</p>
-      ${items.some(canSave) && !store.get("ps_swiped") ? `<p class="swipe-hint">Swipe photos to browse. Swipe the details right to shortlist ♥, left to hide.</p>` : ""}
-      ${nHidden ? `<button type="button" class="linkish lh-hidden" id="manage-hidden">${nHidden} hidden · Manage</button>` : ""}
+      <p class="lh-line">${short ? (S.signedIn ? "We'll tell you if any of these drop in price." : "Kept on this device. Sign in to keep them and get price-drop alerts.")
+        : note || (ranked ? "Best co-living matches first." : "Move the map to see more.")}
+        ${nHidden ? ` <button type="button" class="linkish lh-hidden" id="manage-hidden">${nHidden} hidden</button>` : ""}</p>
+      ${items.some(canSave) && !store.get("ps_swiped") ? `<p class="swipe-hint">Swipe a card right to shortlist ♥, left to hide. A short swipe on the photo flips through pictures.</p>` : ""}
     </div>
-    ${items.map(listCard).join("") || `<p class="hint" style="padding:0 18px">${short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or filter."}</p>`}`;
+    ${items.map(listCard).join("") || `<p class="hint" style="padding:0 18px">${short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or more options above."}</p>`}`;
   bindListCards();
   document.querySelectorAll("[data-lm]").forEach((b) => b.addEventListener("click", () => { panel.scrollTop = 0; openList(b.dataset.lm); }));
   const mh = $("#manage-hidden"); if (mh) mh.addEventListener("click", () => openHiddenManager());
@@ -1744,19 +1992,25 @@ function openList(mode) {
   panel.setAttribute("aria-hidden", "false");
   setActive(null);
 }
+async function shortlistPins() {
+  try {
+    if (S.signedIn) return (await api("/shortlist")).pins.map(cachePut).filter((p) => !p.hidden);
+    const ids = LOCAL.get("ps_short");
+    if (!ids.length) return [];
+    const { pins } = await api("/posts/batch", { method: "POST", body: JSON.stringify({ ids }) });
+    return pins.map((p) => { const v = cachePut(p); v.watched = true; return v; });
+  } catch (e) { toast(e.message); return []; }
+}
 
 function bindListCards() {
   document.querySelectorAll("#panel-content .lcard").forEach((card) => {
-    const p = S.posts.find((x) => x.id === card.dataset.id);
+    const p = getPost(card.dataset.id);
     if (!p) return;
-    const info = card.querySelector(".lc-info"), photos = card.querySelector(".lc-photos"), count = card.querySelector(".lc-count");
-    const open = () => { if (!card.dataset.swiped) openDetails(p.id, { pan: true }); };
-    info.addEventListener("click", (e) => { if (!e.target.closest(".lc-x")) open(); });
-    info.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
-    photos.addEventListener("click", open);
-    if (count) photos.addEventListener("scroll", () => {
-      count.textContent = `${Math.round(photos.scrollLeft / Math.max(1, photos.clientWidth)) + 1} / ${photos.children.length}`;
-    }, { passive: true });
+    const front = card.querySelector(".lc-front");
+    front.addEventListener("click", (e) => {
+      if (e.target.closest("button") || card.dataset.swiped) return;
+      openDetails(p.id, { pan: true });
+    });
     const heart = card.querySelector(".lc-heart");
     if (heart) heart.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -1767,52 +2021,80 @@ function bindListCards() {
     });
     const x = card.querySelector(".lc-x");
     if (x) x.addEventListener("click", (e) => { e.stopPropagation(); swipeHide(card, p); });
-    if (canSave(p)) bindSwipe(card, info, p);
+    bindCardGestures(card, p);
   });
 }
 function refreshCard(card, p) {
   const h = card.querySelector(".lc-heart");
   if (h) { h.textContent = p.watched ? "♥" : "♡"; h.setAttribute("aria-pressed", String(!!p.watched)); h.setAttribute("aria-label", p.watched ? "Remove from shortlist" : "Add to shortlist"); }
   const tab = document.querySelector('[data-lm="short"]');
-  if (tab) tab.textContent = `♥ Shortlisted (${S.posts.filter((x) => x.watched && !x.hidden && x.kind === "listing").length})`;
+  if (tab) tab.textContent = `♥ Shortlisted (${savedCount("shortlist")})`;
 }
-/** Long swipe on the card's details: right shortlists, left hides. Photos keep their own sideways scroll. */
-function bindSwipe(card, info, p) {
-  const front = card.querySelector(".lc-front");
-  let x0 = 0, y0 = 0, dx = 0, id = null, active = false, decided = false;
-  const reset = () => { front.style.transform = ""; card.classList.remove("dragging", "go-yes", "go-no", "armed"); };
-  info.addEventListener("pointerdown", (e) => {
-    if (e.button > 0 || e.target.closest(".lc-x")) return;
-    x0 = e.clientX; y0 = e.clientY; dx = 0; id = e.pointerId; active = true; decided = false;
+/** The other photos load the first time someone flips through a card. */
+async function fillPhotos(card, p) {
+  if (card.dataset.filled) return;
+  card.dataset.filled = "1";
+  const full = await loadFull(p.id);
+  if (!full || !full.photos) return;
+  card.querySelectorAll(".lc-track img").forEach((img, i) => { if (full.photos[i] && !img.getAttribute("src")) img.src = cardPhoto(full.photos[i]); });
+}
+function bindCardGestures(card, p) {
+  const front = card.querySelector(".lc-front"), track = card.querySelector(".lc-track"), count = card.querySelector(".lc-count");
+  const n = track.children.length, can = canSave(p);
+  let idx = 0, x0 = 0, y0 = 0, dx = 0, pid = null, active = false, decided = false, onPhoto = false;
+  const W = () => card.clientWidth || 1;
+  const showIdx = (i) => {
+    idx = Math.max(0, Math.min(n - 1, i));
+    track.style.transition = ""; track.style.transform = `translateX(${-idx * 100}%)`;
+    if (count) count.textContent = `${idx + 1} / ${n}`;
+  };
+  const reset = () => { front.style.transform = ""; card.classList.remove("dragging", "go-yes", "go-no", "armed"); track.style.transition = ""; track.style.transform = `translateX(${-idx * 100}%)`; };
+  front.addEventListener("pointerdown", (e) => {
+    if (e.button > 0 || e.target.closest("button")) return;
+    x0 = e.clientX; y0 = e.clientY; dx = 0; pid = e.pointerId; active = true; decided = false;
+    onPhoto = !!e.target.closest(".lc-photos");
   });
-  info.addEventListener("pointermove", (e) => {
-    if (!active || e.pointerId !== id) return;
+  front.addEventListener("pointermove", (e) => {
+    if (!active || e.pointerId !== pid) return;
     const mx = e.clientX - x0, my = e.clientY - y0;
     if (!decided) {
       if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
       decided = true;
       if (Math.abs(my) > Math.abs(mx)) { active = false; return; }   // scrolling the list
-      try { info.setPointerCapture(id); } catch (err) {}
-      card.classList.add("dragging");
+      try { front.setPointerCapture(pid); } catch (err) {}
+      if (onPhoto && n > 1) fillPhotos(card, p);
     }
     dx = mx;
-    front.style.transform = `translateX(${dx}px) rotate(${dx / 45}deg)`;
-    card.classList.toggle("go-yes", dx > 0);
-    card.classList.toggle("go-no", dx < 0);
-    card.classList.toggle("armed", Math.abs(dx) > card.clientWidth * 0.4);
+    const far = Math.abs(dx) > W() * 0.4;
+    if (can && (far || !(onPhoto && n > 1))) {
+      // Moving the whole card: shortlist or hide on release.
+      card.classList.add("dragging");
+      track.style.transition = ""; track.style.transform = `translateX(${-idx * 100}%)`;
+      front.style.transform = `translateX(${dx}px) rotate(${dx / 45}deg)`;
+      card.classList.toggle("go-yes", dx > 0);
+      card.classList.toggle("go-no", dx < 0);
+      card.classList.toggle("armed", far);
+    } else if (onPhoto && n > 1) {
+      // Flipping through photos: the photo follows the finger.
+      card.classList.remove("dragging", "go-yes", "go-no", "armed");
+      front.style.transform = "";
+      track.style.transition = "none";
+      track.style.transform = `translateX(calc(${-idx * 100}% + ${dx}px))`;
+    }
   });
   const end = () => {
     if (!active) return;
     active = false;
     if (decided) { card.dataset.swiped = "1"; setTimeout(() => { delete card.dataset.swiped; }, 350); }
-    const far = decided && Math.abs(dx) > card.clientWidth * 0.4;
-    if (far && dx > 0) { reset(); swipeShortlist(card, p); }
-    else if (far && dx < 0) { card.classList.remove("dragging"); swipeHide(card, p); }
+    const far = decided && Math.abs(dx) > W() * 0.4;
+    if (far && can && dx > 0) { reset(); swipeShortlist(card, p); }
+    else if (far && can && dx < 0) { card.classList.remove("dragging"); swipeHide(card, p); }
+    else if (decided && onPhoto && n > 1 && Math.abs(dx) > 40) { reset(); showIdx(idx + (dx < 0 ? 1 : -1)); }
     else reset();
     dx = 0;
   };
-  info.addEventListener("pointerup", end);
-  info.addEventListener("pointercancel", () => { active = false; reset(); });
+  front.addEventListener("pointerup", end);
+  front.addEventListener("pointercancel", () => { active = false; reset(); });
 }
 async function swipeShortlist(card, p) {
   store.set("ps_swiped", "1");
@@ -1838,7 +2120,7 @@ async function swipeHide(card, p) {
     setTimeout(() => { renderMarkers(); openList(); }, 280);
   }, 200);
   undoToast("Hidden from your map and list.", async () => {
-    try { await setHiddenId(p.id, false); renderMarkers(); openList(); } catch (e) { toast(e.message); }
+    try { await setHiddenId(p.id, false); renderMarkers(); refreshMap(true); openList(); } catch (e) { toast(e.message); }
   });
 }
 
@@ -1849,7 +2131,13 @@ async function openHiddenManager() {
   body.innerHTML = `<p class="muted">Loading…</p>`;
   let items = [];
   try {
-    items = S.signedIn ? (await api("/hidden")).hidden : S.posts.filter((p) => p.hidden);
+    if (S.signedIn) items = (await api("/hidden")).hidden;
+    else {
+      const ids = LOCAL.get("ps_hidden");
+      items = ids.length ? (await api("/posts/batch", { method: "POST", body: JSON.stringify({ ids }) })).pins : [];
+      // Listings that were removed since don't come back from the server; still list them so they can be cleared.
+      ids.filter((id) => !items.some((x) => x.id === id)).forEach((id) => items.push({ id, kind: "listing", status: "removed" }));
+    }
   } catch (e) { body.innerHTML = `<p class="error">${esc(e.message)}</p>`; return; }
   const draw = () => {
     body.innerHTML = items.length ? `
@@ -1861,7 +2149,7 @@ async function openHiddenManager() {
       : `<p class="muted">You haven't hidden anything. Swipe a listing left in the list to hide it from your map.</p>`;
     body.querySelectorAll("[data-unhide]").forEach((b) => b.addEventListener("click", async () => {
       b.disabled = true;
-      try { await setHiddenId(b.dataset.unhide, false); items = items.filter((x) => x.id !== b.dataset.unhide); renderMarkers(); draw(); }
+      try { await setHiddenId(b.dataset.unhide, false); items = items.filter((x) => x.id !== b.dataset.unhide); refreshMap(true); draw(); }
       catch (e) { b.disabled = false; toast(e.message); }
     }));
     const c = $("#clear-hidden");
@@ -1869,8 +2157,9 @@ async function openHiddenManager() {
       c.disabled = true;
       try {
         if (S.signedIn) await api("/hidden", { method: "DELETE" }); else store.del("ps_hidden");
-        S.posts.forEach((p) => { p.hidden = false; });
-        items = []; renderMarkers(); draw(); toast("Everything is back on your map.");
+        S.cache.forEach((p) => { p.hidden = false; });
+        if (S.me && S.me.counts) S.me.counts.hidden = 0;
+        items = []; refreshMap(true); draw(); toast("Everything is back on your map.");
       } catch (e) { c.disabled = false; toast(e.message); }
     });
   };
@@ -1887,13 +2176,27 @@ function searchText(p) {
 function matchPosts(q) {
   const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
   if (!words.length) return [];
-  return S.posts.filter((p) => p.kind === S.tab && !p.hidden && words.every((w) => searchText(p).includes(w)));
+  return [...S.cache.values()].filter((p) => p.kind === S.tab && !p.hidden && words.every((w) => searchText(p).includes(w)));
+}
+let searchServerTimer, searchServerSeq = 0;
+/** Ask the server too: it knows listings outside the area loaded so far. */
+function searchServer(q) {
+  clearTimeout(searchServerTimer);
+  searchServerTimer = setTimeout(async () => {
+    const seq = ++searchServerSeq;
+    try {
+      const r = await api(`/search?kind=${S.tab}&q=${encodeURIComponent(q)}`);
+      r.pins.forEach(cachePut);
+      if (seq === searchServerSeq && qEl.value.trim() === q && document.activeElement === qEl) renderResults(true);
+    } catch (e) {}
+  }, 250);
 }
 
-function renderResults() {
+function renderResults(fromServer) {
   const q = qEl.value.trim();
   $("#q-clear").hidden = !q;
   if (q.length < 2) { resultsEl.hidden = true; return; }
+  if (fromServer !== true) searchServer(q);
   const hits = matchPosts(q);
   searchSel = -1;
   resultsEl.innerHTML = hits.slice(0, 6).map((p) => `
@@ -1927,7 +2230,8 @@ function pickPost(id) {
 function showMatches(hits) {
   closeResults();
   qEl.blur();
-  S.filter = "all";
+  hits.forEach((p) => { if (p.kind === "listing" && !passChips(p)) S.chips.add(p.deal); });
+  saveChips();
   renderMarkers();
   const b = new google.maps.LatLngBounds();
   hits.forEach((p) => b.extend({ lat: p.lat, lng: p.lng }));
@@ -1944,10 +2248,10 @@ async function goToPlace(q) {
     closeDetails();
     if (place.viewport) S.map.fitBounds({ north: place.viewport.north, south: place.viewport.south, east: place.viewport.east, west: place.viewport.west }, 40);
     else { S.map.setCenter({ lat: place.lat, lng: place.lng }); S.map.setZoom(13); }
-    google.maps.event.addListenerOnce(S.map, "idle", () => {
-      const n = visiblePosts().filter(inView).length;
-      if (n) openList();
-      else toast(`No properties listed around ${place.address || q} yet.`);
+    google.maps.event.addListenerOnce(S.map, "idle", async () => {
+      await refreshMap();
+      if (viewCount()) openList("view");
+      else toast(`No properties listed around ${place.address || q} yet${S.chips.size < DEAL_CHIPS.length ? " for the options you've picked" : ""}.`);
     });
   } catch (e) {
     toast(e.message);
@@ -1996,6 +2300,7 @@ function closeSheet() {
   $("#backdrop").classList.remove("open");
 }
 $("#sheet-close").addEventListener("click", closeSheet);
+pullToClose(sheet, closeSheet);
 $("#backdrop").addEventListener("click", closeSheet);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
@@ -2411,7 +2716,7 @@ function renderProfileStepThen(next) {
 function renderAccount() {
   if (!S.me) return renderSignIn();
   openSheet("account", "My profile");
-  const mine = S.posts.filter((p) => p.mine);
+  const mine = null; // filled in below from the server
   const prof = S.me.profile || {};
   $("#sheet-body").innerHTML = `
     ${(S.me.email || S.me.phone || S.me.isAdmin) ? `<p class="muted">${S.me.email || S.me.phone ? `Signed in as <b>${esc(S.me.email || "+" + String(S.me.phone).replace(/^\+/, ""))}</b>` : ""}${S.me.isAdmin ? `${S.me.email || S.me.phone ? "<br>" : ""}<b>Admin</b>: you can see and remove every post.` : ""}</p>` : ""}
@@ -2423,16 +2728,10 @@ function renderAccount() {
       <button class="btn" id="switch-role">${prof.role ? "Switch" : "Choose"}</button>
     </div>
     <div class="section-title">Your posts</div>
-    ${mine.length ? mine.map((p) => `
-      <div class="my-post">
-        <div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))} · ${esc(ago(p.created_at))}</small></div>
-        <button class="btn" data-view="${esc(p.id)}">View</button>
-        <button class="btn" data-edit="${esc(p.id)}">Edit</button>
-        <button class="btn" data-remove="${esc(p.id)}">Remove</button>
-      </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
+    <div id="my-posts"><p class="muted">Loading your posts…</p></div>
     <div class="section-title">Shortlist and hidden</div>
-    <div class="my-post"><div><b>♥ Shortlisted</b><small>${S.posts.filter((p) => p.watched && !p.hidden).length} saved · we'll tell you if prices drop</small></div><button class="btn" id="acc-short">View</button></div>
-    <div class="my-post"><div><b>Hidden listings</b><small>${S.posts.filter((p) => p.hidden).length} hidden from your map</small></div><button class="btn" id="acc-hidden">Manage</button></div>
+    <div class="my-post"><div><b>♥ Shortlisted</b><small>${savedCount("shortlist")} saved · we'll tell you if prices drop</small></div><button class="btn" id="acc-short">View</button></div>
+    <div class="my-post"><div><b>Hidden listings</b><small>${savedCount("hidden")} hidden from your map</small></div><button class="btn" id="acc-hidden">Manage</button></div>
     <div class="section-title">Colour theme</div>
     ${themePicker()}
     <div id="extras"></div>
@@ -2443,9 +2742,20 @@ function renderAccount() {
   $("#switch-role").addEventListener("click", () => renderRolePicker(true));
   $("#acc-short").addEventListener("click", () => { closeSheet(); openList("short"); });
   $("#acc-hidden").addEventListener("click", () => openHiddenManager());
-  document.querySelectorAll("#sheet-body button[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
-  document.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
-  document.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit)));
+  myPosts().then((list) => {
+    const box = $("#my-posts");
+    if (!box) return;
+    box.innerHTML = list.length ? list.map((p) => `
+      <div class="my-post">
+        <div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))} · ${esc(ago(p.created_at))}</small></div>
+        <button class="btn" data-view="${esc(p.id)}">View</button>
+        <button class="btn" data-edit="${esc(p.id)}">Edit</button>
+        <button class="btn" data-remove="${esc(p.id)}">Remove</button>
+      </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`;
+    box.querySelectorAll("button[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
+    box.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
+    box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit)));
+  });
   $("#signout").addEventListener("click", async () => {
     await S.sb.auth.signOut();
     S.session = null; S.userId = null; S.chat = []; S.draft = null;
@@ -2740,7 +3050,28 @@ async function uploadPhoto(file, opts = {}) {
   const path = `${S.session.user.id}/${id}.jpg`;
   const { error } = await S.sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg", upsert: false });
   if (error) throw new Error("A photo couldn't be uploaded. Please try again.");
+  // Smaller copies for list cards (800px) and thumbnails (240px), so phones never download the full photo for a small picture.
+  // If they can't be made, the full photo is used instead (see the image error handler).
+  if (!opts.square) {
+    await Promise.all([["m", 800, 0.78], ["s", 240, 0.7]].map(async ([k, max, q]) => {
+      try {
+        const small = await resized(blob, max, q);
+        if (small) await S.sb.storage.from("photos").upload(`${S.session.user.id}/${id}_${k}.webp`, small, { contentType: small.type || "image/webp", upsert: false });
+      } catch (e) { /* the full photo still works */ }
+    }));
+  }
   return S.sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+}
+/** A smaller copy: WebP where the browser can make it, JPEG otherwise. */
+async function resized(blob, max, quality) {
+  const bmp = await createImageBitmap(blob);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  const webp = await new Promise((res) => c.toBlob(res, "image/webp", quality));
+  if (webp && webp.type === "image/webp") return webp;
+  return await new Promise((res) => c.toBlob(res, "image/jpeg", quality));
 }
 
 /* =====================================================================
@@ -2770,7 +3101,7 @@ function openAssistant(context = null) {
   if (!profileComplete()) return renderProfileStep();
   const ctxId = context && context.post_id;
   if (!S.ask || S.ask.ctx !== ctxId) S.ask = { ctx: ctxId || null, messages: [] };
-  const here = ctxId && S.posts.find((p) => p.id === ctxId);
+  const here = ctxId && getPost(ctxId);
   openSheet("ask", here ? "Ask Stalker about this property" : "Stalker");
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
@@ -2854,7 +3185,14 @@ function renderAskCard(c) {
   const box = document.createElement("div");
   box.className = "ask-card";
   if (c.type === "listings") {
-    const items = c.ids.map((id) => S.posts.find((p) => p.id === id)).filter(Boolean);
+    const missing = c.ids.filter((id) => !getPost(id));
+    if (missing.length && !c._fetched) {
+      // Stalker's picks may be anywhere on the map: fetch the ones we haven't loaded, then draw the card.
+      c._fetched = true;
+      api("/posts/batch", { method: "POST", body: JSON.stringify({ ids: missing }) }).then((r) => { r.pins.forEach(cachePut); renderAskCard(c); }).catch(() => renderAskCard(c));
+      return;
+    }
+    const items = c.ids.map((id) => getPost(id)).filter(Boolean);
     if (!items.length) return;
     box.innerHTML = `${c.title ? `<div class="ac-title">${esc(c.title)}</div>` : ""}${items.map((p) => `
       <button class="litem" data-id="${esc(p.id)}">
@@ -3027,9 +3365,12 @@ function openViewingForm(p, kind = "viewing") {
   });
 }
 
-function openPitchPicker(req) {
+async function myPosts() {
+  try { const { posts } = await api("/me/posts"); return posts.map((p) => cachePut({ ...p, _full: true })); } catch (e) { return []; }
+}
+async function openPitchPicker(req) {
   if (!ready("Sign in to send a listing.")) return;
-  const mine = S.posts.filter((p) => p.mine && p.kind === "listing");
+  const mine = (await myPosts()).filter((p) => p.kind === "listing");
   openSheet("pitch", "Send a listing to this request");
   $("#sheet-body").innerHTML = `<p class="muted">${esc(titleOf(req))} · ${esc(placeOf(req))} · ${esc(priceOf(req))}</p>
     ${mine.length ? mine.map((p) => `<div class="my-post"><div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))} · ${esc(priceOf(p))}</small></div><button class="btn" data-post="${p.id}">Send</button></div>`).join("")
