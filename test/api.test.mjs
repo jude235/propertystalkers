@@ -132,9 +132,9 @@ test("visibility: requests are only for licensed brokers", async () => {
   assert.deepEqual(await kinds(nobody), ["listing:broker", "listing:landlord"]);
   assert.equal((await feed(admin)).posts.length, 4);
 
-  assert.deepEqual((await feed(owner)).access, { requests: false });
-  assert.deepEqual((await feed(broker)).access, { requests: true });
-  assert.deepEqual((await feed(null)).access, { requests: false });
+  assert.equal((await feed(owner)).access.requests, false);
+  assert.equal((await feed(broker)).access.requests, true);
+  assert.equal((await feed(null)).access.requests, false);
 });
 
 test("developer listings", async () => {
@@ -251,13 +251,13 @@ test("roles: choose, validate, switch", async () => {
   assert.equal((await setRole(u, "developer")).status, 400);              // company required
   const b = await setRole(u, "broker", { licence: "BRN 12345" });
   assert.equal(b.status, 200);
-  assert.deepEqual(b.body.access, { requests: true });
+  assert.equal(b.body.access.requests, true);
   const buyer = await person("b@x.in");
   await post(buyer, buyerReq);
   assert.equal((await feed(u)).posts.filter((p) => p.kind === "request").length, 1);
   // switching away from broker hides requests
   const s2 = await setRole(u, "buyer");
-  assert.deepEqual(s2.body.access, { requests: false });
+  assert.equal(s2.body.access.requests, false);
   assert.equal((await feed(u)).posts.filter((p) => p.kind === "request").length, 0);
   // the chosen role overrides whatever the AI guessed
   await setRole(u, "landlord");

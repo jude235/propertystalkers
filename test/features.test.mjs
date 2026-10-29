@@ -350,3 +350,53 @@ test("pin fixer and photos-to-listing in the posting chat", async () => {
   assert.equal(sent.filter((b) => b.type === "image").length, 1);
   assert.equal(sent[0].source.url, mine);
 });
+
+test("Let's share: rooms per unit, permission, flatmate matching and who sees room requests", async () => {
+  const { call, person, ai, inbox, feed, store } = setup();
+  const host = await person("host@x.in", "Hana Host");
+  const seeker = await person("seek@x.in", "Sam Seeker");
+  const other = await person("other@x.in", "Olga Other");
+  const room = (o = {}) => ({ poster_type: "tenant", deal: "share", share_offer: true, room_type: "private_room", room: "Room 2", unit_number: "1204",
+    price: 3500, currency: "AED", suits: "female", bills_included: true, move_in: "1 Dec", building: "Skyview", locality: "Sector 7", city: "Gurugram", description: "Private room with balcony.", ...o });
+
+  // A tenant can share their space; it needs a room type, and the poster must confirm permission.
+  await call("POST", "/me/role", { token: host.token, body: { role: "tenant" } });
+  ai.queue.push({ text: "", proposal: room({ room_type: null }) });
+  assert.match((await call("POST", "/chat", { token: host.token, body: { messages: [{ role: "user", content: "x" }] } })).body.text, /private room, a shared room, a bed space/);
+  ai.queue.push({ text: "", proposal: room() });
+  const d = await call("POST", "/chat", { token: host.token, body: { messages: [{ role: "user", content: "x" }] } });
+  assert.equal(d.body.draft.kind, "listing");
+  assert.equal(d.body.draft.deal, "share");
+  assert.equal((await call("POST", "/posts", { token: host.token, body: { draftId: d.body.draft.id } })).status, 400);
+  const p = await call("POST", "/posts", { token: host.token, body: { draftId: d.body.draft.id, share_permission: true } });
+  assert.equal(p.status, 200, JSON.stringify(p.body));
+  const row = store._posts.find((x) => x.id === p.body.post.id);
+  assert.equal(row.unit_key, "share|skyview|gurugram|1204|2");
+  const pub = (await feed(null)).find((x) => x.id === p.body.post.id);
+  assert.equal(pub.room_type, "private_room");
+  assert.equal(pub.suits, "female");
+  assert.equal(pub.bills_included, true);
+  assert.equal("room" in pub, false, "room number stays private");
+
+  // A different room in the same flat is a separate unit for the 3-per-unit rule.
+  ai.queue.push({ text: "", proposal: room({ room: "Room 3" }) });
+  const d3 = await call("POST", "/chat", { token: host.token, body: { messages: [{ role: "user", content: "x" }] } });
+  assert.equal(d3.body.type, "draft", JSON.stringify(d3.body));
+
+  // A seeker posts "looking for a room": the host (who shares a space) is told and can see it; a stranger can't.
+  await call("POST", "/me/role", { token: seeker.token, body: { role: "tenant" } });
+  ai.queue.push({ text: "", proposal: { poster_type: "tenant", deal: "share", share_offer: false, room_type: "private_room", suits: "female", price: 4000, currency: "AED", locality: "Sector 7", city: "Gurugram", description: "Looking for a room." } });
+  const rd = await call("POST", "/chat", { token: seeker.token, body: { messages: [{ role: "user", content: "x" }] } });
+  assert.equal(rd.body.draft.kind, "request");
+  const req = await call("POST", "/posts", { token: seeker.token, body: { draftId: rd.body.draft.id } });
+  assert.equal(req.status, 200);
+  assert.ok((await inbox(host)).items.some((n) => n.kind === "pitch_invite" && n.ref_id === req.body.post.id));
+  assert.ok((await feed(host)).some((x) => x.id === req.body.post.id), "hosts see room requests");
+  assert.equal((await call("GET", "/feed", { token: host.token })).body.access.requests, true);
+  assert.ok(!(await feed(other)).some((x) => x.id === req.body.post.id), "others don't");
+  // The host sends their room to the seeker.
+  assert.equal((await call("POST", `/requests/${req.body.post.id}/pitch`, { token: host.token, body: { post_id: p.body.post.id } })).status, 200);
+  // A men-only seeker doesn't match a room for women.
+  const { listingFitsRequest } = await import("../netlify/lib/market.mjs");
+  assert.equal(listingFitsRequest(row, { ...store._posts.find((x) => x.id === req.body.post.id), suits: "male" }), false);
+});
