@@ -150,9 +150,14 @@
   .bell { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(243, 235, 221, .35); background: transparent; color: var(--brand-ink); display: grid; place-items: center; cursor: pointer; }
   .bell[hidden] { display: none; }
   .bell-n { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #c0392b; color: #fff; font-size: 11px; font-weight: 600; display: grid; place-items: center; }
-  .ask-fab { position: fixed; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--brass); background: var(--bg); color: var(--brand);
-    font-size: 14px; font-weight: 500; padding: 9px 13px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(15, 59, 46, .2); }
-  .ask-fab svg { color: var(--brass-ink); }
+  .ask-fab { position: fixed; right: 12px; bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--brass); background: var(--brand); color: var(--brand-ink);
+    font-size: 14px; font-weight: 500; letter-spacing: .02em; padding: 6px 14px 6px 8px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(15, 59, 46, .35); }
+  /* The robot's white eyes glow and blink. */
+  .robot .r-eyes { transform-origin: 16px 16.5px; filter: drop-shadow(0 0 2.5px #fff) drop-shadow(0 0 5px rgba(255, 255, 255, .8)); animation: r-blink 3.6s infinite; }
+  .robot .r-tip { filter: drop-shadow(0 0 3px #fff); animation: r-glow 1.8s ease-in-out infinite; }
+  @keyframes r-blink { 0%, 44%, 52%, 100% { transform: scaleY(1); } 48% { transform: scaleY(.1); } 88% { opacity: 1; } 91% { opacity: .35; } 94% { opacity: 1; } }
+  @keyframes r-glow { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .robot .r-eyes, .robot .r-tip { animation: none; } }
   .ask-card { align-self: stretch; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; padding: 10px 12px; }
   .ask-card .litem { width: 100%; }
   .ac-title { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--brass-ink); margin: 2px 0 8px; }
@@ -425,7 +430,12 @@
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
   <span id="fab-label">Sign in to post</span>
 </button>
-<button class="ask-fab" id="ask" aria-label="Ask Stalker"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg><span>Ask</span></button>
+<button class="ask-fab" id="ask" aria-label="Stalker, the assistant"><svg class="robot" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+  <line x1="16" y1="3.5" x2="16" y2="8" stroke="#b8894a" stroke-width="2" stroke-linecap="round"/><circle class="r-tip" cx="16" cy="3" r="2" fill="#fff"/>
+  <rect x="5" y="8" width="22" height="18" rx="6" fill="#b8894a"/><rect x="2.5" y="14" width="3" height="6" rx="1.5" fill="#b8894a"/><rect x="26.5" y="14" width="3" height="6" rx="1.5" fill="#b8894a"/>
+  <rect x="8.5" y="12" width="15" height="9" rx="4.5" fill="#0b2c22"/>
+  <g class="r-eyes"><circle cx="12.5" cy="16.5" r="2.2" fill="#fff"/><circle cx="19.5" cy="16.5" r="2.2" fill="#fff"/></g>
+  <rect x="12" y="22.5" width="8" height="1.6" rx=".8" fill="#0b2c22"/></svg><span>Stalker</span></button>
 <button class="maptype" id="maptype" aria-label="Switch map style">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
   <span id="maptype-label">Map</span>
@@ -2021,12 +2031,12 @@ const ASK_STARTERS = {
 };
 
 function openAssistant(context = null) {
-  if (!S.session) return needSignIn("Sign in to use Ask Stalker.");
+  if (!S.session) return needSignIn("Sign in to chat with Stalker.");
   if (!profileComplete()) return renderProfileStep();
   const ctxId = context && context.post_id;
   if (!S.ask || S.ask.ctx !== ctxId) S.ask = { ctx: ctxId || null, messages: [] };
   const here = ctxId && S.posts.find((p) => p.id === ctxId);
-  openSheet("ask", here ? "Ask about this property" : "Ask Stalker");
+  openSheet("ask", here ? "Ask Stalker about this property" : "Stalker");
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
@@ -2206,7 +2216,7 @@ async function openInbox() {
   await refreshBell();
   const items = S.inbox || [];
   $("#sheet-body").innerHTML = items.length ? items.map(inboxItem).join("") : `<p class="muted">Nothing yet. Alerts, price drops, enquiries and viewing requests will show up here.</p>
-    <button class="btn" id="ib-ask" style="width:100%;margin-top:12px">Set up an alert with Ask Stalker</button>`;
+    <button class="btn" id="ib-ask" style="width:100%;margin-top:12px">Set up an alert with Stalker</button>`;
   const ask = $("#ib-ask"); if (ask) ask.addEventListener("click", () => openAssistant());
   document.querySelectorAll("#sheet-body [data-act]").forEach((b) => b.addEventListener("click", () => inboxAction(b)));
   if (items.some((x) => !x.read)) { try { await api("/notifications/read", { method: "POST", body: "{}" }); $("#bell-n").hidden = true; } catch (e) {} }
@@ -2302,7 +2312,7 @@ async function renderExtras() {
   box.innerHTML = `
     <div class="section-title">My alerts</div>
     ${al.alerts.length ? al.alerts.map((a) => `<div class="my-post"><div><b>${esc(a.label)}</b><small>Since ${esc(ago(a.created_at))}</small></div><button class="btn" data-del-alert="${a.id}">Remove</button></div>`).join("") : `<p class="muted">No alerts yet.</p>`}
-    <button class="btn" id="new-alert" style="width:100%;margin-top:8px">New alert with Ask Stalker</button>
+    <button class="btn" id="new-alert" style="width:100%;margin-top:8px">New alert with Stalker</button>
     ${role === "landlord" || role === "broker" || tn.tenancies.length ? `
     <div class="section-title">My tenancies</div>
     <p class="muted" style="font-size:13px">Get rent and renewal reminders, and give your tenant a link to report repairs.</p>
