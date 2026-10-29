@@ -299,6 +299,15 @@ export async function features(c) {
     const all = await store.activePosts();
     return json({ posts: all.filter((p) => Array.isArray(p.flags) && p.flags.length).map((p) => ({ id: p.id, title: postTitle(p), flags: p.flags, contact_name: p.contact_name, created_at: p.created_at })) });
   }
+  if (path === "/admin/test-email" && method === "POST") {
+    if (!isAdmin) return json({ error: "Admins only." }, 403);
+    if (!deps.mail) return json({ ok: false, error: "No BREVO_API_KEY is set on the server." });
+    const site = (deps.env && deps.env.SITE_URL) || "https://propertystalkers.com";
+    const r = await deps.mail.send([{ email: profile.email || user.email, name: profile.name, title: "Test email from Property Stalkers",
+      body: "If you can read this, email notifications are working.", link: site }]);
+    await notifyMany({ ...deps, mail: null }, [{ user_id: user.id, kind: "test", title: "Test notification", body: r && r.ok ? "A test email was sent to " + (profile.email || user.email) + "." : "The bell works. The email could not be sent: " + ((r && r.error) || "unknown error") }]);
+    return json({ ok: !!(r && r.ok), status: r && r.status, error: r && r.error });
+  }
   if (path === "/admin/run-jobs" && method === "POST") {
     if (!isAdmin) return json({ error: "Admins only." }, 403);
     return json({ done: await runJobs(deps) });

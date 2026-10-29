@@ -29,7 +29,12 @@ export function makeMailer({ apiKey, from = "alerts@propertystalkers.com", site 
           }))
         })
       });
-      if (!res.ok) console.error("Email failed", res.status, await res.text());
+      if (!res.ok) {
+        const error = await res.text();
+        console.error("Email failed", res.status, error);
+        return { ok: false, status: res.status, error: error.slice(0, 300) };
+      }
+      return { ok: true, status: res.status };
     }
   };
 }
