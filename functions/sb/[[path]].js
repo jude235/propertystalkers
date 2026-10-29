@@ -24,7 +24,13 @@ export async function onRequest({ request, env, waitUntil }) {
   DROP.forEach((h) => headers.delete(h));
   const init = { method: request.method, headers, redirect: "manual" };
   if (!["GET", "HEAD"].includes(request.method)) init.body = request.body;
-  const res = await fetch(SUPABASE_URL + rest + url.search, init);
+  let res = await fetch(SUPABASE_URL + rest + url.search, init);
+  // Photos uploaded before the smaller copies existed: hand back the original instead of an error,
+  // so the browser doesn't wait for a "not found" and then ask again.
+  if (isPhoto && !res.ok && /_(m|s)\.webp$/.test(rest)) {
+    const orig = await fetch(SUPABASE_URL + rest.replace(/_(m|s)\.webp$/, ".jpg"), init);
+    if (orig.ok) res = orig;
+  }
 
   const out = new Headers(res.headers);
   out.delete("set-cookie");
