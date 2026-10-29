@@ -17,9 +17,11 @@ create or replace function public.map_where(p public.posts, f jsonb) returns boo
 language sql immutable parallel safe as $$
   select
     p.kind = coalesce(f->>'kind', 'listing')
-    and (f->'deals' is null or jsonb_array_length(f->'deals') = 0 or (f->'deals') ? p.deal)
+    -- Chips add up: a listing shows if it matches any chosen deal or any chosen category.
     and (
-      (coalesce((f->>'cat_dev')::boolean, false) = false and (f->'cat_types' is null or jsonb_array_length(f->'cat_types') = 0))
+      ((f->'deals' is null or jsonb_array_length(f->'deals') = 0)
+        and coalesce((f->>'cat_dev')::boolean, false) = false and (f->'cat_types' is null or jsonb_array_length(f->'cat_types') = 0))
+      or (f->'deals' is not null and (f->'deals') ? p.deal)
       or (coalesce((f->>'cat_dev')::boolean, false) and p.poster_type = 'developer')
       or (f->'cat_types' is not null and (f->'cat_types') ? coalesce(p.property_type, ''))
     )
