@@ -315,16 +315,6 @@
   .themes button { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: #ffffff; cursor: pointer; font-size: 13px; text-align: left; }
   .themes button[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
   .themes i { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
-  /* Wide screens: the details / list panel stays docked on the right, like a property portal. */
-  @media (min-width: 1100px) {
-    #map-wrap { right: 420px; }
-    .panel { top: 76px; right: 0; bottom: 0; width: 420px; border-radius: 0; transform: none !important; box-shadow: -8px 0 24px rgba(15, 59, 46, .08); border-left: 1px solid var(--line); }
-    .topbar .filters, .banner-row { margin-right: 420px; }
-    .fab { left: calc((100% - 420px) / 2); }
-    .role-pill { left: calc((100% - 420px) / 2); }
-    .ask-fab { right: 436px; }
-    .toast { left: calc((100% - 420px) / 2); }
-  }
   .fact b { display: block; font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 3px; }
   .fact span { font-size: 14px; font-weight: 500; }
   .desc { font-size: 15px; line-height: 1.6; color: #3c4640; margin: 0 0 16px; white-space: pre-line; }
@@ -445,7 +435,6 @@
     .account { order: 4; }
     .top-actions { order: 4; margin-left: auto; }
     .panel { top: 84px; }
-    @media (min-width: 1100px) { .panel { top: 76px; } }
   }
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 27'%3E%3Cpath d='M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z' fill='%23d4af37'/%3E%3Cpath d='M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z' fill='%2311352b'/%3E%3Ccircle cx='12' cy='10.4' r='2.6' fill='%23d4af37'/%3E%3C/svg%3E">
@@ -1179,7 +1168,7 @@ async function reachOut(p, how, btn) {
   }
 }
 
-const docked = () => window.matchMedia("(min-width: 1100px)").matches;
+const docked = () => false; // the panel opens and closes on every screen size
 function closeDetails() {
   if (docked() && S.map) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} return openList(); }
   panel.classList.remove("open");
@@ -1958,12 +1947,12 @@ function openComposer() {
       : (role === "buyer" || role === "tenant"
         ? `Tell me what you're looking for, in your own words: the <b>area and city</b>, the type of home and your budget. Licensed brokers will see it and can call or WhatsApp you.`
         : `Tell me about the property, in your own words. Always include the <b>location</b> (building, area and city), anywhere in the world, and the price.`)
-        + `<br><br>Tap an example and fill in the brackets:`;
+        ;
     log.appendChild(intro);
-    if (lister) S.prefill = true;
+    S.prefill = true;
     const ex = document.createElement("div");
     ex.className = "examples";
-    ex.innerHTML = EXAMPLES.map((e, i) => (e.role === role || (role === "developer" && e.role === "broker")) && !lister ? `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>` : "").join("");
+    ex.innerHTML = EXAMPLES.map((e, i) => false ? `<button type="button" class="example" data-i="${i}"><b>${esc(e.label)}</b><span>${esc(e.text)}</span></button>` : "").join("");
     log.appendChild(ex);
     ex.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => useExample(EXAMPLES[+b.dataset.i].text)));
   } else {
@@ -1995,7 +1984,14 @@ function openComposer() {
 }
 
 const START = "I want to ";
-const GHOST = "sell / rent out / share my apartment, villa, office, shop, plot, land or a room, unit no. …, in [building, area, city] for [price], size … sq ft";
+const GHOSTS = {
+  landlord: "sell / rent out / share my apartment, villa, office, shop, plot, land or a room, unit no. …, in [building, area, city] for [price], size … sq ft",
+  broker: "sell / rent out / share an apartment, villa, office, shop, plot, land or a room, unit no. …, in [building, area, city] for [price], size … sq ft",
+  developer: "list my new project [name] in [area, city], [2, 3 & 4 BHK], from [price], handover [date]",
+  buyer: "buy a [3 bedroom] apartment / villa / office / plot in [area or building, city], budget [price]",
+  tenant: "rent a [2 bedroom] flat / find a room to share / share my room in [area or building, city], budget [rent] a month, moving in [date]"
+};
+const ghostText = () => GHOSTS[roleOf()] || GHOSTS.landlord;
 /* Faded suggestion that follows "I want to " until the person starts typing their own words. */
 function ghostUpdate() {
   const t = $("#msg"), g = $("#ghost");
@@ -2005,7 +2001,7 @@ function ghostUpdate() {
   if (!on) return;
   const cs = getComputedStyle(t);
   for (const k of ["fontFamily", "fontSize", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth"]) g.style[k] = cs[k];
-  g.innerHTML = `<span class="gt">${esc(t.value.endsWith(" ") ? t.value : t.value + " ")}</span><span class="gh">${esc(GHOST)}</span>`;
+  g.innerHTML = `<span class="gt">${esc(t.value.endsWith(" ") ? t.value : t.value + " ")}</span><span class="gh">${esc(ghostText())}</span>`;
 }
 function autoGrow() {
   const t = $("#msg"), g = $("#ghost");
