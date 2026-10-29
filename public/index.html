@@ -75,8 +75,9 @@
       flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
     .switch-btn b { font-size: 12px; font-weight: 700; }
     .switch-btn small { font-size: 9px; color: var(--brass); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* Centred between Switch (72px wide) and Stalker (52px): the middle of that gap is 10px right of centre. */
-    .switch-btn:not([hidden]) ~ .fab { left: calc(50% + 10px); max-width: calc(100vw - 180px); }
+    /* Post button in the exact middle of the screen; Switch and Stalker sit the same distance from each edge. */
+    .fab { left: 50% !important; max-width: calc(100vw - 196px); }
+    .ask-fab { right: 20px !important; }
   }
   .switch-btn { display: none; }
 
@@ -382,12 +383,12 @@
   .lcard .lc-info { display: flex; align-items: baseline; gap: 8px; border-top: 0; padding: 9px 12px 10px; min-width: 0; }
   .lcard .lc-info .lp { flex: 0 0 auto; font-size: 15px; }
   .lcard .lc-info .lc-what { flex: 1; min-width: 0; font-size: 13px; color: rgba(243, 235, 221, .82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* How many listings are on screen: a small gold-ringed tile on the right. Tap it, or swipe it left, for the list. */
-  .count-tab { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 19; width: 52px; height: 52px; padding: 0;
-    border-radius: 17px; border: 1.5px solid var(--brass); background: linear-gradient(150deg, var(--brand) 0%, var(--brand-deep) 75%); color: var(--brass);
+  /* How many listings are on screen: a tab fixed to the right edge with a curved left side. Tap it, or swipe it left, for the list. */
+  .count-tab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 19; width: 50px; height: 64px; padding: 0 0 0 4px;
+    border-radius: 26px 0 0 26px; border: 1.5px solid var(--brass); border-right: 0; background: linear-gradient(150deg, var(--brand) 0%, var(--brand-deep) 75%); color: var(--brass);
     display: grid; place-items: center; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .14); transition: transform .2s ease, opacity .2s; }
-  .count-tab b { position: absolute; top: -10px; left: -12px; min-width: 26px; height: 22px; padding: 0 6px; border-radius: 11px; border: 1.5px solid var(--brand-deep);
+    box-shadow: -4px 5px 16px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .14); transition: transform .2s ease, opacity .2s; }
+  .count-tab b { position: absolute; top: -11px; left: -8px; min-width: 26px; height: 22px; padding: 0 6px; border-radius: 11px; border: 1.5px solid var(--brand-deep);
     background: var(--brass); color: var(--brand-deep); font-size: 12px; font-weight: 800; line-height: 19px; text-align: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); }
   .count-tab .li { width: 22px; height: 22px; }
   .count-tab .chev { position: absolute; left: -15px; top: 50%; margin-top: -7px; opacity: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55)); animation: ct-nudge 3s ease-in-out infinite; }
@@ -552,7 +553,10 @@
   .crow { display: flex; align-items: flex-end; gap: 8px; }
   .msg-wrap { flex: 1; position: relative; display: flex; min-width: 0; }
   .ghost { position: absolute; inset: 0; border-style: solid; border-color: transparent; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word; overflow: hidden; z-index: 1; }
-  .ghost .gt { color: transparent; }
+  .ghost .gt { color: var(--ink); }
+  /* While the suggestion shows, the box's own text is hidden and the overlay draws both parts with the same font, so they can't overlap. */
+  .composer textarea.ghosting { color: transparent !important; caret-color: var(--brass); }
+  .sheet[data-view="chat"] .ghost .gt { color: #f3ebdd; }
   .ghost .gh { color: var(--muted); opacity: .7; }
   .unit-note { font-size: 13px; color: var(--brass-ink); background: #fbf3e4; border: 1px solid #ecd9b5; border-radius: 10px; padding: 8px 12px; margin: 12px 0 0; }
   .lsz { font-weight: 400; color: var(--muted); }
@@ -2953,9 +2957,10 @@ function ghostUpdate() {
   const base = (S.ghost && S.ghost.base) || START;
   const on = t.value.trimEnd().toLowerCase() === base.trimEnd().toLowerCase();
   g.hidden = !on;
+  t.classList.toggle("ghosting", on);
   if (!on) return;
   const cs = getComputedStyle(t);
-  for (const k of ["fontFamily", "fontSize", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth"]) g.style[k] = cs[k];
+  for (const k of ["fontFamily", "fontSize", "fontWeight", "fontStretch", "fontFeatureSettings", "fontKerning", "wordSpacing", "textTransform", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth"]) g.style[k] = cs[k];
   g.innerHTML = `<span class="gt">${esc(t.value.endsWith(" ") ? t.value : t.value + " ")}</span><span class="gh">${esc((S.ghost && S.ghost.hint) || ghostText())}</span>`;
 }
 function autoGrow() {
