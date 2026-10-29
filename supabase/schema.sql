@@ -127,3 +127,97 @@ drop policy if exists "Users upload own photos" on storage.objects;
 create policy "Users upload own photos" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ===================== Phase 1 + 2: assistant, alerts, leads, landlord tools (safe to re-run) =====================
+alter table public.posts drop constraint if exists posts_status_check;
+alter table public.posts add constraint posts_status_check check (status in ('active', 'removed', 'expired'));
+alter table public.posts add column if not exists first_price bigint;            -- price when first posted (for price-cut badges)
+alter table public.posts add column if not exists price_changed_at timestamptz;
+alter table public.posts add column if not exists confirmed_at timestamptz not null default now();  -- last "still available"
+alter table public.posts add column if not exists stale_notified_at timestamptz;
+alter table public.posts add column if not exists flags jsonb not null default '[]'::jsonb;  -- moderation / safety flags
+alter table public.posts add column if not exists cobroke boolean not null default false;   -- broker open to co-broking
+update public.posts set first_price = price where first_price is null;
+alter table public.profiles add column if not exists notify_email boolean not null default true;
+
+-- Everything a person is told about: alerts, price drops, enquiries, viewings, pitches, reminders.
+create table if not exists public.notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  kind       text not null,
+  title      text not null,
+  body       text,
+  post_id    uuid references public.posts(id) on delete cascade,
+  ref_id     uuid,                 -- enquiry / request this is about
+  created_at timestamptz not null default now(),
+  read_at    timestamptz
+);
+create index if not exists notifications_user_idx on public.notifications (user_id, created_at desc);
+
+-- Saved searches ("alert me when...").
+create table if not exists public.saved_searches (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  label      text not null,
+  criteria   jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists saved_searches_user_idx on public.saved_searches (user_id);
+
+-- Watched listings (price-drop alerts).
+create table if not exists public.watches (
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  post_id    uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+
+-- Questions, viewing requests, pitches to requests and co-broke requests.
+create table if not exists public.enquiries (
+  id         uuid primary key default gen_random_uuid(),
+  kind       text not null check (kind in ('question', 'viewing', 'pitch', 'cobroke')),
+  post_id    uuid not null references public.posts(id) on delete cascade,   -- the listing (for pitches: the pitched listing)
+  request_id uuid references public.posts(id) on delete cascade,            -- pitches: the buyer / tenant request
+  from_user  uuid not null references auth.users(id) on delete cascade,
+  to_user    uuid not null references auth.users(id) on delete cascade,
+  message    text,
+  summary    text,
+  slot       timestamptz,          -- viewings
+  status     text not null default 'new' check (status in ('new', 'accepted', 'declined')),
+  reminded   boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists enquiries_to_idx on public.enquiries (to_user, created_at desc);
+create index if not exists enquiries_from_idx on public.enquiries (from_user, created_at desc);
+
+-- Landlord tools: tenancies with rent and renewal reminders, and a repair-request link for the tenant.
+create table if not exists public.tenancies (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  label         text not null,
+  tenant_name   text,
+  tenant_phone  text,
+  tenant_email  text,
+  rent          bigint,
+  currency      text,
+  due_day       int check (due_day between 1 and 28),
+  lease_end     date,
+  repair_token  text not null unique,
+  rent_reminded_for  text,         -- 'YYYY-MM' of the last rent reminder
+  renewal_reminded   boolean not null default false,
+  created_at    timestamptz not null default now()
+);
+create index if not exists tenancies_user_idx on public.tenancies (user_id);
+
+-- When background jobs last ran (they run on normal traffic, at most every few hours).
+create table if not exists public.site_jobs (
+  name     text primary key,
+  last_run timestamptz not null default now()
+);
+
+alter table public.notifications  enable row level security;
+alter table public.saved_searches enable row level security;
+alter table public.watches        enable row level security;
+alter table public.enquiries      enable row level security;
+alter table public.tenancies      enable row level security;
+alter table public.site_jobs      enable row level security;
