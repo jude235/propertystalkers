@@ -1513,8 +1513,14 @@ function focusOn(p, zoom) {
 }
 
 async function openDetails(id, opts = {}) {
+  // Show what the map already knows straight away; the full details follow a moment later.
+  const quick = getPost(id);
+  const seq = (S.detailSeq = (S.detailSeq || 0) + 1);
+  if (quick && !quick._full) showQuickDetails(quick, opts);
   const p = await loadFull(id);
-  if (!p) return false;
+  if (seq !== S.detailSeq) return !!p;   // another listing was opened meanwhile
+  if (!p) { if (quick) closeDetails(); return false; }
+  if (quick && !quick._full) opts = { ...opts, pan: false, zoom: undefined };
   if (p.kind !== S.tab) { S.tab = p.kind; S.posts = []; renderMarkers(); refreshMap(); }
   else if (p.kind === "listing" && !passChips(p)) {
     // Opened from a link or search while its type is switched off: switch it on so its pin shows.
@@ -1650,6 +1656,26 @@ async function openDetails(id, opts = {}) {
   try { history.replaceState(null, "", "#p=" + encodeURIComponent(p.id)); } catch (e) {}
   if (opts.pan || opts.zoom) focusOn(p, opts.zoom);
   return true;
+}
+
+/** The listing card from the pin's own data, while the rest loads. */
+function showQuickDetails(p, opts = {}) {
+  const src = p.photo ? cardPhoto(p.photo) : placeholder(p.id);
+  $("#panel-content").innerHTML = `
+    ${p.kind === "request" ? "" : `<div class="gallery"><div class="slides"><img src="${esc(src)}" alt=""></div></div>`}
+    <div class="body">
+      <h1 class="title">${esc(titleOf(p))}</h1>
+      <p class="loc">${esc(placeOf(p))}</p>
+      <p class="price">${esc(priceOf(p))}</p>
+      <p class="muted loading-line">Loading details…</p>
+    </div>`;
+  panel.classList.remove("list-mode");
+  S.panelMode = "details";
+  panel.scrollTop = 0;
+  panel.classList.add("open");
+  panel.setAttribute("aria-hidden", "false");
+  setActive(p.id);
+  if (opts.pan || opts.zoom) focusOn(p, opts.zoom);
 }
 
 /* Unit listings: the contact is handed out when someone taps, so leads can take turns between listers. */
