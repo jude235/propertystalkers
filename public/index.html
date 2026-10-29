@@ -429,6 +429,21 @@
   .slides img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
   .g-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(251, 247, 239, .92); color: var(--brand); font-size: 24px; line-height: 34px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
   .g-nav.prev { left: 10px; } .g-nav.next { right: 10px; }
+  .slides.zoomable img { cursor: zoom-in; }
+  /* Full-screen photos: swipe between them, pinch or double-tap to zoom, pull down or ✕ to close. */
+  .pv { position: fixed; inset: 0; z-index: 80; background: #000; color: #fff; touch-action: none; animation: pv-in .18s ease; }
+  @keyframes pv-in { from { opacity: 0; } to { opacity: 1; } }
+  .pv-track { display: flex; height: 100%; will-change: transform; }
+  .pv-slide { flex: 0 0 100%; height: 100%; display: grid; place-items: center; overflow: hidden; }
+  .pv-slide img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; }
+  .pv-top { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: space-between; padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+    background: linear-gradient(rgba(0, 0, 0, .55), transparent); pointer-events: none; }
+  .pv-top > * { pointer-events: auto; }
+  .pv-count { font-size: 14px; font-weight: 600; background: rgba(0, 0, 0, .45); padding: 5px 12px; border-radius: 999px; }
+  .pv-x { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .35); background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; cursor: pointer; }
+  .pv-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .16); color: #fff; font-size: 30px; line-height: 44px; cursor: pointer; }
+  .pv-nav.prev { left: 14px; } .pv-nav.next { right: 14px; }
+  @media (hover: none) { .pv-nav { display: none; } }
   .title-row { display: flex; align-items: flex-start; gap: 10px; }
   .title-row .title { flex: 1; }
   .share-btn { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: #ffffff; color: var(--brand); font-size: 13px; font-weight: 500; cursor: pointer; }
@@ -1588,6 +1603,8 @@ async function openDetails(id, opts = {}) {
   }
   const isReq = p.kind === "request";
   const photos = p.photos && p.photos.length ? p.photos.map(shown) : (isReq ? [] : [placeholder(p.id)]);
+  // On the page: the 800px copies (quick). Tap a photo: the full photos open full screen.
+  const galPics = p.photos && p.photos.length ? p.photos.map(cardPhoto) : photos;
   const msg = isReq
     ? `Hi ${p.contact_name || ""}, I saw your request on Property Stalkers (${titleOf(p).toLowerCase()} in ${placeOf(p)}). I may have something for you.`
     : isDev(p)
@@ -1597,7 +1614,7 @@ async function openDetails(id, opts = {}) {
   $("#panel-content").innerHTML = `
     ${isReq ? `<div class="req-head"><div class="big">${esc(POSTER[p.poster_type])} request</div></div>` : `
     <div class="gallery">
-      <div class="slides" id="slides">${photos.map((src, i) => `<img src="${esc(src)}" alt="Photo ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>
+      <div class="slides" id="slides">${galPics.map((src, i) => `<img src="${esc(src)}" alt="Photo ${i + 1}" loading="${i > 1 ? "lazy" : "eager"}" decoding="async">`).join("")}</div>
       ${photos.length > 1 ? `<span class="counter" id="counter">1 / ${photos.length}</span>
         <button class="g-nav prev" id="g-prev" aria-label="Previous photo">&#8249;</button>
         <button class="g-nav next" id="g-next" aria-label="Next photo">&#8250;</button>` : ""}
@@ -1667,6 +1684,10 @@ async function openDetails(id, opts = {}) {
     </div>` : ""}`;
 
   const slides = $("#slides"), counter = $("#counter");
+  if (slides && p.photos && p.photos.length) {
+    slides.classList.add("zoomable");
+    slides.addEventListener("click", () => openViewer(photos, Math.round(slides.scrollLeft / (slides.clientWidth || 1)), galPics));
+  }
   const showCount = () => { if (counter) counter.textContent = `${Math.min(photos.length, Math.round(slides.scrollLeft / slides.clientWidth) + 1)} / ${photos.length}`; };
   if (slides && counter) {
     slides.addEventListener("scroll", showCount, { passive: true });
@@ -2003,6 +2024,153 @@ document.addEventListener("error", (e) => {
 function thumbOf(p) { const u = p.photo || (p.photos && p.photos[0]); return u ? thumbPhoto(u) : placeholder(p.id); }
 function cardOf(p) { const u = p.photo || (p.photos && p.photos[0]); return u ? cardPhoto(u) : placeholder(p.id); }
 
+/* ---------------- full-screen photos ----------------
+   Swipe sideways between photos, pinch or double-tap to zoom, drag to look around when zoomed, pull down or ✕ to close. */
+function openViewer(urls, start = 0, quick = []) {
+  closeViewer();
+  const n = urls.length;
+  const box = document.createElement("div");
+  box.className = "pv"; box.id = "pv";
+  box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "Photos");
+  // The quick copy shows at once (it's already loaded); the full photo replaces it when it arrives.
+  box.innerHTML = `<div class="pv-track">${urls.map((u, i) => `<div class="pv-slide"><img alt="Photo ${i + 1}" draggable="false" data-full="${esc(u)}" ${Math.abs(i - start) <= 1 ? `src="${esc(quick[i] || u)}"` : ""}></div>`).join("")}</div>
+    <div class="pv-top">${n > 1 ? `<span class="pv-count" id="pv-count">${start + 1} / ${n}</span>` : "<span></span>"}<button class="pv-x" id="pv-x" aria-label="Close photos">✕</button></div>
+    ${n > 1 ? `<button class="pv-nav prev" id="pv-prev" aria-label="Previous photo">&#8249;</button><button class="pv-nav next" id="pv-next" aria-label="Next photo">&#8250;</button>` : ""}`;
+  document.body.appendChild(box);
+  document.body.style.overflow = "hidden";
+  const track = box.querySelector(".pv-track"), imgs = [...box.querySelectorAll(".pv-slide img")];
+  let idx = start, z = { s: 1, x: 0, y: 0 };
+  const load = (i) => {
+    const im = imgs[i]; if (!im) return;
+    if (!im.getAttribute("src")) im.src = quick[i] || im.dataset.full;
+    if (im.dataset.full && im.src !== new URL(im.dataset.full, location.href).href) {
+      const big = new Image(); big.decoding = "async";
+      big.onload = () => { if (im.isConnected) im.src = big.src; };
+      big.src = im.dataset.full;
+    }
+  };
+  const W = () => box.clientWidth || 1;
+  const apply = (anim) => {
+    const im = imgs[idx];
+    im.style.transition = anim ? "transform .2s ease" : "none";
+    im.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.s})`;
+  };
+  const clampZ = () => {
+    const im = imgs[idx], w = im.offsetWidth, h = im.offsetHeight;
+    // The picture's top-left sits at (x, y) and is w*s by h*s: keep the screen covered by it where it is bigger.
+    const fit = (pos, size, view) => Math.min(0, Math.max(view - size, pos));
+    const vw = im.parentElement.clientWidth, vh = im.parentElement.clientHeight;
+    const ox = (vw - w) / 2, oy = (vh - h) / 2; // where the picture sits unzoomed
+    const sw = w * z.s, sh = h * z.s;
+    z.x = sw <= vw ? (vw - sw) / 2 - ox : fit(z.x + ox, sw, vw) - ox;
+    z.y = sh <= vh ? (vh - sh) / 2 - oy : fit(z.y + oy, sh, vh) - oy;
+  };
+  const unzoom = (anim) => { z = { s: 1, x: 0, y: 0 }; apply(anim); };
+  const go = (i, anim = true) => {
+    if (z.s !== 1) unzoom(false);
+    idx = Math.max(0, Math.min(n - 1, i));
+    track.style.transition = anim ? "transform .25s ease" : "none";
+    track.style.transform = `translateX(${-idx * 100}%)`;
+    const c = $("#pv-count"); if (c) c.textContent = `${idx + 1} / ${n}`;
+    load(idx); load(idx + 1); load(idx - 1);
+  };
+  go(start, false);
+  const zoomAt = (cx, cy, s) => {
+    // Keep the point under the finger(s) still while the scale changes.
+    const r = imgs[idx].parentElement.getBoundingClientRect(), im = imgs[idx];
+    const ox = (r.width - im.offsetWidth) / 2, oy = (r.height - im.offsetHeight) / 2;
+    const px = cx - r.left - ox, py = cy - r.top - oy;
+    const k = s / z.s;
+    z.x = px - (px - z.x) * k; z.y = py - (py - z.y) * k; z.s = s;
+  };
+
+  /* touch: one finger swipes (or pans when zoomed, or pulls down to close); two fingers pinch */
+  let t0 = null, lastTap = 0;
+  const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  box.addEventListener("touchstart", (e) => {
+    if (e.target.closest("button")) return;
+    const ts = e.touches;
+    if (ts.length === 2) {
+      t0 = { pinch: true, d: dist(ts[0], ts[1]), s: z.s, x: z.x, y: z.y, cx: (ts[0].clientX + ts[1].clientX) / 2, cy: (ts[0].clientY + ts[1].clientY) / 2 };
+    } else if (ts.length === 1) {
+      t0 = { x0: ts[0].clientX, y0: ts[0].clientY, zx: z.x, zy: z.y, mode: null, time: Date.now() };
+    }
+  }, { passive: true });
+  box.addEventListener("touchmove", (e) => {
+    if (!t0) return;
+    e.preventDefault();
+    const ts = e.touches;
+    if (t0.pinch && ts.length === 2) {
+      const s = Math.max(1, Math.min(4, t0.s * dist(ts[0], ts[1]) / t0.d));
+      const cx = (ts[0].clientX + ts[1].clientX) / 2, cy = (ts[0].clientY + ts[1].clientY) / 2;
+      z.s = t0.s; z.x = t0.x; z.y = t0.y;
+      zoomAt(t0.cx, t0.cy, s);
+      z.x += cx - t0.cx; z.y += cy - t0.cy;
+      apply(false);
+      return;
+    }
+    if (t0.pinch || ts.length !== 1) return;
+    const dx = ts[0].clientX - t0.x0, dy = ts[0].clientY - t0.y0;
+    if (z.s > 1) { z.x = t0.zx + dx; z.y = t0.zy + dy; clampZ(); apply(false); return; }
+    if (!t0.mode && Math.hypot(dx, dy) > 8) t0.mode = Math.abs(dx) > Math.abs(dy) ? "swipe" : "pull";
+    if (t0.mode === "swipe") {
+      const edge = (idx === 0 && dx > 0) || (idx === n - 1 && dx < 0) ? 0.3 : 1;
+      track.style.transition = "none";
+      track.style.transform = `translateX(calc(${-idx * 100}% + ${dx * edge}px))`;
+    } else if (t0.mode === "pull" && dy > 0) {
+      imgs[idx].style.transition = "none";
+      imgs[idx].style.transform = `translateY(${dy}px) scale(${1 - Math.min(dy, 400) / 1600})`;
+      box.style.background = `rgba(0, 0, 0, ${1 - Math.min(dy, 400) / 500})`;
+    }
+  }, { passive: false });
+  box.addEventListener("touchend", (e) => {
+    if (!t0) return;
+    if (t0.pinch) {
+      if (e.touches.length === 0) { if (z.s < 1.05) unzoom(true); else { clampZ(); apply(true); } t0 = null; }
+      else t0 = null;
+      return;
+    }
+    const ch = e.changedTouches[0], dx = ch.clientX - t0.x0, dy = ch.clientY - t0.y0;
+    const quickTap = !t0.mode && Date.now() - t0.time < 300 && Math.hypot(dx, dy) < 10;
+    if (t0.mode === "swipe") go(Math.abs(dx) > W() * 0.18 ? idx + (dx < 0 ? 1 : -1) : idx);
+    else if (t0.mode === "pull") {
+      if (dy > 110) { t0 = null; return closeViewer(); }
+      box.style.background = ""; unzoom(true);
+    } else if (quickTap) {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        lastTap = 0;
+        if (z.s > 1) unzoom(true); else { zoomAt(ch.clientX, ch.clientY, 2.5); clampZ(); apply(true); }
+      } else lastTap = now;
+    }
+    t0 = null;
+  });
+
+  /* mouse and keyboard (computers) */
+  box.addEventListener("dblclick", (e) => { if (e.target.closest("button")) return; if (z.s > 1) unzoom(true); else { zoomAt(e.clientX, e.clientY, 2.5); clampZ(); apply(true); } });
+  box.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const s = Math.max(1, Math.min(4, z.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    zoomAt(e.clientX, e.clientY, s); if (s === 1) unzoom(false); else { clampZ(); apply(false); }
+  }, { passive: false });
+  let drag = null;
+  box.addEventListener("mousedown", (e) => { if (z.s > 1 && !e.target.closest("button")) { drag = { x: e.clientX - z.x, y: e.clientY - z.y }; e.preventDefault(); } });
+  box.addEventListener("mousemove", (e) => { if (drag) { z.x = e.clientX - drag.x; z.y = e.clientY - drag.y; clampZ(); apply(false); } });
+  box.addEventListener("mouseup", () => { drag = null; });
+  box._key = (e) => { if (e.key === "ArrowLeft") go(idx - 1); else if (e.key === "ArrowRight") go(idx + 1); };
+  document.addEventListener("keydown", box._key);
+  $("#pv-x").addEventListener("click", closeViewer);
+  if (n > 1) { $("#pv-prev").addEventListener("click", () => go(idx - 1)); $("#pv-next").addEventListener("click", () => go(idx + 1)); }
+  box._go = go;
+}
+function closeViewer() {
+  const box = $("#pv");
+  if (!box) return;
+  document.removeEventListener("keydown", box._key);
+  box.remove();
+  document.body.style.overflow = "";
+}
+
 /* ---------------- the list: three big-photo cards a screen ----------------
    On a card: a short sideways swipe flips photos, a long swipe (past 40%) shortlists (right) or hides (left).
    Tap anywhere else on the card to open it. */
@@ -2013,12 +2181,13 @@ function listCard(p) {
   const n = photoCount(p);
   const can = canSave(p);
   const first = cardOf(p);
-  const slots = n > 1 ? [first, ...Array(n - 1).fill("")] : [first];
+  const links = (p.photos || []).map(cardPhoto);
+  const slots = n > 1 ? [first, ...Array.from({ length: n - 1 }, (_, i) => links[i + 1] || "")] : [first];
   const tag = isDev(p) ? "New project" : commonWith(p).length ? `♥ ${commonWith(p).length} in common` : p.good_deal ? "Good deal" : p.price_cut_pct ? `Price cut ${p.price_cut_pct}%` : "";
   return `<div class="lcard" data-id="${esc(p.id)}">
     ${can ? `<div class="lc-under" aria-hidden="true"><span class="lc-yes">♥ Shortlist</span><span class="lc-no">Hide ✕</span></div>` : ""}
     <div class="lc-front">
-      <div class="lc-photos"><div class="lc-track">${slots.map((src, i) => `<img ${src ? `src="${esc(src)}"` : ""} data-k="${i}" alt="" loading="lazy" draggable="false">`).join("")}</div></div>
+      <div class="lc-photos"><div class="lc-track">${slots.map((src, i) => `<img ${src ? (i ? `data-src="${esc(src)}"` : `src="${esc(src)}"`) : ""} data-k="${i}" alt="" ${i ? "" : `loading="lazy" `}decoding="async" draggable="false">`).join("")}</div></div>
       ${n > 1 ? `<span class="lc-count">1 / ${n}</span>` : ""}
       ${tag ? `<span class="lc-tag">${esc(tag)}</span>` : ""}
       ${can ? `<button type="button" class="lc-x" aria-label="Hide this listing">✕</button>
@@ -2114,8 +2283,20 @@ function refreshCard(card, p) {
   const tab = document.querySelector('[data-lm="short"]');
   if (tab) tab.textContent = `♥ Shortlisted (${savedCount("shortlist")})`;
 }
-/** The other photos load the first time someone flips through a card. */
+/** Start downloading photo i of a card (if it isn't already). */
+function warmPhoto(card, i) {
+  const img = card.querySelectorAll(".lc-track img")[i];
+  if (img && !img.getAttribute("src") && img.dataset.src) img.src = img.dataset.src;
+}
+/* When a card scrolls into view, its second photo starts loading, so the first swipe is instant. */
+const warmObs = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => {
+  if (!e.isIntersecting) return;
+  warmPhoto(e.target, 1);
+  warmObs.unobserve(e.target);
+}), { rootMargin: "200px 0px" }) : null;
+/** Older saved pins have no photo links: fetch the details the first time someone flips through. */
 async function fillPhotos(card, p) {
+  if (card.querySelector(".lc-track img[data-src]")) return;
   if (card.dataset.filled) return;
   card.dataset.filled = "1";
   const full = await loadFull(p.id);
@@ -2131,7 +2312,9 @@ function bindCardGestures(card, p) {
     idx = Math.max(0, Math.min(n - 1, i));
     track.style.transition = ""; track.style.transform = `translateX(${-idx * 100}%)`;
     if (count) count.textContent = `${idx + 1} / ${n}`;
+    warmPhoto(card, idx); warmPhoto(card, idx + 1); warmPhoto(card, idx + 2);
   };
+  if (n > 1 && warmObs) warmObs.observe(card); else if (n > 1) warmPhoto(card, 1);
   const reset = () => { front.style.transform = ""; card.classList.remove("dragging", "go-yes", "go-no", "armed"); track.style.transition = ""; track.style.transform = `translateX(${-idx * 100}%)`; };
   front.addEventListener("pointerdown", (e) => {
     if (e.button > 0 || e.target.closest("button")) return;
@@ -2146,7 +2329,7 @@ function bindCardGestures(card, p) {
       decided = true;
       if (Math.abs(my) > Math.abs(mx)) { active = false; return; }   // scrolling the list
       try { front.setPointerCapture(pid); } catch (err) {}
-      if (onPhoto && n > 1) fillPhotos(card, p);
+      if (onPhoto && n > 1) { warmPhoto(card, idx + 1); warmPhoto(card, idx + 2); fillPhotos(card, p); }
     }
     dx = mx;
     const far = Math.abs(dx) > W() * 0.4;
@@ -2388,7 +2571,7 @@ pullToClose(sheet, closeSheet);
 $("#backdrop").addEventListener("click", closeSheet);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
+  if ($("#pv")) closeViewer(); else if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
 });
 
 /* ---------------- inside the Android / iPhone app ---------------- */
@@ -2398,6 +2581,7 @@ if (IN_APP) {
   try {
     // Android back button: close whatever is open first, and only then leave the app.
     window.Capacitor.addListener("App", "backButton", () => {
+      if ($("#pv")) { closeViewer(); return; }
       const pick = $("#picker");
       if (pick && !pick.hidden) { $("#pk-close").click(); return; }
       if (sheet.classList.contains("open")) { closeSheet(); return; }
