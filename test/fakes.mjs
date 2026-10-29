@@ -71,6 +71,7 @@ export function memoryStore() {
     async setPostStatus(id, status) { const p = posts.find((x) => x.id === id); if (p) p.status = status; },
     async countPostsSince(uid, since) { return posts.filter((p) => p.user_id === uid && p.created_at >= since).length; },
     async createDraft(uid, data) { const id = randomUUID(); drafts.set(id, { uid, data }); return id; },
+    async updateDraft(id, uid, data) { const d = drafts.get(id); if (d && d.uid === uid) d.data = data; },
     async getDraft(id, uid) { const d = drafts.get(id); return d && d.uid === uid ? d.data : null; },
     async deleteDraft(id) { drafts.delete(id); },
     async bumpAiUsage(uid) { const n = (usage.get(uid) || 0) + 1; usage.set(uid, n); return n; }
@@ -93,6 +94,7 @@ export function scriptedAI() {
 export function tableGeo(table) {
   return {
     async pinFromLink(link) { return coordsFromMapsUrl(link); },
+    async reverse(lat, lng) { return { address: `Pinned spot ${lat.toFixed(4)}, ${lng.toFixed(4)}`, locality: "Pinned Area", city: "Pin City", country: "Pinland" }; },
     async search(q) {
       const hit = table[String(q).toLowerCase()];
       return hit ? { lat: hit.lat, lng: hit.lng, address: q, viewport: null } : null;

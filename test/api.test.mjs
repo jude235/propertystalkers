@@ -189,8 +189,21 @@ test("chat: plain replies, profile required, ungeocodable location, drafts are p
 
   ai.queue.push({ text: "", proposal: { ...landlordSale, unit_number: "9", size_sqft: 1000, building: "Nowhere Towers", locality: "Sector 999", city: "Atlantis" } });
   const r2 = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
-  assert.equal(r2.body.type, "message");
-  assert.match(r2.body.text, /couldn't find/);
+  // Not found on the map: a draft that needs the pin dropped by hand.
+  assert.equal(r2.body.type, "draft");
+  assert.equal(r2.body.draft.needs_pin, true);
+  assert.equal((await call("POST", "/posts", { token: u.token, body: { draftId: r2.body.draft.id } })).status, 400);
+  assert.equal((await call("POST", `/drafts/${r2.body.draft.id}/pin`, { token: u.token, body: { lat: 999, lng: 1 } })).status, 400);
+  const pinned = await call("POST", `/drafts/${r2.body.draft.id}/pin`, { token: u.token, body: { lat: 25.2, lng: 55.3 } });
+  assert.equal(pinned.status, 200);
+  assert.equal(pinned.body.draft.precision, "building");
+  assert.equal(pinned.body.draft.city, "Atlantis", "what the person typed is kept");
+  assert.match(pinned.body.draft.address, /Pinned spot/);
+  const someone = await person("pinthief@x.in");
+  assert.equal((await call("POST", `/drafts/${r2.body.draft.id}/pin`, { token: someone.token, body: { lat: 1, lng: 1 } })).status, 404);
+  const posted = await call("POST", "/posts", { token: u.token, body: { draftId: r2.body.draft.id } });
+  assert.equal(posted.status, 200, JSON.stringify(posted.body));
+  assert.equal(posted.body.post.lat, 25.2);
 
   ai.queue.push({ text: "", proposal: { ...landlordSale, unit_number: "9", size_sqft: 1000 } });
   const r3 = await call("POST", "/chat", { token: u.token, body: { messages: [{ role: "user", content: "x" }] } });
@@ -282,8 +295,8 @@ test("developer form creates a draft without the AI", async () => {
   const p = await call("POST", "/posts", { token: d.token, body: { draftId: r.body.draft.id } });
   assert.equal(p.body.post.configs, "2, 3 & 4 BHK");
   const bad = await call("POST", "/draft", { token: d.token, body: { company: "X", project: "Nowhere", area: "Sector 999", city: "Atlantis" } });
-  assert.equal(bad.status, 400);
-  assert.match(bad.body.error, /couldn't find/);
+  assert.equal(bad.status, 200);
+  assert.equal(bad.body.draft.needs_pin, true);
 });
 
 test("editing: owner can change price, details, photos and location; others can't", async () => {
@@ -458,4 +471,16 @@ test("units: number and size required, at most 3 per unit per deal, one shown on
   const other = await post(d, { ...unit, unit_number: "77" });
   const moved = await call("PATCH", `/posts/${other.id}`, { token: d.token, body: { unit_number: "1204" } });
   assert.equal(moved.status, 409);
+});
+
+test("move the pin on an existing post", async () => {
+  const { call, person, post, feed } = setup();
+  const o = await person("mover@x.in");
+  const p = await post(o, landlordSale);
+  assert.equal((await call("PATCH", `/posts/${p.id}`, { token: o.token, body: { pin: { lat: "x", lng: 1 } } })).status, 400);
+  const r = await call("PATCH", `/posts/${p.id}`, { token: o.token, body: { pin: { lat: 28.5, lng: 77.1 } } });
+  assert.equal(r.status, 200);
+  const f = (await feed(null)).posts.find((x) => x.id === p.id);
+  assert.equal(f.lat, 28.5);
+  assert.equal(f.precision, "building");
 });
