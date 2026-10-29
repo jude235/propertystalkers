@@ -219,6 +219,8 @@
     border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--pin); }
   .pin.req { --pin: var(--req); }
   .pin.dev { --pin: var(--brass); color: var(--brand); }
+  .pin.share { --pin: #2f6f8f; color: #fff; }
+  .fchip.share[aria-pressed="false"] { border-color: #2f6f8f; color: #24576f; }
   .pin:hover { transform: scale(1.06); }
   .pin.active { --pin: #1d2a24; color: var(--brand-ink); transform: scale(1.12); }
   .cluster { background: var(--brand); color: var(--brand-ink); border-radius: 50%; display: grid; place-items: center; font-weight: 500; font-size: 14px;
@@ -417,6 +419,7 @@
     <button class="fchip" data-f="all" aria-pressed="true">All</button>
     <button class="fchip" data-f="sale" aria-pressed="false">For sale</button>
     <button class="fchip" data-f="rent" aria-pressed="false">For rent</button>
+    <button class="fchip share" data-f="share" aria-pressed="false">Let's share</button>
     <button class="fchip" data-f="project" aria-pressed="false">New projects</button>
     <button class="fchip" data-f="commercial" aria-pressed="false">Commercial</button>
     <button class="fchip" data-f="land" aria-pressed="false">Land / Plots</button>
@@ -475,7 +478,9 @@ const EXAMPLES = [
   { role: "broker", label: "Listing for sale", text: "Selling a 4 bedroom villa in [building or community], [area], [city] for [price]" },
   { role: "broker", label: "Listing for rent", text: "Renting out a 2 bedroom apartment in [building name], [area], [city] for [rent] a month" },
   { role: "buyer", label: "Looking to buy", text: "I'm looking to buy a 3 bedroom apartment in [building or area], [city], budget [price]" },
-  { role: "tenant", label: "Looking to rent", text: "I'm looking to rent a 2 bedroom apartment in [building or area], [city], budget [rent] a month" }
+  { role: "tenant", label: "Looking to rent", text: "I'm looking to rent a 2 bedroom apartment in [building or area], [city], budget [rent] a month" },
+  { role: "tenant", label: "Share my space", text: "I want to share my flat: a private room in [building], unit [number], [area], [city] for [rent] a month per person, bills included, for [women / men / anyone]" },
+  { role: "tenant", label: "Looking for a room", text: "I'm looking for a room to share in [area], [city], budget [rent] a month, moving in [date]" }
 ];
 
 const ROLES = {
@@ -483,7 +488,7 @@ const ROLES = {
   broker: { label: "Broker / Agent", desc: "List properties and see what buyers and tenants are looking for", cta: "List a property" },
   developer: { label: "Developer", desc: "List new projects and launches", cta: "List a project" },
   buyer: { label: "Buyer", desc: "Tell brokers what you want to buy", cta: "Post what I'm looking for" },
-  tenant: { label: "Tenant", desc: "Tell brokers what you want to rent", cta: "Post a rental request" }
+  tenant: { label: "Tenant", desc: "Tell brokers what you want to rent, or share your space with flatmates", cta: "Find or share a place" }
 };
 const roleOf = () => (S.me && S.me.profile && S.me.profile.role) || null;
 
@@ -515,6 +520,8 @@ function money(n) {
 const TYPE = { apartment: "apartment", villa: "villa", independent_house: "independent house", plot: "plot", office: "office", shop: "shop", warehouse: "warehouse", other: "" };
 const COMMERCIAL = ["office", "shop", "warehouse"];
 const LOGO_MINI = `<svg width="22" height="25" viewBox="0 0 24 27" aria-hidden="true"><path d="M12 26s-9-9.2-9-15.6a9 9 0 0 1 18 0C21 16.8 12 26 12 26z" fill="#b8894a"/><path d="M5.6 10.4Q12 4.4 18.4 10.4Q12 16.4 5.6 10.4Z" fill="#0f3b2e"/><circle cx="12" cy="10.4" r="2.6" fill="#b8894a"/></svg>`;
+const ROOM = { private_room: "Private room", shared_room: "Shared room", bed_space: "Bed space", whole_unit: "Flat to share" };
+const SUITS_TXT = { any: "Anyone", male: "Men", female: "Women", couples: "Couples" };
 const sizeOf = (p) => p.size_sqft ? `${Number(p.size_sqft).toLocaleString("en-US")} sq ft` : "";
 const POSTER = { landlord: "Landlord", broker: "Broker", developer: "Developer", buyer: "Buyer", tenant: "Tenant" };
 const isDev = (p) => p.poster_type === "developer";
@@ -527,6 +534,10 @@ function what(p) {
 }
 function titleOf(p) {
   if (isDev(p)) return p.building || "New project";
+  if (p.deal === "share") {
+    const r = ROOM[p.room_type] || "Room";
+    return p.kind === "listing" ? (p.room_type === "whole_unit" ? "Flat to share" : `${r} to share`) : `Looking for ${p.room_type === "whole_unit" ? "a flat to share" : `a ${r.toLowerCase()} to share`}`;
+  }
   if (p.kind === "listing") return cap(`${what(p)} for ${p.deal === "rent" ? "rent" : "sale"}`);
   const w = what(p);
   return `Looking to ${p.deal === "rent" ? "rent" : "buy"} ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w}`;
@@ -542,12 +553,18 @@ function amount(p) {
   return SYMBOL[cur] ? SYMBOL[cur] + short : cur + " " + short;
 }
 function priceOf(p) {
+  if (p.deal === "share") {
+    const bills = p.bills_included === true ? ", bills included" : p.bills_included === false ? ", plus bills" : "";
+    if (p.kind === "listing") return p.price ? `${amount(p)}/month per person${bills}` : "Rent on request";
+    return p.price ? `Budget ${amount(p)}/month` : "Budget not given";
+  }
   const per = p.deal === "rent" ? "/month" : "";
   if (isDev(p)) return p.price ? `From ${amount(p)}` : "Price on request";
   if (p.kind === "listing") return p.price ? `${amount(p)}${per}` : "Price on request";
   return p.price ? `Budget ${amount(p)}${per}` : "Budget not given";
 }
 function pinLabel(p) {
+  if (p.deal === "share") return p.kind === "listing" ? `${p.price ? amount(p) + "/mo" : "Room"} · share` : `Room · ${p.price ? amount(p) : "wanted"}`;
   if (isDev(p)) return p.price ? `New · ${amount(p)}+` : "New project";
   if (p.kind === "listing") return p.price ? `${amount(p)}${p.deal === "rent" ? "/mo" : ""}` : (p.bedrooms ? `${p.bedrooms} BHK` : "View");
   const head = p.deal === "rent" ? "Rent" : "Buy";
@@ -792,7 +809,7 @@ function renderMarkers() {
   const shown = visiblePosts();
   const markers = shown.map((p) => {
     const el = document.createElement("button");
-    el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.id === S.activeId ? " active" : "");
+    el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.deal === "share" && p.kind === "listing" ? " share" : "") + (p.id === S.activeId ? " active" : "");
     el.textContent = pinLabel(p);
     el.setAttribute("aria-label", `${titleOf(p)}, ${placeOf(p)}`);
     el.addEventListener("click", (e) => { e.stopPropagation(); openDetails(p.id, { pan: true }); });
@@ -838,7 +855,7 @@ function renderBanner() {
   let html = "";
   if (S.tab === "request") {
     html = S.access && S.access.requests
-      ? "You can see all buyer and tenant requests."
+      ? (S.access.share_only ? "You can see people looking for a room to share, because you're sharing a space." : "You can see all buyer and tenant requests.")
       : "You can see your own requests. Buyer and tenant requests are visible only to <b>brokers with a licence / RERA number</b>.";
   } else if (!S.posts.some((p) => p.kind === "listing")) {
     html = "<b>No properties listed yet.</b> Be the first: sign in and list yours.";
@@ -847,6 +864,7 @@ function renderBanner() {
       ? "<b>No new projects listed yet.</b> Developers can sign in, choose <b>Developer</b> and tap <b>List a project</b>."
       : S.filter === "commercial" ? "<b>No commercial properties listed yet.</b> Offices, shops and warehouses will show here."
       : S.filter === "land" ? "<b>No land or plots listed yet.</b>"
+      : S.filter === "share" ? "<b>No rooms to share here yet.</b> Sharing your flat? Tap the post button and say \"I want to share my…\""
       : "No properties match this filter yet.";
   }
   el.innerHTML = html;
@@ -906,7 +924,7 @@ function openDetails(id, opts = {}) {
         <button class="g-nav next" id="g-next" aria-label="Next photo">&#8250;</button>` : ""}
     </div>`}
     <div class="body">
-      <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "rent" ? "Wants to rent" : "Wants to buy") : isDev(p) ? "New project" : (p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
+      <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "rent" ? "Wants to rent" : "Wants to buy") : isDev(p) ? "New project" : (p.deal === "share" ? "Let's share" : p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
       <div class="title-row"><h1 class="title">${esc(titleOf(p))}</h1><button class="share-btn" id="share-post" aria-label="Share this post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</button></div>
       <p class="loc">${esc(placeOf(p))}</p>
       <p class="price">${esc(priceOf(p))}</p>
@@ -918,6 +936,11 @@ function openDetails(id, opts = {}) {
         <div class="fact"><b>Possession</b><span>${esc(p.possession || "—")}</span></div>
         <div class="fact"><b>Configuration</b><span>${esc(p.configs || (p.bedrooms ? p.bedrooms + " BHK onwards" : cap(TYPE[p.property_type] || "—")))}</span></div>
         <div class="fact"><b>Project RERA</b><span>${esc(p.rera_number || "—")}</span></div>
+      </div>` : p.deal === "share" ? `<div class="facts">
+        <div class="fact"><b>Space</b><span>${esc(ROOM[p.room_type] || "Room")}</span></div>
+        <div class="fact"><b>Suits</b><span>${esc(SUITS_TXT[p.suits] || "Anyone")}</span></div>
+        <div class="fact"><b>Bills</b><span>${p.bills_included === true ? "Included" : p.bills_included === false ? "Not included" : "—"}</span></div>
+        <div class="fact"><b>Move in</b><span>${esc(p.move_in || "—")}</span></div>
       </div>` : `<div class="facts">
         <div class="fact"><b>Type</b><span>${esc(cap(TYPE[p.property_type] || "Any"))}</span></div>
         <div class="fact"><b>Bedrooms</b><span>${p.bedrooms ? esc(p.bedrooms + " BHK") : "—"}</span></div>
@@ -1070,7 +1093,15 @@ function openEditForm(id) {
   $("#sheet-body").innerHTML = `
     <form id="edit-form" novalidate>
       <p class="muted">Change anything below and save. Your post updates on the map straight away.</p>
-      ${!isReq && !dev ? `<div class="field"><span>Listing for</span><div class="seg">
+      ${p.deal === "share" ? `<div class="grid2">
+        <label class="field"><span>Space</span><select id="e-roomtype">${Object.entries(ROOM).map(([v, l]) => `<option value="${v}"${p.room_type === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label class="field"><span>Suits</span><select id="e-suits">${Object.entries(SUITS_TXT).map(([v, l]) => `<option value="${v}"${(p.suits || "any") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+      </div>
+      <div class="grid2">
+        <label class="field"><span>Move in</span><input id="e-movein" maxlength="40" value="${esc(p.move_in)}" placeholder="e.g. 1 Dec or now"></label>
+        <label class="field"><span>Bills</span><select id="e-bills"><option value="">Not said</option><option value="yes"${p.bills_included === true ? " selected" : ""}>Included</option><option value="no"${p.bills_included === false ? " selected" : ""}>Not included</option></select></label>
+      </div>` : ""}
+      ${!isReq && !dev && p.deal !== "share" ? `<div class="field"><span>Listing for</span><div class="seg">
         <button type="button" class="segb" data-deal="sale" aria-pressed="${p.deal !== "rent"}">Sale</button>
         <button type="button" class="segb" data-deal="rent" aria-pressed="${p.deal === "rent"}">Rent</button></div></div>` : ""}
       ${dev ? `<label class="field"><span>Project name</span><input id="e-building" value="${esc(p.building)}"></label>
@@ -1140,7 +1171,7 @@ function openEditForm(id) {
     if (!val("#e-city")) { err.hidden = false; err.textContent = "Please add the city."; return; }
     if (!val("#e-locality") && !val("#e-building")) { err.hidden = false; err.textContent = "Please add the area or building."; return; }
     if ($("#e-unit") && !val("#e-unit")) { err.hidden = false; err.textContent = "Please add the unit number. Visitors never see it."; return; }
-    if ($("#e-size") && !Number(String(val("#e-size")).replace(/\D/g, ""))) { err.hidden = false; err.textContent = "Please add the size in sq ft."; return; }
+    if ($("#e-size") && p.deal !== "share" && !Number(String(val("#e-size")).replace(/\D/g, ""))) { err.hidden = false; err.textContent = "Please add the size in sq ft."; return; }
     btn.disabled = true;
     try {
       const urls = [...E.photos];
@@ -1161,6 +1192,8 @@ function openEditForm(id) {
       if ($("#e-rera")) body.rera_number = val("#e-rera");
       if ($("#e-unit")) body.unit_number = val("#e-unit");
       if ($("#e-cobroke")) body.cobroke = $("#e-cobroke").checked;
+      if ($("#e-roomtype")) Object.assign(body, { room_type: val("#e-roomtype"), suits: val("#e-suits"), move_in: val("#e-movein"),
+        bills_included: val("#e-bills") === "yes" ? true : val("#e-bills") === "no" ? false : null });
       if (val("#e-maps")) body.maps_link = val("#e-maps");
       if ($("#e-size")) body.size_sqft = Number(val("#e-size").replace(/\D/g, ""));
       if (!isReq) body.photos = urls;
@@ -1185,7 +1218,7 @@ function thumbOf(p) { return p.photos && p.photos.length ? shown(p.photos[0]) : 
 
 function openList() {
   const items = visiblePosts().filter(inView);
-  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects", commercial: "commercial properties", land: "plots" }[S.filter] || "properties";
+  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects", commercial: "commercial properties", land: "plots", share: "rooms to share" }[S.filter] || "properties";
   $("#panel-content").innerHTML = `
     <div class="list-head">
       <h2>${items.length} ${esc(items.length === 1 ? label.replace(/ies$/, "y").replace(/s$/, "") : label)} in this view</h2>
@@ -1766,7 +1799,7 @@ function openComposer() {
   $("#sheet-body").innerHTML = `<div class="log" id="log"></div>`;
   $("#sheet-foot").innerHTML = `
     <form class="composer" id="composer">
-      ${role === "buyer" || role === "tenant" ? "" : `<label class="cam" title="Add photos" aria-label="Add photos">📷<input type="file" id="chat-pics" accept="image/*" multiple hidden></label>`}
+      ${role === "buyer" ? "" : `<label class="cam" title="Add photos" aria-label="Add photos">📷<input type="file" id="chat-pics" accept="image/*" multiple hidden></label>`}
       <div class="msg-wrap"><textarea id="msg" rows="2" placeholder="Describe what you want to post…" aria-label="Message"></textarea><div class="ghost" id="ghost" aria-hidden="true"></div></div>
       <button class="btn accent" id="send" aria-label="Send">Send</button>
     </form>`;
@@ -1818,7 +1851,7 @@ function openComposer() {
 }
 
 const START = "I want to ";
-const GHOST = "sell / rent out my apartment, villa, office, shop, plot or land, unit no. …, in [building, area, city] for [price], size … sq ft";
+const GHOST = "sell / rent out / share my apartment, villa, office, shop, plot, land or a room, unit no. …, in [building, area, city] for [price], size … sq ft";
 /* Faded suggestion that follows "I want to " until the person starts typing their own words. */
 function ghostUpdate() {
   const t = $("#msg"), g = $("#ghost");
@@ -1923,13 +1956,16 @@ function renderDraft(d) {
       <dt>Posting as</dt><dd>${esc(posterLine(d))}</dd>
       <dt>${isListing ? "Price" : "Budget"}</dt><dd>${esc(priceOf(d).replace(/^Budget /, ""))}</dd>
       ${d.size_sqft ? `<dt>Size</dt><dd>${esc(sizeOf(d))}</dd>` : ""}
-      ${d.unit_number ? `<dt>Unit</dt><dd>${esc(d.unit_number)} <span class="muted">(only you see this)</span></dd>` : ""}
+      ${d.unit_number ? `<dt>Unit</dt><dd>${esc(d.unit_number)}${d.room ? " · " + esc(d.room) : ""} <span class="muted">(only you see this)</span></dd>` : ""}
+      ${d.deal === "share" ? `<dt>Suits</dt><dd>${esc(SUITS_TXT[d.suits] || "Anyone")}${d.move_in ? " · moving in " + esc(d.move_in) : ""}</dd>` : ""}
       <dt>On the map</dt><dd>${esc(d.address || placeOf(d))}${d.precision === "area" ? " (sector / area pin)" : ""}</dd>
       <dt>Contact</dt><dd>${esc(d.contact_name)} · +${esc(d.contact_phone)}</dd>
     </dl>
     ${(d.notes || []).map((n) => `<p class="note">${esc(n)}</p>`).join("")}
     ${d.precision === "area" && isListing ? `<p class="note">The pin is at the area, not the building. For an exact pin, paste a Google Maps link in the chat.</p>` : ""}
     ${d.poster_type === "broker" ? `<label class="chip-check"><input type="checkbox" class="d-cobroke"> Open to co-broking with other brokers</label>` : ""}
+    ${isListing && d.deal === "share" ? `<p class="note">In many places (including Dubai) you need the owner's or landlord's consent to share or sublet, and partitioned rooms aren't allowed.</p>
+      <label class="chip-check" style="margin-bottom:10px"><input type="checkbox" class="d-permit"> I have permission to share this space</label>` : ""}
     ${S.chatPics.length && isListing ? `<p class="muted" style="font-size:13px">${S.chatPics.length} photo${S.chatPics.length > 1 ? "s" : ""} from the chat will be added.</p>` : ""}
     ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
     ${isListing ? `<label class="photo-pick">Add photos (optional, up to 8)<input type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="thumbs"></div>` : ""}
@@ -1964,8 +2000,11 @@ async function confirmDraft(d, btn) {
       urls.push(await uploadPhoto(S.draftPhotos[i]));
     }
     btn.textContent = "Posting…";
-    const cob = btn.closest(".draft") && btn.closest(".draft").querySelector(".d-cobroke");
-    const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id, photos: [...S.chatPics, ...urls].slice(0, 8), cobroke: !!(cob && cob.checked) }) });
+    const card = btn.closest(".draft");
+    const cob = card && card.querySelector(".d-cobroke");
+    const permit = card && card.querySelector(".d-permit");
+    if (permit && !permit.checked) { btn.disabled = false; return toast("Please confirm you have permission to share this space."); }
+    const r = await api("/posts", { method: "POST", body: JSON.stringify({ draftId: d.id, photos: [...S.chatPics, ...urls].slice(0, 8), cobroke: !!(cob && cob.checked), share_permission: !!(permit && permit.checked) }) });
     S.chat = []; S.draft = null; S.draftPhotos = []; S.devForm = null; S.chatPics = []; S.pendingPics = [];
     closeSheet();
     toast(r.post.kind === "listing" ? "Posted! Your property is on the map." : "Posted! Your request is on the map.");
@@ -2027,7 +2066,7 @@ const ASK_STARTERS = {
   broker: ["Find listings open to co-broking in Dubai Marina", "Buyer requests that match my listings", "Score my listings", "Rewrite my listing in plain words"],
   developer: ["Rewrite my project description", "Translate my project into Hindi", "What are similar projects priced at?"],
   buyer: ["Is this area's price fair?", "What can I afford?", "Post my request so brokers can find me", "Alert me when something matches"],
-  tenant: ["Find me a rental under my budget", "Rent vs buy for me", "Post my rental request", "Alert me when something matches"]
+  tenant: ["Find a room to share under AED 4,000 in Dubai Marina", "Find me a rental under my budget", "Rent vs buy for me", "Post my rental request", "Alert me when something matches"]
 };
 
 function openAssistant(context = null) {
