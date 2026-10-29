@@ -67,6 +67,7 @@ export async function handle(req, deps) {
       for (const p of posts) p.contact_avatar = avatars[p.user_id] || null;
       const info = marketInfo(posts);
       const watched = viewer ? new Set((await store.rows("watches", { user_id: viewer.id })).map((w) => w.post_id)) : new Set();
+      const hiddenIds = viewer ? new Set((await store.rows("hidden_posts", { user_id: viewer.id }, { limit: 2000 })).map((h) => h.post_id)) : new Set();
       const visible = collapseUnits(posts, viewer).filter((p) => canSee(p, viewer)).map((p) => {
         const out = toPublic(p, viewer);
         const i = info.get(p.id) || {};
@@ -77,6 +78,7 @@ export async function handle(req, deps) {
         out.good_deal = !!i.deal;
         out.warnings = flags.filter((f) => insider || PUBLIC_FLAGS.includes(f)).map((f) => FLAG_TEXT[f]).filter(Boolean);
         out.watched = watched.has(p.id);
+        out.hidden = hiddenIds.has(p.id);
         out.cobroke = !!p.cobroke && (insider || !!(viewer && viewer.isBroker));
         out.needs_confirm = !!(insider && p.stale_notified_at);
         return out;

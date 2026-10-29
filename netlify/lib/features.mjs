@@ -1,6 +1,6 @@
 // Phase 1 + 2 routes: notifications, alerts, watching, enquiries and viewings, pitches, co-broking,
 // tenancies with repair links, the admin flag list, and background jobs.
-import { isUuid, clean, cleanPhone, canSee, leadPool } from "./core.mjs";
+import { isUuid, clean, cleanPhone, canSee, leadPool, toPublic } from "./core.mjs";
 import { matchesCriteria, describeCriteria, listingFitsRequest } from "./market.mjs";
 import { notifyMany } from "./notify.mjs";
 import { postTitle } from "./events.mjs";
@@ -134,6 +134,7 @@ export async function features(c) {
     if (method === "POST") {
       const post = await store.getPost(watch[1]);
       if (!post || post.status !== "active" || post.kind !== "listing") return json({ error: "Not found" }, 404);
+      if (post.user_id === user.id) return json({ error: "You can't shortlist your own listing." }, 400);
       const has = await store.rows("watches", { user_id: user.id, post_id: post.id });
       if (!has.length) await store.insert("watches", { user_id: user.id, post_id: post.id });
       return json({ watching: true });
@@ -142,6 +143,60 @@ export async function features(c) {
       await store.remove("watches", { user_id: user.id, post_id: watch[1] });
       return json({ watching: false });
     }
+  }
+
+  /* ---------- hide a listing ("not for me"): gone from this person's map and list ---------- */
+  const hide = path.match(/^\/posts\/([^/]+)\/hide$/);
+  if (hide) {
+    if (!isUuid(hide[1])) return json({ error: "Not found" }, 404);
+    if (method === "POST") {
+      const post = await store.getPost(hide[1]);
+      if (!post || post.kind !== "listing") return json({ error: "Not found" }, 404);
+      if (post.user_id === user.id) return json({ error: "You can't hide your own listing." }, 400);
+      const has = await store.rows("hidden_posts", { user_id: user.id, post_id: post.id });
+      if (!has.length) await store.insert("hidden_posts", { user_id: user.id, post_id: post.id });
+      // Hiding something takes it off the shortlist too.
+      await store.remove("watches", { user_id: user.id, post_id: post.id });
+      return json({ hidden: true });
+    }
+    if (method === "DELETE") {
+      await store.remove("hidden_posts", { user_id: user.id, post_id: hide[1] });
+      return json({ hidden: false });
+    }
+  }
+  /* ---------- the hidden list in My profile: see it, or clear it all ---------- */
+  if (path === "/hidden" && method === "GET") {
+    const rows = await store.rows("hidden_posts", { user_id: user.id }, { order: "created_at", asc: false, limit: 500 });
+    const out = [];
+    for (const r of rows) {
+      const p = await store.getPost(r.post_id);
+      if (!p) continue;
+      const v = toPublic(p, null);
+      out.push({ id: p.id, kind: p.kind, deal: v.deal, poster_type: v.poster_type, property_type: v.property_type, bedrooms: v.bedrooms, room_type: v.room_type,
+        price: v.price, currency: v.currency, building: v.building, locality: v.locality, city: v.city, photos: v.photos.slice(0, 1),
+        status: p.status, hidden_at: r.created_at });
+    }
+    return json({ hidden: out });
+  }
+  if (path === "/hidden" && method === "DELETE") {
+    await store.remove("hidden_posts", { user_id: user.id });
+    return json({ ok: true });
+  }
+  /* ---------- after signing in: keep what was shortlisted or hidden on this device ---------- */
+  if (path === "/saved/merge" && method === "POST") {
+    const b = await read();
+    const ids = (a) => (Array.isArray(a) ? [...new Set(a.filter(isUuid))].slice(0, 200) : []);
+    const done = { shortlisted: 0, hidden: 0 };
+    for (const [list, table] of [[ids(b.shortlist), "watches"], [ids(b.hidden), "hidden_posts"]]) {
+      for (const id of list) {
+        const post = await store.getPost(id);
+        if (!post || post.kind !== "listing" || post.user_id === user.id) continue;
+        if ((await store.rows(table, { user_id: user.id, post_id: id })).length) continue;
+        await store.insert(table, { user_id: user.id, post_id: id });
+        done[table === "watches" ? "shortlisted" : "hidden"]++;
+      }
+    }
+    return json(done);
   }
 
   /* ---------- "still available" ---------- */
