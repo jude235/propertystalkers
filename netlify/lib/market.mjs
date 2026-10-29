@@ -117,7 +117,7 @@ export function describeCriteria(c = {}) {
     : c.category === "commercial" ? "commercial property"
     : c.category === "land" ? "land / plots"
     : (c.min_bedrooms ? `${c.min_bedrooms}+ bed ` : "") + (Array.isArray(c.types) && c.types.length ? c.types.join(" / ") : "homes");
-  const deal = c.deal === "rent" ? " to rent" : c.deal === "sale" ? " for sale" : c.deal === "share" ? " to share" : "";
+  const deal = c.deal === "rent" ? " to rent" : c.deal === "sale" ? " for sale" : c.deal === "share" ? " in co-living" : c.deal === "stay" ? " as holiday homes" : "";
   const where = [c.area, c.city].filter(Boolean).join(", ");
   const money = c.max_price ? ` up to ${c.currency || ""} ${Number(c.max_price).toLocaleString("en-US")}`.replace("  ", " ") : "";
   return `${c.deals_only ? "Deals on " : ""}${what}${deal}${where ? " in " + where : ""}${money}`.trim();

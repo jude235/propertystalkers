@@ -2,7 +2,7 @@
 //   /property/<id>  one page per active listing (requests and drafts are never public)
 //   /sitemap.xml    every listing the map shows to visitors
 // Only what a signed-out visitor already sees on the map is used. No phone numbers, no unit numbers, no requests.
-import { collapseUnits, toPublic } from "./core.mjs";
+import { collapseUnits, toPublic, INTEREST_LABEL } from "./core.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -11,7 +11,7 @@ const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const TYPE = { apartment: "apartment", villa: "villa", independent_house: "independent house", plot: "plot", office: "office", shop: "shop", warehouse: "warehouse", other: "" };
 const ROOM = { private_room: "Private room", shared_room: "Shared room", bed_space: "Bed space", whole_unit: "Flat to share" };
 const SUITS = { any: "Anyone", male: "Men", female: "Women", couples: "Couples" };
-const POSTER = { landlord: "Owner", broker: "Broker", developer: "Developer" };
+const POSTER = { landlord: "Owner", broker: "Broker", developer: "Developer", host: "Host", tenant: "Tenant" };
 const AMENITIES = { wifi: "WiFi", ac: "AC", furnished: "Furnished", parking: "Parking", pool: "Pool", gym: "Gym", security: "24/7 security",
   balcony: "Balcony", lift: "Lift", power_backup: "Power backup", kitchen: "Modular kitchen", maid: "Housekeeping", laundry: "Laundry",
   meals: "Meals", pets: "Pet friendly", metro: "Near metro", garden: "Garden", view: "View" };
@@ -26,7 +26,8 @@ const what = (p) => {
 };
 export function titleOf(p) {
   if (isDev(p)) return p.building || "New project";
-  if (p.deal === "share") return p.room_type === "whole_unit" ? "Flat to share" : `${ROOM[p.room_type] || "Room"} to share`;
+  if (p.deal === "share") return p.room_type === "whole_unit" ? "Co-living flat" : `${ROOM[p.room_type] || "Room"} in co-living`;
+  if (p.deal === "stay") return p.bedrooms ? `${p.bedrooms} BHK holiday home` : "Holiday home";
   return cap(`${what(p)} for ${p.deal === "rent" ? "rent" : "sale"}`);
 }
 export const placeOf = (p) => [isDev(p) ? null : p.building, p.locality, p.city].filter(Boolean).join(", ");
@@ -45,6 +46,7 @@ export function priceOf(p) {
     return p.price ? `${amount(p)} a month per person${bills}` : "Rent on request";
   }
   if (isDev(p)) return p.price ? `From ${amount(p)}` : "Price on request";
+  if (p.deal === "stay") return p.price ? `${amount(p)} a night` : "Price on request";
   return p.price ? `${amount(p)}${p.deal === "rent" ? " a month" : ""}` : "Price on request";
 }
 function postedBy(p) {
@@ -98,7 +100,7 @@ function structuredData(p, url) {
       availability: "https://schema.org/InStock",
       url
     };
-    if (p.deal !== "sale") data.offers.priceSpecification = { "@type": "UnitPriceSpecification", price: Number(p.price), priceCurrency: p.currency || "INR", unitCode: "MON" };
+    if (p.deal !== "sale") data.offers.priceSpecification = { "@type": "UnitPriceSpecification", price: Number(p.price), priceCurrency: p.currency || "INR", unitCode: p.deal === "stay" ? "DAY" : "MON" };
   }
   return JSON.stringify(data, (k, v) => (v === undefined ? undefined : v)).replace(/</g, "\\u003c");
 }
@@ -203,6 +205,11 @@ export function propertyPage(raw, { site, all = [], canonicalId = null, supabase
     add("Suits", SUITS[p.suits] || "");
     add("Bills", p.bills_included === true ? "Included" : p.bills_included === false ? "Extra" : "");
     add("Move in", p.move_in || "");
+  } else if (p.deal === "stay") {
+    add("Type", cap(TYPE[p.property_type] || "") || "");
+    add("Bedrooms", p.bedrooms ? (p.bedrooms === 1 ? "1 bedroom" : `${p.bedrooms} bedrooms`) : "");
+    add("Sleeps", p.guests ? `${p.guests} guests` : "");
+    add("Minimum stay", p.min_nights ? (p.min_nights === 1 ? "1 night" : `${p.min_nights} nights`) : "");
   } else {
     add("Type", cap(TYPE[p.property_type] || "") || "");
     add("Bedrooms", p.bedrooms ? (p.bedrooms === 1 ? "1 bedroom" : `${p.bedrooms} bedrooms`) : "");
@@ -215,7 +222,7 @@ export function propertyPage(raw, { site, all = [], canonicalId = null, supabase
   }
   add("Listed by", postedBy(p));
   const changed = lastChange(p);
-  const deal = p.deal === "share" ? "Room to share" : isDev(p) ? "New project" : p.deal === "rent" ? "For rent" : "For sale";
+  const deal = p.deal === "share" ? "Co-living" : p.deal === "stay" ? "Holiday home" : isDev(p) ? "New project" : p.deal === "rent" ? "For rent" : "For sale";
   const body = `<main>
   <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a>${p.country ? ` › ${esc(p.country)}` : ""}${p.city ? ` › ${esc(p.city)}` : ""}${p.locality ? ` › ${esc(p.locality)}` : ""}</nav>
   ${photos.length ? `<div class="photos">${photos.map((u, i) => `<img src="${esc(u)}" alt="${esc(titleOf(p))}, photo ${i + 1}" loading="${i ? "lazy" : "eager"}" width="560" height="420">`).join("")}</div>` : `<div class="nophoto">${LOGO.replace('width="24" height="27"', 'width="56" height="63"')}</div>`}
@@ -224,7 +231,8 @@ export function propertyPage(raw, { site, all = [], canonicalId = null, supabase
   <p class="price">${esc(priceOf(p))}</p>
   <span class="tag">${deal}</span>${p.source === "dld" ? `<span class="tag">From Dubai Land Department project records</span>` : ""}
   <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-  ${p.description ? `<h2>About this ${p.deal === "share" ? "room" : isDev(p) ? "project" : "property"}</h2><p class="desc">${esc(p.description)}</p>` : ""}
+  ${p.description ? `<h2>About this ${p.deal === "share" ? "room" : p.deal === "stay" ? "stay" : isDev(p) ? "project" : "property"}</h2><p class="desc">${esc(p.description)}</p>` : ""}
+  ${p.deal === "share" && p.interests && p.interests.length ? `<h2>The household</h2><ul class="amen">${p.interests.map((a) => `<li>${esc(INTEREST_LABEL[a] || a)}</li>`).join("")}</ul>` : ""}
   ${p.amenities && p.amenities.length ? `<h2>Amenities</h2><ul class="amen">${p.amenities.map((a) => `<li>${esc(AMENITIES[a] || a)}</li>`).join("")}</ul>` : ""}
   <p class="meta">Listed on ${esc(longDay(p.created_at))}${changed && day(changed.toISOString()) !== day(p.created_at) ? ` · last updated ${esc(longDay(changed.toISOString()))}` : ""}. Prices are asking prices set by the lister.</p>
   ${moreList(p, all, site)}

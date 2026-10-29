@@ -1,7 +1,7 @@
 // All /api/* routes. Dependencies are passed in so the logic can be tested without real services.
 import {
   LIMITS, POSTER_TYPES, isUuid, clean, cleanPhone, cleanRera, buildingKey, validateProposal,
-  makeViewer, canSee, accessSummary, toPublic, sanitizeMessages, unitKey, leadPool, collapseUnits
+  makeViewer, canSee, accessSummary, toPublic, sanitizeMessages, unitKey, leadPool, collapseUnits, roleOf, cleanInterests
 } from "./core.mjs";
 import { marketInfo, textFlags, FLAG_TEXT, PUBLIC_FLAGS } from "./market.mjs";
 import { features } from "./features.mjs";
@@ -152,6 +152,7 @@ export async function handle(req, deps) {
       if (!phone) return json({ error: "Please enter a valid mobile number with country code." }, 400);
       const update = { id: user.id, email, name, phone };
       if (typeof body.notify_email === "boolean") update.notify_email = body.notify_email;
+      if (Array.isArray(body.interests)) update.interests = cleanInterests(body.interests);
       if (body.rera !== undefined) {
         const raw = String(body.rera || "").trim();
         const rera = raw ? cleanRera(raw) : null;
@@ -174,8 +175,8 @@ export async function handle(req, deps) {
     /* ---------- choose / switch role ---------- */
     if (path === "/me/role" && method === "POST") {
       const body = await readJson(req);
-      const role = String(body.role || "").toLowerCase();
-      if (!POSTER_TYPES.includes(role)) return json({ error: "Please choose how you'll use Property Stalkers." }, 400);
+      const role = roleOf(String(body.role || "").toLowerCase());
+      if (!role) return json({ error: "Please choose how you'll use Property Stalkers." }, 400);
       const update = { id: user.id, role };
       if (role === "broker") {
         const licence = cleanRera(body.licence);
@@ -199,7 +200,7 @@ export async function handle(req, deps) {
     async function unitProblem(key, deal, exceptId = null) {
       if (!key) return null;
       const others = (await store.activeByUnitKey(key)).filter((p) => p.id !== exceptId);
-      const what = deal === "rent" ? "for rent" : "for sale";
+      const what = { rent: "for rent", share: "for co-living", stay: "as a holiday home" }[deal] || "for sale";
       if (others.some((p) => p.user_id === user.id)) return `You've already listed this unit ${what}. You can edit that post instead.`;
       if (others.length >= LIMITS.listingsPerUnit) return `This unit is already listed ${what} ${LIMITS.listingsPerUnit} times, which is the most allowed. It can't be listed again unless one of those is removed.`;
       return null;
@@ -292,7 +293,8 @@ export async function handle(req, deps) {
         return json({ error: "You've reached today's limit for the posting assistant. Please try again tomorrow." }, 429);
       }
 
-      const result = await ai.converse(messages, { role: profile.role });
+      const role = roleOf(profile.role);
+      const result = await ai.converse(messages, { role });
       if (!result.proposal) {
         return json({
           type: "message",
@@ -301,7 +303,9 @@ export async function handle(req, deps) {
       }
 
       // The user's chosen role decides who they post as.
-      const proposal = { ...result.proposal, poster_type: profile.role };
+      // Buyer / Tenant posts as a buyer when buying and as a tenant when renting or looking for co-living.
+      const poster_type = role === "seeker" ? (result.proposal.deal === "sale" ? "buyer" : "tenant") : role;
+      const proposal = { ...result.proposal, poster_type };
       if (profile.role === "broker" && !proposal.rera_number) proposal.rera_number = profile.rera_number;
       if (profile.role === "developer" && !proposal.company) proposal.company = profile.company;
       const r = await makeDraft(proposal);
@@ -371,6 +375,7 @@ export async function handle(req, deps) {
         possession: pick("possession"), configs: pick("configs"), description: pick("description"),
         unit_number: pick("unit_number"), size_sqft: pick("size_sqft"), maps_link: b.maps_link,
         room_type: pick("room_type"), room: pick("room"), suits: pick("suits"), bills_included: pick("bills_included"), move_in: pick("move_in"), amenities: pick("amenities"),
+        interests: pick("interests"), guests: pick("guests"), min_nights: pick("min_nights"),
         share_offer: post.kind === "listing"
       });
       if (!v.ok) return json({ error: v.ask }, 400);

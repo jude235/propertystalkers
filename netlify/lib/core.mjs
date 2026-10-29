@@ -1,6 +1,26 @@
 // Business rules: validation, who-can-see-what, and what the browser receives.
 
-export const POSTER_TYPES = ["landlord", "broker", "developer", "buyer", "tenant"];
+export const POSTER_TYPES = ["landlord", "broker", "developer", "buyer", "tenant", "host"];
+/**
+ * The five ways to use the site. "seeker" is Buyer / Tenant (their posts are buyer or tenant requests);
+ * "host" is Co-living / Homestays (rooms in a shared home, and holiday homes by the night).
+ */
+export const ROLES = ["landlord", "broker", "developer", "seeker", "host"];
+/** Profiles saved before the merge said "buyer" or "tenant". */
+export const roleOf = (r) => (r === "buyer" || r === "tenant" ? "seeker" : ROLES.includes(r) ? r : null);
+/** sale, rent, share (co-living), stay (holiday home, priced per night). */
+export const DEALS = ["sale", "rent", "share", "stay"];
+/** Co-living: what a household is like and what people enjoy, used to rank and match flatmates. */
+export const INTERESTS = ["non_smoker", "vegetarian", "pet_lover", "early_riser", "night_owl", "work_from_home", "professional", "student",
+  "quiet", "social", "tidy", "fitness", "yoga", "cooking", "music", "movies", "gaming", "reading", "travel", "outdoors", "sports",
+  "art", "tech", "nightlife"];
+export const INTEREST_LABEL = { non_smoker: "Non-smoker", vegetarian: "Vegetarian", pet_lover: "Pet lover", early_riser: "Early riser",
+  night_owl: "Night owl", work_from_home: "Works from home", professional: "Working professional", student: "Student", quiet: "Quiet home",
+  social: "Social", tidy: "Very tidy", fitness: "Fitness", yoga: "Yoga", cooking: "Cooking", music: "Music", movies: "Movies", gaming: "Gaming",
+  reading: "Reading", travel: "Travel", outdoors: "Outdoors", sports: "Sports", art: "Art & design", tech: "Tech", nightlife: "Going out" };
+export const cleanInterests = (a) => (Array.isArray(a) ? [...new Set(a.filter((x) => INTERESTS.includes(x)))].slice(0, 15) : []);
+/** Interests two people (or a person and a household) have in common. */
+export const sharedInterests = (a, b) => { const B = new Set(Array.isArray(b) ? b : []); return (Array.isArray(a) ? a : []).filter((x) => B.has(x)); };
 export const PROPERTY_TYPES = ["apartment", "villa", "independent_house", "plot", "office", "shop", "warehouse", "other"];
 export const COMMERCIAL_TYPES = ["office", "shop", "warehouse"];
 /** "Let's share": what is being shared, and who it suits. */
@@ -135,7 +155,7 @@ function toInt(v, min, max) {
 export function validateProposal(input = {}) {
   const poster = String(input.poster_type || "").toLowerCase();
   if (!POSTER_TYPES.includes(poster)) {
-    return { ok: false, ask: "Are you the landlord, a broker, a developer, a buyer or a tenant?" };
+    return { ok: false, ask: "Are you the owner, a broker, a developer, a buyer or tenant, or a co-living / homestay host?" };
   }
 
   let poster_type = poster;
@@ -157,18 +177,24 @@ export function validateProposal(input = {}) {
 
   const wantDeal = String(input.deal || "").toLowerCase();
   // A tenant can look for a place, or share the place they live in (then it's a listing).
-  const sharingOut = wantDeal === "share" && (poster_type === "landlord" || poster_type === "broker" || (poster_type === "tenant" && !!input.share_offer));
+  const sharingOut = wantDeal === "share" && (poster_type === "landlord" || poster_type === "broker" || poster_type === "host" || (poster_type === "tenant" && !!input.share_offer));
   const kind = sharingOut ? "listing" : poster_type === "buyer" || poster_type === "tenant" ? "request" : "listing";
   let deal;
   if (poster_type === "buyer") deal = "sale";
   else if (poster_type === "tenant") deal = wantDeal === "share" ? "share" : "rent";
   else if (poster_type === "developer") deal = wantDeal === "rent" ? "rent" : "sale";
-  else {
+  else if (poster_type === "host") {
     deal = wantDeal;
-    if (!["sale", "rent", "share"].includes(deal)) {
-      return { ok: false, ask: "Do you want to sell it, rent it out, or share it (a room or bed space)?" };
+    if (!["share", "stay"].includes(deal)) {
+      return { ok: false, ask: "Are you offering a room in a shared home (co-living), or a holiday home that guests book by the night?" };
+    }
+  } else {
+    deal = wantDeal;
+    if (!DEALS.includes(deal)) {
+      return { ok: false, ask: "Do you want to sell it, rent it out, share it (co-living), or let it as a holiday home by the night?" };
     }
   }
+  const stay = deal === "stay";
   const shareListing = deal === "share" && kind === "listing";
   const room_type = deal === "share" ? (ROOM_TYPES.includes(input.room_type) ? input.room_type : null) : null;
   if (shareListing && !room_type) {
@@ -193,8 +219,8 @@ export function validateProposal(input = {}) {
     if (!unit_number) {
       return { ok: false, ask: "What's the unit, flat or villa number? It's never shown to visitors; it only stops the same unit being listed too many times." };
     }
-    // Room sizes are often unknown, so size is required only for whole properties.
-    if (!size_sqft && !shareListing) return { ok: false, ask: "What's the size of the property in sq ft?" };
+    // Room sizes are often unknown, so size is required only for whole properties sold or rented.
+    if (!size_sqft && !shareListing && !stay) return { ok: false, ask: "What's the size of the property in sq ft?" };
   }
   const price = toInt(input.price, 1, 100_000_000_000);
   const currency = cleanCurrency(input.currency) || (price ? "INR" : null);
@@ -224,6 +250,9 @@ export function validateProposal(input = {}) {
       suits: deal === "share" ? (SUITS.includes(input.suits) ? input.suits : "any") : null,
       bills_included: deal === "share" && typeof input.bills_included === "boolean" ? input.bills_included : null,
       move_in: deal === "share" ? clean(input.move_in, 40) : null,
+      interests: deal === "share" ? cleanInterests(input.interests) : [],
+      guests: stay ? toInt(input.guests, 1, 50) : null,
+      min_nights: stay ? toInt(input.min_nights, 1, 365) : null,
       amenities: kind === "listing" ? cleanAmenities(input.amenities) : [],
       maps_link: cleanMapsLink(input.maps_link),
       description: clean(input.description, 400),
@@ -244,7 +273,8 @@ export function makeViewer({ user, profile, isAdmin = false, sharesSpace = false
     // Anyone offering a room can see who's looking for one (flatmate matching).
     sharesSpace: !!sharesSpace,
     // Brokers see requests only while acting as a broker (switching role turns it off).
-    isBroker: !!(profile && profile.rera_number && (!profile.role || profile.role === "broker"))
+    isBroker: !!(profile && profile.rera_number && (!profile.role || profile.role === "broker")),
+    interests: profile && Array.isArray(profile.interests) ? profile.interests : []
   };
 }
 
@@ -299,6 +329,9 @@ export function toPublic(post, viewer) {
     suits: post.suits || null,
     bills_included: post.bills_included ?? null,
     move_in: post.move_in || null,
+    interests: Array.isArray(post.interests) ? post.interests : [],
+    guests: post.guests ?? null,
+    min_nights: post.min_nights ?? null,
     amenities: Array.isArray(post.amenities) ? post.amenities : [],
     unit_number: insider ? post.unit_number || null : null,
     contact_on_tap: gated,

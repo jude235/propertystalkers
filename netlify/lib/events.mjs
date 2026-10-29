@@ -1,12 +1,13 @@
 // What happens after a post is published or changed: alerts, the request matcher and price-drop alerts.
 import { marketInfo, matchesCriteria, listingFitsRequest, describeCriteria } from "./market.mjs";
 import { notifyMany } from "./notify.mjs";
+import { sharedInterests, INTEREST_LABEL } from "./core.mjs";
 
 const MAX_PER_EVENT = 40;
 
 function money(p) {
   if (!p.price) return "";
-  return `${p.currency || "INR"} ${Number(p.price).toLocaleString("en-US")}${p.deal === "rent" ? "/month" : ""}`;
+  return `${p.currency || "INR"} ${Number(p.price).toLocaleString("en-US")}${p.deal === "rent" || p.deal === "share" ? "/month" : p.deal === "stay" ? "/night" : ""}`;
 }
 const ROOM = { private_room: "private room", shared_room: "shared room", bed_space: "bed space", whole_unit: "flat to share" };
 export function postTitle(p) {
@@ -14,6 +15,10 @@ export function postTitle(p) {
     const where = [p.building, p.locality, p.city].filter(Boolean).join(", ");
     const r = ROOM[p.room_type] || "room";
     return p.kind === "request" ? `looking for a ${r === "flat to share" ? "flat to share" : r + " to share"}${where ? " in " + where : ""}` : `${r === "flat to share" ? "Flat to share" : r[0].toUpperCase() + r.slice(1) + " to share"}${where ? " in " + where : ""}`;
+  }
+  if (p.deal === "stay") {
+    const where = [p.building, p.locality, p.city].filter(Boolean).join(", ");
+    return `${p.bedrooms ? p.bedrooms + " BHK holiday home" : "Holiday home"}${where ? " in " + where : ""}`;
   }
   const t = { apartment: "apartment", villa: "villa", independent_house: "house", plot: "plot", office: "office", shop: "shop", warehouse: "warehouse" }[p.property_type] || "property";
   const what = p.poster_type === "developer" ? (p.building || "New project") : `${p.bedrooms ? p.bedrooms + " BHK " : ""}${t}`;
@@ -42,8 +47,10 @@ export async function onListingLive(deps, post, { previous = null } = {}) {
     for (const r of all) {
       if (r.kind !== "request" || r.user_id === post.user_id) continue;
       if (!listingFitsRequest(post, r)) continue;
+      const common = post.deal === "share" ? sharedInterests(post.interests, r.interests) : [];
+      const like = common.length ? ` You have ${common.length} thing${common.length > 1 ? "s" : ""} in common: ${common.slice(0, 4).map((x) => INTEREST_LABEL[x] || x).join(", ")}.` : "";
       out.push({ user_id: r.user_id, kind: "match", post_id: post.id, ref_id: r.id,
-        title: `A listing fits your request: ${postTitle(post)}`, body: `${money(post)}. Open it on the map to see details and contact the lister.` });
+        title: `A listing fits your request: ${postTitle(post)}`, body: `${money(post)}.${like} Open it on the map to see details and contact the lister.` });
     }
   }
   return notifyMany(deps, out.slice(0, MAX_PER_EVENT));
