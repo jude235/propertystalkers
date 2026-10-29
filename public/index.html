@@ -69,8 +69,15 @@
     #map-wrap { bottom: calc(var(--bar) + env(safe-area-inset-bottom)); }
     .fab { bottom: calc(11px + env(safe-area-inset-bottom)) !important; box-shadow: none; }
     .ask-fab { bottom: calc(7px + env(safe-area-inset-bottom)) !important; box-shadow: none; }
-    .role-pill { bottom: calc(var(--bar) + 12px + env(safe-area-inset-bottom)) !important; }
+    .role-pill { display: none !important; }  /* on phones the Switch button in the bar does this */
+    .switch-btn:not([hidden]) { display: flex; position: fixed; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 20; height: 48px; min-width: 78px; max-width: 96px;
+      padding: 0 10px; border-radius: 999px; border: 1px solid var(--brass); background: transparent; color: var(--brand-ink); cursor: pointer;
+      flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+    .switch-btn b { font-size: 13px; font-weight: 700; }
+    .switch-btn small { font-size: 10px; color: var(--brass); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .switch-btn:not([hidden]) ~ .fab { left: 114px; right: 72px; transform: none; justify-content: center; max-width: none; }
   }
+  .switch-btn { display: none; }
 
   /* ---------- header ---------- */
   .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; pointer-events: none; }
@@ -333,6 +340,46 @@
   .panel:not(.open) { pointer-events: none; }
   .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 8px auto 0; }
   /* The list of properties sits on the theme's deep colour (emerald by default). */
+  /* Swipe cards in the list: about three to a screen. */
+  .panel { --lc-photo: max(96px, calc((100vh - 24px - 150px) / 3 - 98px)); }
+  @media (max-width: 759px) {
+    .panel.list-mode { max-height: 92vh; max-height: 92dvh; }
+    .panel { --lc-photo: max(84px, calc((92vh - 150px) / 3 - 98px)); --lc-photo: max(84px, calc((92dvh - 150px) / 3 - 98px)); }
+  }
+  .panel.list-mode .list-head { padding: 14px 14px 8px; }
+  .panel.list-mode .list-head h2 { font-size: 18px; margin: 0 0 2px; }
+  .panel.list-mode .list-head p { font-size: 12px; }
+  .list-tabs { display: flex; gap: 6px; margin: 0 0 12px; padding-right: 44px; }
+  .list-tabs button { flex: 1; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(243, 235, 221, .28); background: none; color: #f3ebdd; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .list-tabs button[aria-pressed="true"] { background: var(--brass); color: var(--brand-deep); border-color: var(--brass); }
+  .panel.list-mode .swipe-hint { font-size: 12px; color: var(--brass); margin-top: 6px; }
+  .lh-hidden { display: block; margin-top: 6px; font-size: 12px; color: rgba(243, 235, 221, .85); }
+  .lcard { position: relative; margin: 0 12px 12px; border-radius: 16px; }
+  .lc-under { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 22px; border-radius: 16px; font-weight: 800; font-size: 16px;
+    color: #fff; background: #2e7d4f; opacity: 0; transition: opacity .15s; }
+  .lc-under .lc-no { display: none; margin-left: auto; }
+  .lcard.go-no .lc-under { background: #5b6560; }
+  .lcard.go-no .lc-yes { display: none; } .lcard.go-no .lc-no { display: inline; }
+  .lcard.dragging .lc-under, .lcard.leaving .lc-under { opacity: 1; }
+  .lcard.armed .lc-under span { transform: scale(1.18); transition: transform .12s; }
+  .lc-front { position: relative; background: var(--brand); border: 1px solid rgba(243, 235, 221, .12); border-radius: 16px; overflow: hidden; transition: transform .25s ease; }
+  .lcard.dragging .lc-front { transition: none; }
+  .lcard.pulse .lc-heart { animation: lc-pop .5s; }
+  @keyframes lc-pop { 40% { transform: scale(1.35); } }
+  .lcard.collapse { overflow: hidden; margin-bottom: 0; transition: height .25s ease, margin .25s ease; }
+  .lc-photos { display: flex; height: var(--lc-photo); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; background: rgba(0, 0, 0, .25); cursor: pointer; }
+  .lc-photos::-webkit-scrollbar { display: none; }
+  .lc-photos img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; user-select: none; -webkit-user-drag: none; }
+  .lc-count { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; pointer-events: none; }
+  .lc-heart { position: absolute; top: 8px; right: 8px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+  .lc-heart[aria-pressed="true"] { background: #fff; color: #d6336c; }
+  .lcard .lc-info { display: flex; align-items: flex-start; gap: 10px; border-top: 0; padding: 10px 12px 12px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .lcard .lc-info > div { flex: 1; min-width: 0; }
+  .lcard .lc-info b, .lcard .lc-info > div > small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lc-x { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(243, 235, 221, .28); background: none; color: rgba(243, 235, 221, .85); font-size: 14px; cursor: pointer; }
+  .hidden-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--soft); font-size: 13px; color: var(--muted); }
+  .toast-undo { margin-left: 12px; border: 1px solid var(--brass); background: none; color: var(--brass); border-radius: 999px; padding: 3px 12px; font-weight: 700; cursor: pointer; }
+  .toast.show { pointer-events: auto; }
   .map-tint { position: absolute; width: 10000px; height: 10000px; pointer-events: none; background: var(--map-tint); }
   .panel.list-mode { background: var(--brand-deep); color: #f3ebdd; }
   .panel.list-mode .grab { background: rgba(243, 235, 221, .3); }
@@ -562,6 +609,7 @@
   <div class="banner-row"><div class="banner" id="banner" hidden></div></div>
 </div>
 
+<button class="switch-btn" id="switch-btn" type="button" hidden aria-label="Switch role"><b>Switch</b><small id="sw-role"></small></button>
 <button class="role-pill" id="role-pill" hidden></button>
 <button class="fab" id="fab">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -1003,6 +1051,50 @@ function renderAccountButton() {
   }
 }
 
+/* ---------------- shortlist (swipe right) and hidden (swipe left) ----------------
+   Signed in: saved to the account (the shortlist is the same as watching the price).
+   Signed out: kept on this device, and moved to the account after signing in. */
+const LOCAL = {
+  get(k) { try { const v = JSON.parse(store.get(k) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } },
+  set(k, v) { store.set(k, JSON.stringify([...new Set(v)].slice(-300))); }
+};
+const canSave = (p) => !!p && p.kind === "listing" && !p.mine;
+function applyLocalSaved() {
+  const sl = new Set(LOCAL.get("ps_short")), hd = new Set(LOCAL.get("ps_hidden"));
+  S.posts.forEach((p) => { if (p.kind === "listing") { p.watched = sl.has(p.id); p.hidden = hd.has(p.id); } });
+}
+async function mergeLocalSaved() {
+  const shortlist = LOCAL.get("ps_short"), hidden = LOCAL.get("ps_hidden");
+  if (!shortlist.length && !hidden.length) return false;
+  try {
+    await api("/saved/merge", { method: "POST", body: JSON.stringify({ shortlist, hidden }) });
+    store.del("ps_short"); store.del("ps_hidden");
+    return true;
+  } catch (e) { return false; }
+}
+async function setShortlist(p, on) {
+  if (S.signedIn) await api(`/posts/${p.id}/watch`, { method: on ? "POST" : "DELETE" });
+  else LOCAL.set("ps_short", on ? [...LOCAL.get("ps_short"), p.id] : LOCAL.get("ps_short").filter((x) => x !== p.id));
+  p.watched = on;
+}
+async function setHiddenId(id, on) {
+  if (S.signedIn) await api(`/posts/${id}/hide`, { method: on ? "POST" : "DELETE" });
+  else {
+    LOCAL.set("ps_hidden", on ? [...LOCAL.get("ps_hidden"), id] : LOCAL.get("ps_hidden").filter((x) => x !== id));
+    if (on) LOCAL.set("ps_short", LOCAL.get("ps_short").filter((x) => x !== id));
+  }
+  const p = S.posts.find((x) => x.id === id);
+  if (p) { p.hidden = on; if (on) p.watched = false; }
+}
+function undoToast(msg, undo) {
+  const t = $("#toast");
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button" class="toast-undo">Undo</button>`;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 5000);
+  t.querySelector(".toast-undo").addEventListener("click", () => { t.classList.remove("show"); undo(); });
+}
+
 /* ---------------- feed and markers ---------------- */
 async function loadFeed() {
   try {
@@ -1014,6 +1106,8 @@ async function loadFeed() {
     toast("Couldn't load the map posts. Please reload.");
     return;
   }
+  if (!S.signedIn) applyLocalSaved();
+  else if (await mergeLocalSaved()) return loadFeed();
   renderMarkers();
 }
 
@@ -1109,7 +1203,7 @@ function passFilter(p, adv = S.adv) {
   if (S.filter === "land") return p.property_type === "plot";
   return p.deal === S.filter;
 }
-const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && passFilter(p));
+const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && !p.hidden && passFilter(p));
 
 function inView(p) {
   const b = S.map && S.map.getBounds && S.map.getBounds();
@@ -1268,6 +1362,7 @@ function openDetails(id, opts = {}) {
       <p class="loc">${esc(placeOf(p))}</p>
       <p class="price">${esc(priceOf(p))}</p>
       ${badgeHtml(p)}
+      ${p.hidden ? `<div class="hidden-note">You hid this listing, so it's off your map. <button type="button" class="linkish" id="unhide-btn">Unhide</button></div>` : ""}
       ${p.needs_confirm ? `<div class="confirm-banner"><span>Is this still available?</span><button class="btn accent" id="still-here">Yes, still available</button></div>` : ""}
       ${(p.warnings || []).length ? `<div class="warn-box"><b>${p.mine ? "Please check" : "Safety check"}</b>${p.warnings.map(esc).join("<br>")}</div>` : ""}
       ${isDev(p) ? `<div class="facts">
@@ -1305,7 +1400,7 @@ function openDetails(id, opts = {}) {
         ` : `${contactHead(p)}`}
       </div>
       ${!p.mine && p.kind === "listing" ? `<div class="act-row">
-        <button class="btn" id="watch-btn" aria-pressed="${!!p.watched}">${p.watched ? "★ Watching price" : "☆ Watch price"}</button>
+        <button class="btn" id="watch-btn" aria-pressed="${!!p.watched}">${p.watched ? "♥ Shortlisted" : "♡ Shortlist"}</button>
         <button class="btn" id="ask-about">Ask about this</button>
         <button class="btn" id="viewing-btn">Request a viewing</button>
         ${p.cobroke ? `<button class="btn" id="cobroke-btn">Co-broke</button>` : `<button class="btn" id="check-btn">Fair price?</button>`}
@@ -1352,6 +1447,7 @@ function openDetails(id, opts = {}) {
   document.querySelectorAll("[data-reach]").forEach((b) => b.addEventListener("click", () => reachOut(p, b.dataset.reach, b)));
   const on = (id, fn) => { const el = $(id); if (el) el.addEventListener("click", fn); };
   on("#watch-btn", (e) => toggleWatch(p, e.currentTarget));
+  on("#unhide-btn", async () => { try { await setHiddenId(p.id, false); renderMarkers(); openDetails(p.id); toast("It's back on your map."); } catch (e) { toast(e.message); } });
   on("#ask-about", () => openAssistant({ post_id: p.id }));
   on("#viewing-btn", () => openViewingForm(p, "viewing"));
   on("#cobroke-btn", () => openViewingForm(p, "cobroke"));
@@ -1591,20 +1687,16 @@ function shown(u) {
 }
 function thumbOf(p) { return p.photos && p.photos.length ? shown(p.photos[0]) : placeholder(p.id); }
 
-function openList() {
-  let items = visiblePosts().filter(inView);
-  // Co-living: the homes you have most in common with come first.
-  const ranked = S.filter === "share" && myInterests().length;
-  if (ranked) items = items.slice().sort((a, b) => commonWith(b).length - commonWith(a).length);
-  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects", commercial: "commercial properties", land: "plots", share: "co-living rooms", stay: "holiday homes" }[S.filter] || "properties";
-  $("#panel-content").innerHTML = `
-    <div class="list-head">
-      <h2>${items.length} ${esc(items.length === 1 ? label.replace(/ies$/, "y").replace(/s$/, "") : label)} in this view</h2>
-      <p>${ranked ? "Sorted by what you have in common. " : S.filter === "share" ? "Add your interests in My profile to see the best matches first. " : ""}Move or zoom the map, or search an area, to see more.</p>
-    </div>
-    ${items.map((p) => `
-      <button class="litem" data-id="${esc(p.id)}">
-        <img src="${esc(thumbOf(p))}" alt="" loading="lazy">
+function listCard(p) {
+  const photos = (p.photos || []).length ? p.photos.map(shown) : [placeholder(p.id)];
+  const can = canSave(p);
+  return `<div class="lcard" data-id="${esc(p.id)}">
+    ${can ? `<div class="lc-under" aria-hidden="true"><span class="lc-yes">♥ Shortlist</span><span class="lc-no">Hide ✕</span></div>` : ""}
+    <div class="lc-front">
+      <div class="lc-photos">${photos.map((src) => `<img src="${esc(src)}" alt="" loading="lazy" draggable="false">`).join("")}</div>
+      ${photos.length > 1 ? `<span class="lc-count">1 / ${photos.length}</span>` : ""}
+      ${can ? `<button type="button" class="lc-heart" aria-pressed="${!!p.watched}" aria-label="${p.watched ? "Remove from shortlist" : "Add to shortlist"}">${p.watched ? "♥" : "♡"}</button>` : ""}
+      <div class="litem lc-info" role="button" tabindex="0" data-id="${esc(p.id)}">
         <div>
           ${isDev(p) ? `<span class="tag dev">New project</span>` : ""}
           <b>${esc(titleOf(p))}</b>
@@ -1612,14 +1704,177 @@ function openList() {
           <span class="lp">${esc(priceOf(p))}${sizeOf(p) ? ` <small class="lsz">· ${esc(sizeOf(p))}</small>` : ""}</span>${badgeHtml(p)}
           ${commonWith(p).length ? `<span class="match">♥ ${commonWith(p).length} in common</span>` : ""}
         </div>
-      </button>`).join("") || `<p class="hint" style="padding:0 18px">Nothing here yet. Try another area or filter.</p>`}`;
-  document.querySelectorAll(".litem").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { pan: true })));
+        ${can ? `<button type="button" class="lc-x" aria-label="Hide this listing">✕</button>` : ""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function openList(mode) {
+  if (mode) S.listMode = mode;
+  const short = S.listMode === "short";
+  let items = short ? S.posts.filter((p) => p.watched && !p.hidden && p.kind === "listing") : visiblePosts().filter(inView);
+  // Co-living: the homes you have most in common with come first.
+  const ranked = !short && S.filter === "share" && myInterests().length;
+  if (ranked) items = items.slice().sort((a, b) => commonWith(b).length - commonWith(a).length);
+  const label = { all: "properties", sale: "properties for sale", rent: "properties for rent", project: "new projects", commercial: "commercial properties", land: "plots", share: "co-living rooms", stay: "holiday homes" }[S.filter] || "properties";
+  const inViewN = short ? visiblePosts().filter(inView).length : items.length;
+  const nShort = S.posts.filter((p) => p.watched && !p.hidden && p.kind === "listing").length;
+  const nHidden = S.posts.filter((p) => p.hidden).length;
+  $("#panel-content").innerHTML = `
+    <div class="list-head">
+      <div class="list-tabs" role="tablist">
+        <button type="button" role="tab" data-lm="view" aria-pressed="${!short}">In this view (${inViewN})</button>
+        <button type="button" role="tab" data-lm="short" aria-pressed="${short}">♥ Shortlisted (${nShort})</button>
+      </div>
+      <h2>${short ? "Your shortlist" : `${items.length} ${esc(items.length === 1 ? label.replace(/ies$/, "y").replace(/s$/, "") : label)} in this view`}</h2>
+      <p>${short ? (S.signedIn ? "You'll be told if any of these drop in price." : "Kept on this device. Sign in to keep them everywhere and get price-drop alerts.")
+        : `${ranked ? "Sorted by what you have in common. " : S.filter === "share" ? "Add your interests in My profile to see the best matches first. " : ""}Move the map to see more.`}</p>
+      ${items.some(canSave) && !store.get("ps_swiped") ? `<p class="swipe-hint">Swipe photos to browse. Swipe the details right to shortlist ♥, left to hide.</p>` : ""}
+      ${nHidden ? `<button type="button" class="linkish lh-hidden" id="manage-hidden">${nHidden} hidden · Manage</button>` : ""}
+    </div>
+    ${items.map(listCard).join("") || `<p class="hint" style="padding:0 18px">${short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or filter."}</p>`}`;
+  bindListCards();
+  document.querySelectorAll("[data-lm]").forEach((b) => b.addEventListener("click", () => { panel.scrollTop = 0; openList(b.dataset.lm); }));
+  const mh = $("#manage-hidden"); if (mh) mh.addEventListener("click", () => openHiddenManager());
   if (S.panelMode !== "list") panel.scrollTop = 0;
   S.panelMode = "list";
   panel.classList.add("list-mode");
   panel.classList.add("open");
   panel.setAttribute("aria-hidden", "false");
   setActive(null);
+}
+
+function bindListCards() {
+  document.querySelectorAll("#panel-content .lcard").forEach((card) => {
+    const p = S.posts.find((x) => x.id === card.dataset.id);
+    if (!p) return;
+    const info = card.querySelector(".lc-info"), photos = card.querySelector(".lc-photos"), count = card.querySelector(".lc-count");
+    const open = () => { if (!card.dataset.swiped) openDetails(p.id, { pan: true }); };
+    info.addEventListener("click", (e) => { if (!e.target.closest(".lc-x")) open(); });
+    info.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+    photos.addEventListener("click", open);
+    if (count) photos.addEventListener("scroll", () => {
+      count.textContent = `${Math.round(photos.scrollLeft / Math.max(1, photos.clientWidth)) + 1} / ${photos.children.length}`;
+    }, { passive: true });
+    const heart = card.querySelector(".lc-heart");
+    if (heart) heart.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      try { await setShortlist(p, !p.watched); } catch (err) { return toast(err.message); }
+      refreshCard(card, p);
+      toast(p.watched ? "Added to your shortlist ♥" : "Removed from your shortlist.");
+      if (S.listMode === "short" && !p.watched) openList();
+    });
+    const x = card.querySelector(".lc-x");
+    if (x) x.addEventListener("click", (e) => { e.stopPropagation(); swipeHide(card, p); });
+    if (canSave(p)) bindSwipe(card, info, p);
+  });
+}
+function refreshCard(card, p) {
+  const h = card.querySelector(".lc-heart");
+  if (h) { h.textContent = p.watched ? "♥" : "♡"; h.setAttribute("aria-pressed", String(!!p.watched)); h.setAttribute("aria-label", p.watched ? "Remove from shortlist" : "Add to shortlist"); }
+  const tab = document.querySelector('[data-lm="short"]');
+  if (tab) tab.textContent = `♥ Shortlisted (${S.posts.filter((x) => x.watched && !x.hidden && x.kind === "listing").length})`;
+}
+/** Long swipe on the card's details: right shortlists, left hides. Photos keep their own sideways scroll. */
+function bindSwipe(card, info, p) {
+  const front = card.querySelector(".lc-front");
+  let x0 = 0, y0 = 0, dx = 0, id = null, active = false, decided = false;
+  const reset = () => { front.style.transform = ""; card.classList.remove("dragging", "go-yes", "go-no", "armed"); };
+  info.addEventListener("pointerdown", (e) => {
+    if (e.button > 0 || e.target.closest(".lc-x")) return;
+    x0 = e.clientX; y0 = e.clientY; dx = 0; id = e.pointerId; active = true; decided = false;
+  });
+  info.addEventListener("pointermove", (e) => {
+    if (!active || e.pointerId !== id) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!decided) {
+      if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+      decided = true;
+      if (Math.abs(my) > Math.abs(mx)) { active = false; return; }   // scrolling the list
+      try { info.setPointerCapture(id); } catch (err) {}
+      card.classList.add("dragging");
+    }
+    dx = mx;
+    front.style.transform = `translateX(${dx}px) rotate(${dx / 45}deg)`;
+    card.classList.toggle("go-yes", dx > 0);
+    card.classList.toggle("go-no", dx < 0);
+    card.classList.toggle("armed", Math.abs(dx) > card.clientWidth * 0.4);
+  });
+  const end = () => {
+    if (!active) return;
+    active = false;
+    if (decided) { card.dataset.swiped = "1"; setTimeout(() => { delete card.dataset.swiped; }, 350); }
+    const far = decided && Math.abs(dx) > card.clientWidth * 0.4;
+    if (far && dx > 0) { reset(); swipeShortlist(card, p); }
+    else if (far && dx < 0) { card.classList.remove("dragging"); swipeHide(card, p); }
+    else reset();
+    dx = 0;
+  };
+  info.addEventListener("pointerup", end);
+  info.addEventListener("pointercancel", () => { active = false; reset(); });
+}
+async function swipeShortlist(card, p) {
+  store.set("ps_swiped", "1");
+  const was = !!p.watched;
+  if (!was) { try { await setShortlist(p, true); } catch (e) { return toast(e.message); } }
+  refreshCard(card, p);
+  card.classList.add("pulse"); setTimeout(() => card.classList.remove("pulse"), 600);
+  if (was) return toast("Already on your shortlist ♥");
+  undoToast(S.signedIn ? "Added to your shortlist ♥" : "Added to your shortlist ♥ (on this device)", async () => {
+    try { await setShortlist(p, false); refreshCard(card, p); if (S.listMode === "short") openList(); } catch (e) { toast(e.message); }
+  });
+}
+async function swipeHide(card, p) {
+  store.set("ps_swiped", "1");
+  const front = card.querySelector(".lc-front");
+  card.classList.add("leaving", "go-no");
+  front.style.transform = "translateX(-115%)";
+  try { await setHiddenId(p.id, true); }
+  catch (e) { front.style.transform = ""; card.classList.remove("leaving", "go-no"); return toast(e.message); }
+  setTimeout(() => {
+    card.style.height = card.offsetHeight + "px";
+    requestAnimationFrame(() => { card.classList.add("collapse"); card.style.height = "0px"; });
+    setTimeout(() => { renderMarkers(); openList(); }, 280);
+  }, 200);
+  undoToast("Hidden from your map and list.", async () => {
+    try { await setHiddenId(p.id, false); renderMarkers(); openList(); } catch (e) { toast(e.message); }
+  });
+}
+
+/* Hidden listings: see them all, unhide one, or clear the lot (My profile, or "Manage" in the list). */
+async function openHiddenManager() {
+  openSheet("hidden", "Hidden listings");
+  const body = $("#sheet-body");
+  body.innerHTML = `<p class="muted">Loading…</p>`;
+  let items = [];
+  try {
+    items = S.signedIn ? (await api("/hidden")).hidden : S.posts.filter((p) => p.hidden);
+  } catch (e) { body.innerHTML = `<p class="error">${esc(e.message)}</p>`; return; }
+  const draw = () => {
+    body.innerHTML = items.length ? `
+      <p class="muted">These are off your map and list. Other people still see them.</p>
+      <button class="btn" style="width:100%;margin:0 0 14px" id="clear-hidden">Show them all again (${items.length})</button>
+      ${items.map((p) => `<div class="my-post">
+        <div><b>${esc(titleOf(p))}</b><small>${esc(placeOf(p))}${p.price ? " · " + esc(priceOf(p)) : ""}${p.status && p.status !== "active" ? " · no longer listed" : ""}</small></div>
+        <button class="btn" data-unhide="${esc(p.id)}">Unhide</button></div>`).join("")}`
+      : `<p class="muted">You haven't hidden anything. Swipe a listing left in the list to hide it from your map.</p>`;
+    body.querySelectorAll("[data-unhide]").forEach((b) => b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await setHiddenId(b.dataset.unhide, false); items = items.filter((x) => x.id !== b.dataset.unhide); renderMarkers(); draw(); }
+      catch (e) { b.disabled = false; toast(e.message); }
+    }));
+    const c = $("#clear-hidden");
+    if (c) c.addEventListener("click", async () => {
+      c.disabled = true;
+      try {
+        if (S.signedIn) await api("/hidden", { method: "DELETE" }); else store.del("ps_hidden");
+        S.posts.forEach((p) => { p.hidden = false; });
+        items = []; renderMarkers(); draw(); toast("Everything is back on your map.");
+      } catch (e) { c.disabled = false; toast(e.message); }
+    });
+  };
+  draw();
 }
 
 /* ---------------- search ---------------- */
@@ -1632,7 +1887,7 @@ function searchText(p) {
 function matchPosts(q) {
   const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
   if (!words.length) return [];
-  return S.posts.filter((p) => p.kind === S.tab && words.every((w) => searchText(p).includes(w)));
+  return S.posts.filter((p) => p.kind === S.tab && !p.hidden && words.every((w) => searchText(p).includes(w)));
 }
 
 function renderResults() {
@@ -1766,10 +2021,14 @@ if (IN_APP) {
 
 $("#fab").addEventListener("click", () => startPosting());
 $("#role-pill").addEventListener("click", () => renderRolePicker(true));
+$("#switch-btn").addEventListener("click", () => renderRolePicker(true));
 
 function updateFab() {
   const role = roleOf();
   $("#fab-label").textContent = role ? ROLES[role].cta : S.me ? "Get started" : "Sign in to post";
+  const sw = $("#switch-btn");
+  sw.hidden = !role;
+  $("#sw-role").textContent = role ? ({ landlord: "Owner", broker: "Broker", developer: "Developer", seeker: "Buyer/Tenant", host: "Co-living" }[role] || "") : "";
   const pill = $("#role-pill");
   if (role) {
     pill.innerHTML = `Posting as <b>${esc(ROLES[role].label)}</b><span>Switch</span>`;
@@ -2171,6 +2430,9 @@ function renderAccount() {
         <button class="btn" data-edit="${esc(p.id)}">Edit</button>
         <button class="btn" data-remove="${esc(p.id)}">Remove</button>
       </div>`).join("") : `<p class="muted">You haven't posted anything yet.</p>`}
+    <div class="section-title">Shortlist and hidden</div>
+    <div class="my-post"><div><b>♥ Shortlisted</b><small>${S.posts.filter((p) => p.watched && !p.hidden).length} saved · we'll tell you if prices drop</small></div><button class="btn" id="acc-short">View</button></div>
+    <div class="my-post"><div><b>Hidden listings</b><small>${S.posts.filter((p) => p.hidden).length} hidden from your map</small></div><button class="btn" id="acc-hidden">Manage</button></div>
     <div class="section-title">Colour theme</div>
     ${themePicker()}
     <div id="extras"></div>
@@ -2179,6 +2441,8 @@ function renderAccount() {
   bindThemePicker($("#sheet-body"));
   renderExtras();
   $("#switch-role").addEventListener("click", () => renderRolePicker(true));
+  $("#acc-short").addEventListener("click", () => { closeSheet(); openList("short"); });
+  $("#acc-hidden").addEventListener("click", () => openHiddenManager());
   document.querySelectorAll("#sheet-body button[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
   document.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removePost(b.dataset.remove)));
   document.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit)));
@@ -2731,15 +2995,14 @@ async function inboxAction(b) {
 }
 
 /* ---------------- listing actions: watch, ask, viewing, co-broke, pitch ---------------- */
+/* The shortlist: saved listings, with price-drop alerts when signed in. */
 async function toggleWatch(p, btn) {
-  if (!ready("Sign in to watch prices.")) return;
   btn.disabled = true;
   try {
-    const r = await api(`/posts/${p.id}/watch`, { method: p.watched ? "DELETE" : "POST" });
-    p.watched = r.watching;
-    btn.innerHTML = p.watched ? "★ Watching price" : "☆ Watch price";
-    btn.setAttribute("aria-pressed", String(p.watched));
-    toast(p.watched ? "You'll be told if the price drops." : "Stopped watching.");
+    await setShortlist(p, !p.watched);
+    btn.innerHTML = p.watched ? "♥ Shortlisted" : "♡ Shortlist";
+    btn.setAttribute("aria-pressed", String(!!p.watched));
+    toast(p.watched ? (S.signedIn ? "Shortlisted. We'll tell you if the price drops." : "Shortlisted on this device. Sign in to keep it and get price-drop alerts.") : "Removed from your shortlist.");
   } catch (e) { toast(e.message); }
   btn.disabled = false;
 }
