@@ -400,3 +400,12 @@ test("Let's share: rooms per unit, permission, flatmate matching and who sees ro
   const { listingFitsRequest } = await import("../netlify/lib/market.mjs");
   assert.equal(listingFitsRequest(row, { ...store._posts.find((x) => x.id === req.body.post.id), suits: "male" }), false);
 });
+
+test("amenities: only known ones are kept, shown, and editable", async () => {
+  const { call, person, post, feed } = setup();
+  const o = await person("am@x.in", "Amy Amen");
+  const l = await post(o, sale({ amenities: ["wifi", "pool", "rocket_launcher", "wifi"] }));
+  assert.deepEqual((await feed(null)).find((x) => x.id === l.id).amenities, ["wifi", "pool"]);
+  await call("PATCH", `/posts/${l.id}`, { token: o.token, body: { amenities: ["gym", "parking"] } });
+  assert.deepEqual((await feed(null)).find((x) => x.id === l.id).amenities, ["gym", "parking"]);
+});
