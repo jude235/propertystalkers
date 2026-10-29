@@ -6,6 +6,15 @@
 <title>Property Stalkers | Properties and requests on the map</title>
 <meta name="description" content="Search properties and new projects for sale and rent on one map, anywhere in the world. Post your own listing in plain words.">
 <meta name="theme-color" content="#11352b">
+<link rel="canonical" href="https://propertystalkers.com/">
+<meta property="og:site_name" content="Property Stalkers">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Property Stalkers | Properties and requests on the map">
+<meta property="og:description" content="Search properties and new projects for sale and rent on one map, anywhere in the world. Post your own listing in plain words.">
+<meta property="og:url" content="https://propertystalkers.com/">
+<meta property="og:image" content="https://propertystalkers.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://propertystalkers.com/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -91,15 +100,34 @@
   /* Search */
   .search { position: relative; flex: 1; min-width: 0; }
   .search input { width: 100%; height: 42px; border-radius: 999px; border: 1px solid rgba(243, 235, 221, .35);
-    background: rgba(243, 235, 221, .12); color: var(--brand-ink); padding: 0 40px 0 42px; font-size: 15px; }
+    background: rgba(243, 235, 221, .12); color: var(--brand-ink); padding: 0 80px 0 42px; font-size: 15px; }
   .search input::-webkit-search-cancel-button, .search input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
   .search input::placeholder { color: rgba(243, 235, 221, .75); }
   .search input:focus { outline: none; background: var(--brand-ink); color: var(--ink); border-color: var(--brass); }
   .search input:focus::placeholder { color: var(--muted); }
   .s-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--brass); display: flex; }
-  .s-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%;
+  .s-clear { position: absolute; right: 44px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%;
     background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
   .s-clear[hidden] { display: none; }
+  .s-filter { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; border: 0;
+    background: var(--brass); color: var(--brand-deep); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .s-filter:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 2px; }
+  .s-filter .f-n { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--brand-ink);
+    color: var(--brand); border: 1px solid var(--brass); font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; }
+  .s-filter .f-n[hidden] { display: none; }
+  /* Filters sheet */
+  .fsec h3 { font-size: 14px; font-weight: 700; color: var(--brand); margin: 18px 0 8px; }
+  .fsec:first-child h3 { margin-top: 0; }
+  .fopts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fopt { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: #ffffff; color: var(--ink); cursor: pointer; font-size: 14px; font-weight: 500; }
+  .fopt[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .frow .field { margin: 0; }
+  .fhint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  .ffoot { display: flex; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+  .ffoot .btn { flex: 1; }
+  .ffoot .btn.accent { flex: 2; }
+  .linkish { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: inherit; text-decoration: underline; cursor: pointer; }
   .results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--bg); color: var(--ink); border-radius: 14px;
     box-shadow: var(--shadow); max-height: 60vh; overflow-y: auto; z-index: 25; border: 1px solid var(--line); }
   .results[hidden] { display: none; }
@@ -462,6 +490,7 @@
       <span class="s-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>
       <input id="q" type="search" placeholder="Search an area, building or city" autocomplete="off" aria-label="Search an area, building or city" aria-controls="results">
       <button class="s-clear" id="q-clear" aria-label="Clear search" hidden>&times;</button>
+      <button class="s-filter" id="filter-btn" type="button" aria-label="Filters" title="Filters"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="f-n" id="filter-n" hidden></span></button>
       <div class="results" id="results" role="listbox" hidden></div>
     </div>
     <div class="tabs" role="tablist" aria-label="What to show" hidden>
@@ -893,7 +922,92 @@ async function loadFeed() {
   renderMarkers();
 }
 
-function passFilter(p) {
+/* ---------------- more filters (the button in the search bar) ---------------- */
+const ADV0 = () => ({ types: [], beds: 0, min: "", max: "", smin: "", smax: "", by: [], amen: [], photos: false });
+S.adv = (() => { try { return { ...ADV0(), ...JSON.parse(store.get("ps_filters") || "{}") }; } catch (e) { return ADV0(); } })();
+const F_TYPES = [["apartment", "Apartment"], ["villa", "Villa"], ["independent_house", "House"], ["plot", "Plot / land"], ["office", "Office"], ["shop", "Shop"], ["warehouse", "Warehouse"]];
+const F_BY = [["landlord", "Owner"], ["broker", "Broker"], ["developer", "Developer"]];
+const num = (v) => { const n = Number(String(v ?? "").replace(/[^\d.]/g, "")); return String(v ?? "").trim() !== "" && isFinite(n) && n > 0 ? n : null; };
+function advCount(a = S.adv) {
+  return [a.types.length, a.beds, num(a.min) || num(a.max), num(a.smin) || num(a.smax), a.by.length, a.amen.length, a.photos].filter(Boolean).length;
+}
+function bedsOf(p) {
+  if (p.bedrooms) return Number(p.bedrooms);
+  const c = Array.isArray(p.configs) ? p.configs.map(Number).filter((n) => n > 0) : [];
+  return c.length ? Math.max(...c) : 0;
+}
+function passAdv(p, a = S.adv) {
+  if (a.types.length && !a.types.includes(p.property_type)) return false;
+  if (a.beds && bedsOf(p) < a.beds) return false;
+  const lo = num(a.min), hi = num(a.max);
+  if ((lo || hi) && (p.price == null || (lo && p.price < lo) || (hi && p.price > hi))) return false;
+  const slo = num(a.smin), shi = num(a.smax);
+  if ((slo || shi) && (!p.size_sqft || (slo && p.size_sqft < slo) || (shi && p.size_sqft > shi))) return false;
+  if (p.kind === "listing") {
+    if (a.by.length && !a.by.includes(p.poster_type)) return false;
+    if (a.amen.length && !a.amen.every((x) => (p.amenities || []).includes(x))) return false;
+    if (a.photos && !(p.photos && p.photos.length)) return false;
+  }
+  return true;
+}
+function updateFilterBadge() {
+  const n = advCount();
+  const el = $("#filter-n");
+  el.textContent = n ? String(n) : "";
+  el.hidden = !n;
+  $("#filter-btn").setAttribute("aria-label", n ? `Filters, ${n} on` : "Filters");
+}
+function saveAdv() { store.set("ps_filters", JSON.stringify(S.adv)); }
+function clearAdv() { S.adv = ADV0(); saveAdv(); renderMarkers(); }
+
+function openFilters() {
+  const f = JSON.parse(JSON.stringify(S.adv));
+  const req = S.tab === "request";
+  const opts = (key, list, multi = true) => `<div class="fopts" data-key="${key}">${list.map(([v, l]) =>
+    `<button type="button" class="fopt" data-v="${esc(v)}" aria-pressed="${multi ? f[key].includes(v) : String(f[key]) === String(v)}">${esc(l)}</button>`).join("")}</div>`;
+  openSheet("filters", "Filters");
+  $("#sheet-body").innerHTML = `
+    <div class="fsec"><h3>Property type</h3>${opts("types", F_TYPES)}</div>
+    <div class="fsec"><h3>Bedrooms</h3>${opts("beds", [[0, "Any"], [1, "1+"], [2, "2+"], [3, "3+"], [4, "4+"], [5, "5+"]], false)}</div>
+    <div class="fsec"><h3>${req ? "Budget" : "Price"}</h3>
+      <div class="frow"><label class="field"><span>Min</span><input id="f-min" inputmode="numeric" placeholder="No min" value="${esc(f.min)}"></label>
+      <label class="field"><span>Max</span><input id="f-max" inputmode="numeric" placeholder="No max" value="${esc(f.max)}"></label></div>
+      <p class="fhint">In the listing's own currency. Rents are per month.</p></div>
+    <div class="fsec"><h3>Size (sq ft)</h3>
+      <div class="frow"><label class="field"><span>Min</span><input id="f-smin" inputmode="numeric" placeholder="No min" value="${esc(f.smin)}"></label>
+      <label class="field"><span>Max</span><input id="f-smax" inputmode="numeric" placeholder="No max" value="${esc(f.smax)}"></label></div></div>
+    ${req ? "" : `<div class="fsec"><h3>Listed by</h3>${opts("by", F_BY)}</div>
+    <div class="fsec"><h3>Must have</h3>${opts("amen", Object.entries(AMENITIES))}</div>
+    <div class="fsec"><h3>Photos</h3>${opts("photos", [[false, "Any"], [true, "With photos only"]], false)}</div>`}`;
+  $("#sheet-foot").innerHTML = `<div class="ffoot"><button class="btn" id="f-clear" type="button">Clear all</button><button class="btn accent" id="f-show" type="button"></button></div>`;
+  const body = $("#sheet-body");
+  const count = () => {
+    const n = S.posts.filter((p) => p.kind === S.tab && passFilter(p, f)).length;
+    const what = req ? (n === 1 ? "request" : "requests") : (n === 1 ? "property" : "properties");
+    $("#f-show").textContent = n ? `Show ${n} ${what}` : `No ${what} match`;
+  };
+  body.querySelectorAll(".fopts").forEach((g) => g.addEventListener("click", (e) => {
+    const b = e.target.closest(".fopt"); if (!b) return;
+    const key = g.dataset.key;
+    if (Array.isArray(f[key])) {
+      f[key] = f[key].includes(b.dataset.v) ? f[key].filter((x) => x !== b.dataset.v) : [...f[key], b.dataset.v];
+      b.setAttribute("aria-pressed", String(f[key].includes(b.dataset.v)));
+    } else {
+      f[key] = key === "photos" ? b.dataset.v === "true" : Number(b.dataset.v);
+      g.querySelectorAll(".fopt").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    }
+    count();
+  }));
+  [["#f-min", "min"], ["#f-max", "max"], ["#f-smin", "smin"], ["#f-smax", "smax"]].forEach(([id, key]) =>
+    $(id).addEventListener("input", (e) => { f[key] = e.target.value; count(); }));
+  $("#f-clear").addEventListener("click", () => { clearAdv(); closeSheet(); toast("Filters cleared."); });
+  $("#f-show").addEventListener("click", () => { S.adv = f; saveAdv(); closeSheet(); closeDetails(); renderMarkers(); });
+  count();
+}
+$("#filter-btn").addEventListener("click", (e) => { e.preventDefault(); closeResults(); openFilters(); });
+
+function passFilter(p, adv = S.adv) {
+  if (!passAdv(p, adv)) return false;
   if (p.kind !== "listing" || S.filter === "all") return true;
   if (S.filter === "project") return isDev(p);
   if (S.filter === "commercial") return COMMERCIAL.includes(p.property_type);
@@ -923,6 +1037,7 @@ function renderMarkers() {
   $("#n-request").textContent = counts.request ? String(counts.request) : "";
   document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === S.tab)));
   renderBanner();
+  updateFilterBadge();
   if (!S.map) return;
 
   if (S.clusterer) S.clusterer.clearMarkers();
@@ -984,6 +1099,8 @@ function renderBanner() {
       : "You can see your own requests. Buyer and tenant requests are visible only to <b>brokers with a licence / RERA number</b>.";
   } else if (!S.posts.some((p) => p.kind === "listing")) {
     html = "<b>No properties listed yet.</b> Be the first: sign in and list yours.";
+  } else if (!visiblePosts().length && advCount()) {
+    html = `<b>No properties match your filters.</b> <button type="button" class="linkish" data-clear-filters>Clear filters</button>`;
   } else if (!visiblePosts().length) {
     html = S.filter === "project"
       ? "<b>No new projects listed yet.</b> Developers can sign in, choose <b>Developer</b> and tap <b>List a project</b>."
@@ -1002,6 +1119,7 @@ document.querySelectorAll(".fchip[data-f]").forEach((c) => c.addEventListener("c
   renderMarkers();
 }));
 $("#show-list").addEventListener("click", () => openList());
+$("#banner").addEventListener("click", (e) => { if (e.target.closest("[data-clear-filters]")) clearAdv(); });
 
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
   if (S.tab === t.dataset.tab) return;
@@ -1118,7 +1236,8 @@ function openDetails(id, opts = {}) {
     $("#g-next").addEventListener("click", () => go(1));
   }
   $("#share-post").addEventListener("click", async () => {
-    const link = location.origin + "/#p=" + encodeURIComponent(p.id);
+    // The /property/ page shows the photo and price in WhatsApp previews, and opens the map from there.
+    const link = location.origin + (p.kind === "listing" ? "/property/" : "/#p=") + encodeURIComponent(p.id);
     const text = `${titleOf(p)} in ${placeOf(p)}${p.price ? " · " + priceOf(p) : ""} on Property Stalkers`;
     try {
       if (await shareOut({ title: titleOf(p), text, url: link })) return;

@@ -1,0 +1,8 @@
+# Property Stalkers: public listings are open to search engines and AI assistants.
+# Private data (requests, contacts, accounts) is protected by the server, not by this file.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /sb/
+
+Sitemap: https://propertystalkers.com/sitemap.xml
