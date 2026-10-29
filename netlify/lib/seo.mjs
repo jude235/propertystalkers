@@ -270,23 +270,24 @@ export async function handlePublic(req, { store, env }) {
   if (req.method !== "GET" && req.method !== "HEAD") return null;
 
   if (url.pathname === "/sitemap.xml") {
-    const all = publicListings(await store.activePosts());
+    const all = publicListings(await store.sitemapRows());
     return new Response(sitemap(all, site), { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=1800" } });
   }
 
   const m = url.pathname.match(/^\/property\/([^/]+)\/?$/);
   if (!m) return null;
   const id = decodeURIComponent(m[1]);
-  const all = publicListings(await store.activePosts());
   if (!UUID.test(id)) return html(gonePage({ site, all: [] }), 404);
   const post = await store.getPost(id);
   if (!post || post.kind !== "listing" || post.status === "draft" || post.lat == null) return html(gonePage({ site }), 404);
+  // "More in <city>": listings near this one only, never the whole table.
+  const all = publicListings(await store.mapPins({ w: post.lng - 0.3, e: post.lng + 0.3, s: post.lat - 0.3, n: post.lat + 0.3, kind: "listing", lim: 200 }));
   if (post.status !== "active") return html(gonePage({ site, post, all }), 410);
   // Several people can list the same unit; the map shows the cheapest, so that page is the main one.
   let canonicalId = null;
-  if (!all.some((x) => x.id === post.id) && post.unit_key) {
-    const main = all.find((x) => x.unit_key === post.unit_key);
-    if (main) canonicalId = main.id;
+  if (post.unit_key) {
+    const main = publicListings(await store.activeByUnitKey(post.unit_key))[0];
+    if (main && main.id !== post.id) canonicalId = main.id;
   }
   return html(propertyPage(post, { site, all, canonicalId, supabaseUrl: env.SUPABASE_URL || "" }));
 }

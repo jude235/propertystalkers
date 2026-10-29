@@ -4,6 +4,9 @@ import { notifyMany } from "./notify.mjs";
 import { sharedInterests, INTEREST_LABEL } from "./core.mjs";
 
 const MAX_PER_EVENT = 40;
+/** Posts near p (about 50 km), instead of loading every post: matches are always local. */
+const nearby = (store, p, f) => (p.lat == null ? Promise.resolve([])
+  : store.mapPins({ w: p.lng - 0.5, e: p.lng + 0.5, s: p.lat - 0.5, n: p.lat + 0.5, lim: 1000, ...f }));
 
 function money(p) {
   if (!p.price) return "";
@@ -29,8 +32,9 @@ export function postTitle(p) {
 /** A listing went live (new, re-activated, or edited so it may now match more searches). */
 export async function onListingLive(deps, post, { previous = null } = {}) {
   const { store } = deps;
-  const all = await store.activePosts();
-  const info = marketInfo(all);
+  const comps = await nearby(store, post, { kind: "listing", deals: [post.deal] });
+  const info = marketInfo(comps.some((x) => x.id === post.id) ? comps : [...comps, post]);
+  const all = await nearby(store, post, { kind: "request", deals: [post.deal], req_scope: "all" });
   const i = info.get(post.id) || null;
   const out = [];
   // Saved searches ("alert me when...").
@@ -59,7 +63,7 @@ export async function onListingLive(deps, post, { previous = null } = {}) {
 /** A buyer / tenant request went live: tell owners and brokers whose listing fits, so they can pitch it. */
 export async function onRequestLive(deps, req) {
   const { store } = deps;
-  const all = await store.activePosts();
+  const all = await nearby(store, req, { kind: "listing", deals: [req.deal] });
   const out = [];
   for (const l of all) {
     if (l.kind !== "listing" || l.user_id === req.user_id) continue;

@@ -1,8 +1,13 @@
 // Supabase access using the server-only service key. The browser never gets this key.
 import { createClient } from "@supabase/supabase-js";
 
+/** The fields the map and the list need. No descriptions, contact details or unit numbers. */
+export const LEAN = "id,user_id,kind,poster_type,deal,property_type,bedrooms,price,currency,building,locality,city,country,lat,lng,photos,room_type,suits,guests,interests,size_sqft,unit_key,status,created_at,first_price,price_changed_at,configs,building_key,amenities,company,possession,rera_number";
+
 export function makeStore({ url, serviceKey }) {
   const sb = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  // Map filters: drop empty values so the database never sees nulls where it expects lists.
+  const tidyF = (f) => Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
   const must = ({ data, error }) => {
     if (error) throw new Error(`Database: ${error.message}`);
     return data;
@@ -69,6 +74,28 @@ export function makeStore({ url, serviceKey }) {
       const { data, error } = await sb.from("profiles").select("id, avatar_url").in("id", userIds).not("avatar_url", "is", null);
       if (error) return {}; // pictures are optional; never break the map over them
       return Object.fromEntries(data.map((r) => [r.id, r.avatar_url]));
+    },
+    /* ----- fast map: only what's in view ----- */
+    async mapPins(f) {
+      return must(await sb.rpc("map_pins", { f: tidyF(f) }).select(LEAN));
+    },
+    async mapClusters(f) {
+      return must(await sb.rpc("map_clusters", { f: tidyF(f) }));
+    },
+    async postsByIds(ids) {
+      if (!ids.length) return [];
+      return must(await sb.from("posts").select(LEAN).in("id", ids.slice(0, 200)).eq("status", "active"));
+    },
+    async searchPosts(q, kind, limit = 20) {
+      const s = String(q || "").replace(/[%,()*\\.:"']/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+      if (s.length < 2) return [];
+      return must(await sb.from("posts").select(LEAN).eq("status", "active").eq("kind", kind)
+        .or(`building.ilike.%${s}%,locality.ilike.%${s}%,city.ilike.%${s}%,company.ilike.%${s}%`)
+        .order("created_at", { ascending: false }).limit(limit));
+    },
+    async sitemapRows() {
+      return must(await sb.from("posts").select("id,kind,status,user_id,unit_key,price,lat,created_at,price_changed_at,confirmed_at")
+        .eq("status", "active").eq("kind", "listing").order("created_at", { ascending: false }).limit(50000));
     },
     async activePosts() {
       return must(await sb.from("posts").select("*").eq("status", "active")

@@ -8,6 +8,7 @@ import { features } from "./features.mjs";
 import { runAssistant } from "./assistant.mjs";
 import { onListingLive, onRequestLive, onPriceChange } from "./events.mjs";
 import { maybeRunJobs } from "./jobs.mjs";
+import { mapRoutes } from "./mapapi.mjs";
 
 const placeCache = new Map();
 
@@ -99,6 +100,10 @@ export async function handle(req, deps) {
       return json({ place: placeCache.get(key) });
     }
 
+    /* ---------- the fast map, listing details, search, shortlist (see mapapi.mjs) ---------- */
+    const m = await mapRoutes({ path, method, url, req, deps, json, readJson, loadViewer, user, later, maybeRunJobs });
+    if (m) return m;
+
     /* ---------- contact for a listing: hands out leads in turn (signed in or not) ---------- */
     const contactM = path.match(/^\/posts\/([^/]+)\/contact$/);
     if (contactM && method === "POST") {
@@ -141,7 +146,13 @@ export async function handle(req, deps) {
     /* ---------- profile ---------- */
     if (path === "/me" && method === "GET") {
       const { viewer, profile } = await loadViewer();
-      return json({ email: user.email || null, phone: user.phone || null, profile, isAdmin, access: accessSummary(viewer) });
+      // How many listings this person shortlisted and hid (shown in My profile and the list).
+      const counts = {
+        shortlist: (await store.rows("watches", { user_id: user.id }, { limit: 1000 })).length,
+        hidden: (await store.rows("hidden_posts", { user_id: user.id }, { limit: 2000 })).length,
+        requests: (await store.rows("posts", { user_id: user.id, kind: "request", status: "active" }, { limit: 50 })).length
+      };
+      return json({ email: user.email || null, phone: user.phone || null, profile, isAdmin, access: accessSummary(viewer), counts });
     }
     if (path === "/me" && method === "POST") {
       const body = await readJson(req);
