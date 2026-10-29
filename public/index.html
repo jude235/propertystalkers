@@ -2049,7 +2049,7 @@ function openAssistant(context = null) {
   } else {
     for (const m of S.ask.messages) {
       if (m.role === "user") bubble("me", m.content);
-      else { if (m.content) bubble("ai", m.content); (m.cards || []).forEach(renderAskCard); }
+      else { if (m.content) aiBubble(m.content); (m.cards || []).forEach(renderAskCard); }
     }
   }
   const msg = $("#msg");
@@ -2077,7 +2077,7 @@ async function askSend() {
     typing.remove();
     const note = (r.cards || []).map((c) => c.type === "listings" ? `[Showed listings: ${c.ids.join(", ")}]` : c.type === "draft" ? `[Showed a request draft to confirm]` : c.type === "enquiry" ? `[Showed an enquiry card for ${c.post_id}]` : `[Showed a ${c.type} card]`).join(" ");
     S.ask.messages.push({ role: "assistant", content: r.text, cards: r.cards || [], note });
-    bubble("ai", r.text);
+    aiBubble(r.text);
     (r.cards || []).forEach(renderAskCard);
   } catch (e) {
     typing.remove();
@@ -2086,6 +2086,13 @@ async function askSend() {
   } finally {
     S.busy = false; const s = $("#send"); if (s) s.disabled = false;
   }
+}
+
+/** The assistant writes light markdown: **bold** and "- " bullets. */
+function aiBubble(text) {
+  const d = bubble("ai", "");
+  if (d) d.innerHTML = esc(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-*•] /gm, "• ").replace(/^#{1,4} /gm, "");
+  return d;
 }
 
 function badgeHtml(p) {
