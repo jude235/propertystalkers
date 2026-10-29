@@ -201,6 +201,7 @@ export function validateProposal(input = {}) {
       configs: poster_type === "developer" ? clean(input.configs, 80) : null,
       unit_number,
       size_sqft,
+      maps_link: cleanMapsLink(input.maps_link),
       description: clean(input.description, 400),
       notes
     }
@@ -287,11 +288,21 @@ export function sanitizeMessages(messages) {
   for (const m of messages.slice(-LIMITS.maxMessages)) {
     if (!m || !["user", "assistant"].includes(m.role)) continue;
     const content = String(m.content ?? "").slice(0, LIMITS.maxMessageChars).trim();
-    if (!content) continue;
+    const images = m.role === "user" && Array.isArray(m.images) ? m.images.filter((u) => typeof u === "string" && u.length < 400).slice(0, 4) : [];
+    if (!content && !images.length) continue;
     const last = out[out.length - 1];
-    if (last && last.role === m.role) last.content += "\n" + content;
-    else out.push({ role: m.role, content });
+    if (last && last.role === m.role) {
+      last.content = [last.content, content].filter(Boolean).join("\n");
+      if (images.length) last.images = [...(last.images || []), ...images].slice(0, 4);
+    } else out.push(images.length ? { role: m.role, content: content || "(photos)", images } : { role: m.role, content });
   }
   while (out.length && out[0].role !== "user") out.shift();
   return out;
+}
+
+/** Only Google Maps links are accepted for exact pins. */
+export function cleanMapsLink(u) {
+  const s = String(u || "").trim();
+  if (s.length > 600) return null;
+  return /^https:\/\/((www\.|maps\.)?google\.[a-z.]{2,8}\/maps|maps\.app\.goo\.gl\/|goo\.gl\/maps\/|maps\.google\.[a-z.]{2,8}\/)/i.test(s) ? s : null;
 }

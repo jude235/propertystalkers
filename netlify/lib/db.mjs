@@ -8,7 +8,40 @@ export function makeStore({ url, serviceKey }) {
     return data;
   };
 
+  /** where: { col: value | null | { in, lt, lte, gt, gte, not } } */
+  const filter = (q, where = {}) => {
+    for (const [k, v] of Object.entries(where)) {
+      if (v === null) q = q.is(k, null);
+      else if (v && typeof v === "object" && !Array.isArray(v)) {
+        if ("in" in v) q = q.in(k, v.in.length ? v.in : ["00000000-0000-0000-0000-000000000000"]);
+        if ("lt" in v) q = q.lt(k, v.lt);
+        if ("lte" in v) q = q.lte(k, v.lte);
+        if ("gt" in v) q = q.gt(k, v.gt);
+        if ("gte" in v) q = q.gte(k, v.gte);
+        if ("not" in v) q = v.not === null ? q.not(k, "is", null) : q.neq(k, v.not);
+      } else q = q.eq(k, v);
+    }
+    return q;
+  };
+
   return {
+    /* Generic table access used by the newer features. */
+    async rows(table, where = {}, { order, asc = false, limit } = {}) {
+      let q = filter(sb.from(table).select("*"), where);
+      if (order) q = q.order(order, { ascending: asc });
+      if (limit) q = q.limit(limit);
+      return must(await q);
+    },
+    async insert(table, rows) {
+      if (Array.isArray(rows) && !rows.length) return [];
+      return must(await sb.from(table).insert(rows).select());
+    },
+    async update(table, where, patch) {
+      return must(await filter(sb.from(table).update(patch), where).select());
+    },
+    async remove(table, where) {
+      must(await filter(sb.from(table).delete(), where));
+    },
     async getUser(token) {
       if (!token) return null;
       const { data, error } = await sb.auth.getUser(token);

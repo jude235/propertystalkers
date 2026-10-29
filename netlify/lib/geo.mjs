@@ -11,6 +11,21 @@ export function precisionOf(result) {
   return "city"; // too vague to pin a property
 }
 
+/** Coordinates written in a Google Maps URL: @lat,lng / !3dlat!4dlng / q=lat,lng / ll= / query= / destination=. */
+export function coordsFromMapsUrl(u) {
+  const s = decodeURIComponent(String(u || ""));
+  const pats = [/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/, /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
+    /[?&](?:q|ll|query|destination|center)=(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/];
+  for (const re of pats) {
+    const m = s.match(re);
+    if (m) {
+      const lat = +m[1], lng = +m[2];
+      if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat || lng)) return { lat, lng };
+    }
+  }
+  return null;
+}
+
 export function makeGeo({ apiKey, fetchImpl = fetch }) {
   async function geocode(address) {
     const u = new URL("https://maps.googleapis.com/maps/api/geocode/json");
@@ -24,6 +39,22 @@ export function makeGeo({ apiKey, fetchImpl = fetch }) {
   }
 
   return {
+    /** Exact pin from a Google Maps link; short maps.app.goo.gl links are followed (two hops at most). */
+    async pinFromLink(link) {
+      let u = link;
+      for (let hop = 0; hop < 3; hop++) {
+        const c = coordsFromMapsUrl(u);
+        if (c) return c;
+        if (!/^https:\/\/(maps\.app\.goo\.gl|goo\.gl)\//i.test(u) && hop > 0) break;
+        try {
+          const res = await fetchImpl(u, { redirect: "manual" });
+          const next = res.headers.get("location");
+          if (!next) break;
+          u = next;
+        } catch { break; }
+      }
+      return null;
+    },
     /** For the search bar: any place name -> centre and viewport, or null. */
     async search(q) {
       const r = await geocode(q);

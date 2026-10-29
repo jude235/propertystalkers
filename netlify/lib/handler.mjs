@@ -3,6 +3,11 @@ import {
   LIMITS, POSTER_TYPES, isUuid, clean, cleanPhone, cleanRera, buildingKey, validateProposal,
   makeViewer, canSee, accessSummary, toPublic, sanitizeMessages, unitKey, leadPool, collapseUnits
 } from "./core.mjs";
+import { marketInfo, textFlags, FLAG_TEXT, PUBLIC_FLAGS } from "./market.mjs";
+import { features } from "./features.mjs";
+import { runAssistant } from "./assistant.mjs";
+import { onListingLive, onRequestLive, onPriceChange } from "./events.mjs";
+import { maybeRunJobs } from "./jobs.mjs";
 
 const placeCache = new Map();
 
@@ -24,6 +29,11 @@ export async function handle(req, deps) {
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api/, "").replace(/\/+$/, "") || "/";
   const method = req.method;
+  // Work that can finish after the reply (notifications, background jobs). Tests run it inline.
+  const later = async (fn) => {
+    const job = Promise.resolve().then(fn).catch((e) => console.error("background job failed", e));
+    if (deps.defer) deps.defer(job); else await job;
+  };
 
   try {
     if (path === "/config" && method === "GET") {
@@ -54,7 +64,23 @@ export async function handle(req, deps) {
       const posts = await store.activePosts();
       const avatars = await store.avatarsFor([...new Set(posts.map((p) => p.user_id))]);
       for (const p of posts) p.contact_avatar = avatars[p.user_id] || null;
-      const visible = collapseUnits(posts, viewer).filter((p) => canSee(p, viewer)).map((p) => toPublic(p, viewer));
+      const info = marketInfo(posts);
+      const watched = viewer ? new Set((await store.rows("watches", { user_id: viewer.id })).map((w) => w.post_id)) : new Set();
+      const visible = collapseUnits(posts, viewer).filter((p) => canSee(p, viewer)).map((p) => {
+        const out = toPublic(p, viewer);
+        const i = info.get(p.id) || {};
+        const insider = viewer && (viewer.id === p.user_id || viewer.isAdmin);
+        const flags = [...(Array.isArray(p.flags) ? p.flags : []), ...(i.below_pct >= 40 ? ["far_below_market"] : [])];
+        out.below_market_pct = i.below_pct >= 5 ? i.below_pct : 0;
+        out.price_cut_pct = i.cut_pct || 0;
+        out.good_deal = !!i.deal;
+        out.warnings = flags.filter((f) => insider || PUBLIC_FLAGS.includes(f)).map((f) => FLAG_TEXT[f]).filter(Boolean);
+        out.watched = watched.has(p.id);
+        out.cobroke = !!p.cobroke && (insider || !!(viewer && viewer.isBroker));
+        out.needs_confirm = !!(insider && p.stale_notified_at);
+        return out;
+      });
+      await later(() => maybeRunJobs(deps));
       return json({ posts: visible, access: accessSummary(viewer), signedIn: !!viewer });
     }
 
@@ -90,6 +116,11 @@ export async function handle(req, deps) {
       return json({ contact: { post_id: to.id, name: to.contact_name, phone: to.contact_phone, avatar: pic } });
     }
 
+    if (path.startsWith("/repair/")) {
+      const r = await features({ path, method, req, url, user: null, deps, json, readJson, loadViewer });
+      if (r) return r;
+    }
+
     if (!user) return json({ error: "sign_in_required" }, 401);
 
     /** Keep only photos in the owner's folder of our bucket (direct or via the /sb proxy), stored in canonical form. */
@@ -119,6 +150,7 @@ export async function handle(req, deps) {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Please enter a valid email address." }, 400);
       if (!phone) return json({ error: "Please enter a valid mobile number with country code." }, 400);
       const update = { id: user.id, email, name, phone };
+      if (typeof body.notify_email === "boolean") update.notify_email = body.notify_email;
       if (body.rera !== undefined) {
         const raw = String(body.rera || "").trim();
         const rera = raw ? cleanRera(raw) : null;
@@ -176,7 +208,15 @@ export async function handle(req, deps) {
     async function makeDraft(proposal) {
       const v = validateProposal(proposal);
       if (!v.ok) return { message: v.ask };
-      const place = await geo.locate(v.post);
+      const { maps_link, ...postFields } = v.post;
+      v.post = postFields;
+      let place = await geo.locate(v.post);
+      if (maps_link) {
+        // Pin fixer: a Google Maps link gives the exact spot.
+        const pin = await geo.pinFromLink(maps_link);
+        if (pin) place = { address: place ? place.address : null, place_id: null, ...(place || {}), lat: pin.lat, lng: pin.lng, precision: "building" };
+        else if (!place) return { message: "I couldn't read a location from that map link. Please open the place in Google Maps, tap Share, and paste that link." };
+      }
       if (!place) {
         const where = [v.post.building, v.post.locality, v.post.city].filter(Boolean).join(", ");
         return { message: `I couldn't find "${where}" on the map. Could you check the spelling, or add the area name or a nearby landmark?` };
@@ -216,7 +256,12 @@ export async function handle(req, deps) {
       if (needsProfile) return json({ error: "profile_required" }, 400);
       if (!profile.role) return json({ error: "role_required" }, 400);
       const body = await readJson(req);
-      const messages = sanitizeMessages(body.messages);
+      const messages = sanitizeMessages(body.messages).map((m) => {
+        // Photos-to-listing: the AI can look at photos the user uploaded to their own folder.
+        const pics = m.images ? ownPhotos(m.images, user.id) : [];
+        if (!pics.length) return { role: m.role, content: m.content };
+        return { role: m.role, content: [...pics.map((url) => ({ type: "image", source: { type: "url", url } })), { type: "text", text: m.content }] };
+      });
       if (!messages.length || messages[messages.length - 1].role !== "user") {
         return json({ error: "Please type a message." }, 400);
       }
@@ -265,6 +310,10 @@ export async function handle(req, deps) {
       const post = await store.createPost({
         ...fields,
         unit_key,
+        first_price: fields.price || null,
+        confirmed_at: new Date().toISOString(),
+        flags: textFlags({ ...fields, kind: draft.kind }),
+        cobroke: draft.poster_type === "broker" && !!body.cobroke,
         photos: draft.kind === "listing" ? photos : [],
         user_id: user.id,
         contact_name: profile.name,
@@ -275,6 +324,7 @@ export async function handle(req, deps) {
       if (draft.poster_type === "broker" && draft.rera_number && profile.rera_number !== draft.rera_number) {
         await store.upsertProfile({ id: user.id, rera_number: draft.rera_number });
       }
+      await later(() => (post.kind === "listing" ? onListingLive(deps, post) : onRequestLive(deps, post)));
       const { viewer } = await loadViewer();
       return json({ post: toPublic(post, viewer) });
     }
@@ -293,10 +343,15 @@ export async function handle(req, deps) {
         price: pick("price"), currency: pick("currency"), building: pick("building"), locality: pick("locality"),
         city: pick("city"), country: pick("country"), rera_number: pick("rera_number"), company: pick("company"),
         possession: pick("possession"), configs: pick("configs"), description: pick("description"),
-        unit_number: pick("unit_number"), size_sqft: pick("size_sqft")
+        unit_number: pick("unit_number"), size_sqft: pick("size_sqft"), maps_link: b.maps_link
       });
       if (!v.ok) return json({ error: v.ask }, 400);
-      const { notes, kind, poster_type, ...fields } = v.post;
+      const { notes, kind, poster_type, maps_link, ...fields } = v.post;
+      let pin = null;
+      if (b.maps_link) {
+        pin = maps_link ? await geo.pinFromLink(maps_link) : null;
+        if (!pin) return json({ error: "That doesn't look like a Google Maps link with a location. In Google Maps, tap Share and paste the link." }, 400);
+      }
       // A broker who clears the licence number isn't turned into a landlord on edit; keep their old number.
       if (post.poster_type === "broker" && !fields.rera_number) fields.rera_number = post.rera_number;
       const norm = (x) => String(x || "").trim().toLowerCase();
@@ -309,6 +364,7 @@ export async function handle(req, deps) {
         }
         Object.assign(fields, place, { building_key: buildingKey(fields.building, fields.city) });
       }
+      if (pin) Object.assign(fields, { lat: pin.lat, lng: pin.lng, precision: "building" });
       if (post.kind === "listing") {
         fields.unit_key = unitKey(fields);
         if (fields.unit_key !== post.unit_key) {
@@ -319,7 +375,18 @@ export async function handle(req, deps) {
       if (post.kind === "listing" && Array.isArray(b.photos)) {
         fields.photos = ownPhotos(b.photos, post.user_id);
       }
+      if (post.poster_type === "broker" && typeof b.cobroke === "boolean") fields.cobroke = b.cobroke;
+      fields.flags = textFlags({ ...post, ...fields, kind: post.kind, poster_type: post.poster_type });
+      const priceChanged = (fields.price || null) !== (post.price || null);
+      if (priceChanged) {
+        fields.price_changed_at = new Date().toISOString();
+        if (!post.first_price) fields.first_price = post.price || fields.price || null;
+      }
+      const before = { ...post };
       const updated = await store.updatePost(post.id, fields);
+      if (updated.kind === "listing") {
+        await later(() => (priceChanged ? onPriceChange(deps, updated, before.price) : onListingLive(deps, updated, { previous: before })));
+      }
       const { viewer } = await loadViewer();
       return json({ post: toPublic(updated, viewer) });
     }
@@ -388,6 +455,25 @@ export async function handle(req, deps) {
       await store.setPostStatus(post.id, "removed");
       return json({ ok: true });
     }
+
+    /* ---------- Ask Stalker ---------- */
+    if (path === "/assistant" && method === "POST") {
+      if (needsProfile) return json({ error: "profile_required" }, 400);
+      const body = await readJson(req);
+      const messages = sanitizeMessages(body.messages);
+      if (!messages.length || messages[messages.length - 1].role !== "user") return json({ error: "Please type a message." }, 400);
+      if ((await store.bumpAiUsage(user.id)) > LIMITS.aiCallsPerDay) {
+        return json({ error: "You've reached today's limit for the assistant. Please try again tomorrow." }, 429);
+      }
+      const { viewer } = await loadViewer();
+      const context = body.context && isUuid(body.context.post_id) ? { post_id: body.context.post_id } : {};
+      const r = await runAssistant({ deps, user, profile, viewer, messages, context,
+        makeRequestDraft: (proposal) => makeDraft(proposal) });
+      return json(r);
+    }
+
+    const extra = await features({ path, method, req, url, user, profile, isAdmin, deps, json, readJson, loadViewer, needsProfile });
+    if (extra) return extra;
 
     return json({ error: "Not found" }, 404);
   } catch (err) {
