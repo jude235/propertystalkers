@@ -1,0 +1,72 @@
+# Builds the Property Stalkers Android preview app whenever the app/ folder changes (or when started by hand).
+# The installable file is attached to the "android-preview" release, so it can be downloaded straight to a phone.
+name: Android preview app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["app/**", ".github/workflows/android-preview.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Make the Android project
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          npx cap add android
+          npx capacitor-assets generate --android --iconBackgroundColor '#11352b' --iconBackgroundColorDark '#0b231c' --splashBackgroundColor '#11352b' --splashBackgroundColorDark '#0b231c'
+          node scripts/patch-android.mjs
+          npx cap sync android
+
+      - name: Build
+        run: |
+          mkdir -p ~/.android
+          cp preview.keystore ~/.android/debug.keystore   # same key every build, so new versions install over old ones
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../PropertyStalkers.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PropertyStalkers-android-preview
+          path: app/PropertyStalkers.apk
+
+      - name: Put it on the download page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-preview
+          name: Android preview app
+          prerelease: true
+          body: |
+            Preview build ${{ github.run_number }} of the Property Stalkers Android app (not on Google Play yet).
+            Open this page on your Android phone, tap PropertyStalkers.apk, then open the download and allow "Install unknown apps" when asked.
+          files: app/PropertyStalkers.apk
