@@ -54,3 +54,13 @@ test("geocoding: building, falls back to sector, rejects city-only", async () =>
   const denied = makeGeo({ apiKey: "g", fetchImpl: async () => new Response(JSON.stringify({ status: "REQUEST_DENIED", error_message: "bad key" })) });
   await assert.rejects(denied.locate({ locality: "X", city: "Y" }), /REQUEST_DENIED/);
 });
+
+test("pin from a Google Maps short link follows the redirect", async () => {
+  const fetchImpl = async (u) => {
+    if (u === "https://maps.app.goo.gl/abc") return new Response(null, { status: 302, headers: { location: "https://www.google.com/maps/place/X/data=!3d25.0801!4d55.1402" } });
+    throw new Error("unexpected " + u);
+  };
+  const geo = makeGeo({ apiKey: "k", fetchImpl });
+  assert.deepEqual(await geo.pinFromLink("https://maps.app.goo.gl/abc"), { lat: 25.0801, lng: 55.1402 });
+  assert.deepEqual(await geo.pinFromLink("https://www.google.com/maps/@25.2,55.3,15z"), { lat: 25.2, lng: 55.3 });
+});
