@@ -3,6 +3,9 @@
 export const POSTER_TYPES = ["landlord", "broker", "developer", "buyer", "tenant"];
 export const PROPERTY_TYPES = ["apartment", "villa", "independent_house", "plot", "office", "shop", "warehouse", "other"];
 export const COMMERCIAL_TYPES = ["office", "shop", "warehouse"];
+/** "Let's share": what is being shared, and who it suits. */
+export const ROOM_TYPES = ["private_room", "shared_room", "bed_space", "whole_unit"];
+export const SUITS = ["any", "male", "female", "couples"];
 
 export const LIMITS = {
   importBatch: 10,       // DLD projects per admin import call (keeps each call under the host's request cap)
@@ -48,15 +51,18 @@ export function cleanUnit(u) {
 /** "Unit 1204", "Flat #1204" and "1204" are the same unit. */
 export function unitNorm(u) {
   return String(u || "").toLowerCase()
-    .replace(/\b(unit|flat|apartment|apt|villa|office|shop|plot|no|number|num)\b\.?/g, "")
+    .replace(/\b(unit|flat|apartment|apt|villa|office|shop|plot|room|bedroom|bed|space|no|number|num)\b\.?/g, "")
     .replace(/[^a-z0-9]/g, "");
 }
 
 /** One key per unit and deal: the same unit is counted separately for sale and for rent. */
-export function unitKey({ deal, building, locality, city, unit_number }) {
+export function unitKey({ deal, building, locality, city, unit_number, room }) {
   const place = buildingKey(building || locality, city);
   const n = unitNorm(unit_number);
-  return place && n && deal ? `${deal}|${place}|${n}` : null;
+  if (!(place && n && deal)) return null;
+  // Shared spaces are counted per room, so one flat can offer several rooms.
+  if (deal === "share") return `share|${place}|${n}|${unitNorm(room) || "whole"}`;
+  return `${deal}|${place}|${n}`;
 }
 
 /** Listings of one unit share the map: the cheapest first, then whoever listed first. */
@@ -146,16 +152,24 @@ export function validateProposal(input = {}) {
     rera_number = cleanRera(input.rera_number); // project registration, optional
   }
 
-  const kind = poster_type === "buyer" || poster_type === "tenant" ? "request" : "listing";
+  const wantDeal = String(input.deal || "").toLowerCase();
+  // A tenant can look for a place, or share the place they live in (then it's a listing).
+  const sharingOut = wantDeal === "share" && (poster_type === "landlord" || poster_type === "broker" || (poster_type === "tenant" && !!input.share_offer));
+  const kind = sharingOut ? "listing" : poster_type === "buyer" || poster_type === "tenant" ? "request" : "listing";
   let deal;
   if (poster_type === "buyer") deal = "sale";
-  else if (poster_type === "tenant") deal = "rent";
-  else if (poster_type === "developer") deal = String(input.deal || "").toLowerCase() === "rent" ? "rent" : "sale";
+  else if (poster_type === "tenant") deal = wantDeal === "share" ? "share" : "rent";
+  else if (poster_type === "developer") deal = wantDeal === "rent" ? "rent" : "sale";
   else {
-    deal = String(input.deal || "").toLowerCase();
-    if (!["sale", "rent"].includes(deal)) {
-      return { ok: false, ask: "Do you want to sell it or rent it out?" };
+    deal = wantDeal;
+    if (!["sale", "rent", "share"].includes(deal)) {
+      return { ok: false, ask: "Do you want to sell it, rent it out, or share it (a room or bed space)?" };
     }
+  }
+  const shareListing = deal === "share" && kind === "listing";
+  const room_type = deal === "share" ? (ROOM_TYPES.includes(input.room_type) ? input.room_type : null) : null;
+  if (shareListing && !room_type) {
+    return { ok: false, ask: "What are you sharing: a private room, a shared room, a bed space, or the whole flat with flatmates?" };
   }
 
   const building = clean(input.building, 100);
@@ -176,7 +190,8 @@ export function validateProposal(input = {}) {
     if (!unit_number) {
       return { ok: false, ask: "What's the unit, flat or villa number? It's never shown to visitors; it only stops the same unit being listed too many times." };
     }
-    if (!size_sqft) return { ok: false, ask: "What's the size of the property in sq ft?" };
+    // Room sizes are often unknown, so size is required only for whole properties.
+    if (!size_sqft && !shareListing) return { ok: false, ask: "What's the size of the property in sq ft?" };
   }
   const price = toInt(input.price, 1, 100_000_000_000);
   const currency = cleanCurrency(input.currency) || (price ? "INR" : null);
@@ -201,6 +216,11 @@ export function validateProposal(input = {}) {
       configs: poster_type === "developer" ? clean(input.configs, 80) : null,
       unit_number,
       size_sqft,
+      room_type,
+      room: shareListing ? clean(input.room, 30) : null,
+      suits: deal === "share" ? (SUITS.includes(input.suits) ? input.suits : "any") : null,
+      bills_included: deal === "share" && typeof input.bills_included === "boolean" ? input.bills_included : null,
+      move_in: deal === "share" ? clean(input.move_in, 40) : null,
       maps_link: cleanMapsLink(input.maps_link),
       description: clean(input.description, 400),
       notes
@@ -211,12 +231,14 @@ export function validateProposal(input = {}) {
 /* ---------------- visibility ---------------- */
 
 /** Everything we need to know about the person looking at the map. */
-export function makeViewer({ user, profile, isAdmin = false }) {
+export function makeViewer({ user, profile, isAdmin = false, sharesSpace = false }) {
   if (!user) return null;
   return {
     id: user.id,
     email: user.email,
     isAdmin,
+    // Anyone offering a room can see who's looking for one (flatmate matching).
+    sharesSpace: !!sharesSpace,
     // Brokers see requests only while acting as a broker (switching role turns it off).
     isBroker: !!(profile && profile.rera_number && (!profile.role || profile.role === "broker"))
   };
@@ -232,11 +254,13 @@ export function canSee(post, viewer) {
   if (post.status !== "active") return false;
   if (post.kind === "listing") return true;
   if (!viewer) return false;
+  if (post.deal === "share" && viewer.sharesSpace) return true;
   return viewer.isAdmin || viewer.isBroker || post.user_id === viewer.id;
 }
 
 export function accessSummary(viewer) {
-  return { requests: !!(viewer && (viewer.isAdmin || viewer.isBroker)) };
+  const full = !!(viewer && (viewer.isAdmin || viewer.isBroker));
+  return { requests: full || !!(viewer && viewer.sharesSpace), share_only: !full && !!(viewer && viewer.sharesSpace) };
 }
 
 /** What the browser receives. Internal fields and user ids never leave the server. */
@@ -267,6 +291,10 @@ export function toPublic(post, viewer) {
     possession: post.possession,
     configs: post.configs,
     size_sqft: post.size_sqft ?? null,
+    room_type: post.room_type || null,
+    suits: post.suits || null,
+    bills_included: post.bills_included ?? null,
+    move_in: post.move_in || null,
     unit_number: insider ? post.unit_number || null : null,
     contact_on_tap: gated,
     description: post.description,

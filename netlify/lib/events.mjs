@@ -8,7 +8,13 @@ function money(p) {
   if (!p.price) return "";
   return `${p.currency || "INR"} ${Number(p.price).toLocaleString("en-US")}${p.deal === "rent" ? "/month" : ""}`;
 }
+const ROOM = { private_room: "private room", shared_room: "shared room", bed_space: "bed space", whole_unit: "flat to share" };
 export function postTitle(p) {
+  if (p.deal === "share") {
+    const where = [p.building, p.locality, p.city].filter(Boolean).join(", ");
+    const r = ROOM[p.room_type] || "room";
+    return p.kind === "request" ? `looking for a ${r === "flat to share" ? "flat to share" : r + " to share"}${where ? " in " + where : ""}` : `${r === "flat to share" ? "Flat to share" : r[0].toUpperCase() + r.slice(1) + " to share"}${where ? " in " + where : ""}`;
+  }
   const t = { apartment: "apartment", villa: "villa", independent_house: "house", plot: "plot", office: "office", shop: "shop", warehouse: "warehouse" }[p.property_type] || "property";
   const what = p.poster_type === "developer" ? (p.building || "New project") : `${p.bedrooms ? p.bedrooms + " BHK " : ""}${t}`;
   const where = [p.building && p.poster_type !== "developer" ? p.building : null, p.locality, p.city].filter(Boolean).join(", ");

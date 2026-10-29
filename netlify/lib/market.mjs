@@ -117,7 +117,7 @@ export function describeCriteria(c = {}) {
     : c.category === "commercial" ? "commercial property"
     : c.category === "land" ? "land / plots"
     : (c.min_bedrooms ? `${c.min_bedrooms}+ bed ` : "") + (Array.isArray(c.types) && c.types.length ? c.types.join(" / ") : "homes");
-  const deal = c.deal === "rent" ? " to rent" : c.deal === "sale" ? " for sale" : "";
+  const deal = c.deal === "rent" ? " to rent" : c.deal === "sale" ? " for sale" : c.deal === "share" ? " to share" : "";
   const where = [c.area, c.city].filter(Boolean).join(", ");
   const money = c.max_price ? ` up to ${c.currency || ""} ${Number(c.max_price).toLocaleString("en-US")}`.replace("  ", " ") : "";
   return `${c.deals_only ? "Deals on " : ""}${what}${deal}${where ? " in " + where : ""}${money}`.trim();
@@ -137,7 +137,11 @@ export function listingFitsRequest(listing, req) {
   } else if (req.building) {
     if (!placeMatches(listing, req.building)) return false;
   }
-  if (req.bedrooms && listing.bedrooms && !(listing.bedrooms >= req.bedrooms && listing.bedrooms <= req.bedrooms + 1)) return false;
+  if (req.deal === "share") {
+    // Flatmates: the room type and who it suits must fit; bedrooms don't matter.
+    if (req.room_type && listing.room_type && req.room_type !== listing.room_type) return false;
+    if (req.suits && req.suits !== "any" && listing.suits && listing.suits !== "any" && req.suits !== listing.suits) return false;
+  } else if (req.bedrooms && listing.bedrooms && !(listing.bedrooms >= req.bedrooms && listing.bedrooms <= req.bedrooms + 1)) return false;
   if (req.property_type && req.property_type !== "other" && listing.property_type && listing.property_type !== "other"
     && !sameType(req.property_type, listing.property_type)) return false;
   if (req.price && listing.price && (req.currency || "INR") === (listing.currency || "INR") && listing.price > req.price * 1.1) return false;

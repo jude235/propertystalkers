@@ -55,7 +55,8 @@ export async function handle(req, deps) {
     async function loadViewer() {
       if (!user) return { viewer: null, profile: null };
       const profile = await store.getProfile(user.id);
-      return { viewer: makeViewer({ user, profile, isAdmin }), profile };
+      const shares = await store.rows("posts", { user_id: user.id, kind: "listing", deal: "share", status: "active" }, { limit: 1 });
+      return { viewer: makeViewer({ user, profile, isAdmin, sharesSpace: shares.length > 0 }), profile };
     }
 
     /* ---------- map feed (signed in or not) ---------- */
@@ -304,6 +305,9 @@ export async function handle(req, deps) {
       const photos = ownPhotos(body.photos, user.id);
 
       const { notes, ...fields } = draft;
+      if (draft.kind === "listing" && draft.deal === "share" && body.share_permission !== true) {
+        return json({ error: "Please confirm you have permission to share this space (from the owner or landlord)." }, 400);
+      }
       const unit_key = draft.kind === "listing" ? unitKey(draft) : null;
       const problem = await unitProblem(unit_key, draft.deal);
       if (problem) return json({ error: problem }, 409);
@@ -343,7 +347,9 @@ export async function handle(req, deps) {
         price: pick("price"), currency: pick("currency"), building: pick("building"), locality: pick("locality"),
         city: pick("city"), country: pick("country"), rera_number: pick("rera_number"), company: pick("company"),
         possession: pick("possession"), configs: pick("configs"), description: pick("description"),
-        unit_number: pick("unit_number"), size_sqft: pick("size_sqft"), maps_link: b.maps_link
+        unit_number: pick("unit_number"), size_sqft: pick("size_sqft"), maps_link: b.maps_link,
+        room_type: pick("room_type"), room: pick("room"), suits: pick("suits"), bills_included: pick("bills_included"), move_in: pick("move_in"),
+        share_offer: post.kind === "listing"
       });
       if (!v.ok) return json({ error: v.ask }, 400);
       const { notes, kind, poster_type, maps_link, ...fields } = v.post;

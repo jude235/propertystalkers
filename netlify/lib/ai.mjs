@@ -7,10 +7,12 @@ People tell you in their own words what they want to post. Every post is exactly
 - developer: a property developer or builder listing a new project (off-plan or newly built). Developers MUST give the company name. Also ask for the project registration number (RERA or local equivalent), the configurations (e.g. 2, 3 and 4 BHK), the starting price and the possession / handover date, but do not insist.
 - buyer: someone looking to buy
 - tenant: someone looking to rent
+"Let's share" (deal "share"): sharing a home with flatmates. An owner, broker or tenant can offer a private room, shared room, bed space, or the whole flat to split (set share_offer true when offering). A tenant can also look for a room to share (share_offer false; that's a request).
 
 What you need before you can propose a post:
 1. Who they are (landlord, broker, buyer or tenant).
-2. For landlords and brokers: whether they want to sell or rent it out. Developers are selling unless they say otherwise.
+2. For landlords and brokers: whether they want to sell, rent it out, or share it. Developers are selling unless they say otherwise.
+   For sharing: room_type (private_room, shared_room, bed_space or whole_unit), the monthly rent per person, whether bills are included, the move-in date, and who it suits (any, male, female, couples). The room name or number (e.g. "Room 2") goes in room. Size is optional for rooms.
 3. The location: the building or project name and/or the area, sector or community, AND the city. This is mandatory. Never guess a city. Fill in the country when it is clear from the city (e.g. Dubai -> United Arab Emirates, Gurgaon -> India).
 4. For brokers: their licence / RERA number. If a broker does not have or will not give one, tell them it will be posted as Landlord and continue.
 5. For landlords and brokers: the unit, flat, villa, office or plot number (unit_number), and the size (size_sqft). Both are mandatory. The unit number is never shown to visitors; it only stops the same unit being listed more than 3 times. Say so briefly if they hesitate.
@@ -40,7 +42,13 @@ export const PROPOSE_TOOL = {
     type: "object",
     properties: {
       poster_type: { type: "string", enum: ["landlord", "broker", "developer", "buyer", "tenant"] },
-      deal: { type: "string", enum: ["sale", "rent"], description: "sale = selling/buying, rent = renting out/renting" },
+      deal: { type: "string", enum: ["sale", "rent", "share"], description: "sale = selling/buying, rent = renting out/renting, share = rooms / bed spaces with flatmates" },
+      share_offer: { type: ["boolean", "null"], description: "deal share: true when offering a space, false when looking for one" },
+      room_type: { type: ["string", "null"], enum: ["private_room", "shared_room", "bed_space", "whole_unit", null] },
+      room: { type: ["string", "null"], description: "Which room in the unit, e.g. 'Room 2' (sharing)" },
+      suits: { type: ["string", "null"], enum: ["any", "male", "female", "couples", null] },
+      bills_included: { type: ["boolean", "null"] },
+      move_in: { type: ["string", "null"], description: "Move-in date as written, e.g. '1 Dec' or 'now'" },
       property_type: { type: "string", enum: ["apartment", "villa", "independent_house", "plot", "office", "shop", "warehouse", "other"] },
       unit_number: { type: ["string", "null"], description: "Unit / flat / villa / office / plot number (landlords and brokers). Private." },
       size_sqft: { type: ["integer", "null"], description: "Size in square feet (built-up area, or plot area for land)" },
