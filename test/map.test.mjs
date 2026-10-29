@@ -38,13 +38,15 @@ test("pins are lean: no description, contact, phone or unit number; one photo pl
   assert.equal(pin.nphotos, 2);
 });
 
-test("chips: deals add up, categories narrow down", async () => {
+test("chips add up: every chip adds its listings, none hides another's", async () => {
   const { call, sale, rent, dev } = await setup();
   const ids = async (q) => (await call("GET", `/map?${area}&${q}`)).body.pins.map((p) => p.id).sort();
   assert.deepEqual(await ids("deals=sale"), [sale.id, dev.id].sort());
   assert.deepEqual(await ids("deals=sale,rent"), [sale.id, rent.id, dev.id].sort());
   assert.deepEqual(await ids("deals=rent&cats=commercial"), [rent.id]);
-  assert.deepEqual(await ids("deals=sale&cats=project"), [dev.id]);
+  assert.deepEqual(await ids("deals=sale&cats=project"), [sale.id, dev.id].sort(), "sale listings stay when New projects is added");
+  assert.deepEqual(await ids("cats=project"), [dev.id]);
+  assert.deepEqual(await ids("deals=stay&cats=project"), [dev.id], "a chip with nothing in view doesn't hide the others");
   assert.deepEqual(await ids("deals=sale&types=apartment&beds=2"), [sale.id]);
   assert.deepEqual(await ids("deals=sale&pmax=1500000"), [sale.id]);
 });

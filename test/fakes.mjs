@@ -109,9 +109,9 @@ function inBox(p, f) {
 function mapWhere(p, f) {
   const has = (a, v) => !Array.isArray(a) || !a.length || a.includes(v);
   if (p.kind !== (f.kind || "listing")) return false;
-  if (!has(f.deals, p.deal)) return false;
-  const catOn = !!f.cat_dev || (Array.isArray(f.cat_types) && f.cat_types.length);
-  if (catOn && !((f.cat_dev && p.poster_type === "developer") || (f.cat_types || []).includes(p.property_type || ""))) return false;
+  // Chips add up: a listing shows if it matches any chosen deal or any chosen category.
+  const dealsOn = Array.isArray(f.deals) && f.deals.length, catOn = !!f.cat_dev || (Array.isArray(f.cat_types) && f.cat_types.length);
+  if ((dealsOn || catOn) && !((dealsOn && f.deals.includes(p.deal)) || (f.cat_dev && p.poster_type === "developer") || (f.cat_types || []).includes(p.property_type || ""))) return false;
   if (!has(f.types, p.property_type || "")) return false;
   if (f.beds != null && !(Math.max(p.bedrooms || 0, 0) >= f.beds)) return false;
   if (f.pmin != null && !(p.price >= f.pmin)) return false;
