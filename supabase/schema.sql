@@ -221,3 +221,12 @@ alter table public.watches        enable row level security;
 alter table public.enquiries      enable row level security;
 alter table public.tenancies      enable row level security;
 alter table public.site_jobs      enable row level security;
+
+-- ===================== Let's share: rooms, bed spaces and flatmates (safe to re-run) =====================
+alter table public.posts drop constraint if exists posts_deal_check;
+alter table public.posts add constraint posts_deal_check check (deal in ('sale', 'rent', 'share'));
+alter table public.posts add column if not exists room_type text;        -- private_room / shared_room / bed_space / whole_unit
+alter table public.posts add column if not exists room text;             -- which room in the unit, e.g. "Room 2" (never shown to visitors)
+alter table public.posts add column if not exists suits text;            -- any / male / female / couples
+alter table public.posts add column if not exists bills_included boolean;
+alter table public.posts add column if not exists move_in text;
