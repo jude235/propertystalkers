@@ -59,6 +59,18 @@
   button, input, textarea, select { font: inherit; color: inherit; }
   #map-wrap { position: fixed; inset: 0; }
   #map { width: 100%; height: 100%; background: #e9e2d3; }
+  /* Phones: a bar in the header's colours along the bottom, down behind the phone's own navigation buttons.
+     The post button and Stalker sit in it; the map ends above it so Google's logo and terms stay visible. */
+  .bottombar { display: none; }
+  @media (max-width: 759px) {
+    :root { --bar: 68px; }
+    .bottombar { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 18; height: calc(var(--bar) + env(safe-area-inset-bottom));
+      background: var(--brand-deep); border-top: 2px solid var(--brass); box-shadow: 0 -6px 18px rgba(0, 0, 0, .18); }
+    #map-wrap { bottom: calc(var(--bar) + env(safe-area-inset-bottom)); }
+    .fab { bottom: calc(11px + env(safe-area-inset-bottom)) !important; box-shadow: none; }
+    .ask-fab { bottom: calc(7px + env(safe-area-inset-bottom)) !important; box-shadow: none; }
+    .role-pill { bottom: calc(var(--bar) + 12px + env(safe-area-inset-bottom)) !important; }
+  }
 
   /* ---------- header ---------- */
   .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; pointer-events: none; }
@@ -507,6 +519,7 @@
 <body>
 
 <div id="map-wrap"><div id="map" aria-label="Map of properties and requests"></div></div>
+<div class="bottombar" aria-hidden="true"></div>
 
 <div class="topbar">
   <header class="header"><div class="header-in">
