@@ -30,11 +30,12 @@ test("only listings inside the visible area are sent", async () => {
   assert.ok(!ids.includes(far.id), "Mumbai is off screen");
 });
 
-test("pins are lean: no description, contact, phone or unit number; one photo plus a count", async () => {
+test("pins are lean: no description, contact, phone or unit number; photo links plus a count", async () => {
   const { call, sale } = await setup();
   const pin = (await call("GET", `/map?${area}&deals=sale`)).body.pins.find((p) => p.id === sale.id);
-  for (const k of ["description", "contact_phone", "contact_name", "unit_number", "user_id", "unit_key", "photos"]) assert.equal(pin[k], undefined, k);
+  for (const k of ["description", "contact_phone", "contact_name", "unit_number", "user_id", "unit_key"]) assert.equal(pin[k], undefined, k);
   assert.equal(pin.photo, "https://x/p1.jpg");
+  assert.deepEqual(pin.photos, ["https://x/p1.jpg", "https://x/p2.jpg"]);
   assert.equal(pin.nphotos, 2);
 });
 
