@@ -62,6 +62,29 @@ export function memoryStore() {
     async logLead(l) { this._leads.push(l); },
     async avatarsFor(ids) { const o = {}; for (const id of ids) { const p = profiles.get(id); if (p && p.avatar_url) o[id] = p.avatar_url; } return o; },
     async activePosts() { return posts.filter((p) => p.status === "active"); },
+    // Same rules as the SQL functions in supabase/map.sql.
+    async mapPins(f) {
+      const hidden = f.me ? new Set(tbl("hidden_posts").filter((h) => h.user_id === f.me).map((h) => h.post_id)) : new Set();
+      return posts.filter((p) => p.status === "active" && inBox(p, f) && mapWhere(p, f) && !hidden.has(p.id))
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, Math.min(f.lim || 400, 1000)).map((p) => ({ ...p }));
+    },
+    async mapClusters(f) {
+      const cells = new Map();
+      for (const p of posts) {
+        if (!(p.status === "active" && inBox(p, f) && mapWhere(p, f))) continue;
+        const k = Math.floor(p.lat / f.cell) + ":" + Math.floor(p.lng / f.cell);
+        const c = cells.get(k) || { lat: 0, lng: 0, n: 0 };
+        c.lat += p.lat; c.lng += p.lng; c.n++; cells.set(k, c);
+      }
+      return [...cells.values()].map((c) => ({ lat: c.lat / c.n, lng: c.lng / c.n, n: c.n }));
+    },
+    async postsByIds(ids) { return posts.filter((p) => ids.includes(p.id) && p.status === "active").map((p) => ({ ...p })); },
+    async searchPosts(q, kind, limit = 20) {
+      const s = String(q || "").toLowerCase().trim();
+      if (s.length < 2) return [];
+      return posts.filter((p) => p.status === "active" && p.kind === kind && [p.building, p.locality, p.city, p.company].some((x) => String(x || "").toLowerCase().includes(s))).slice(0, limit);
+    },
+    async sitemapRows() { return posts.filter((p) => p.status === "active" && p.kind === "listing"); },
     async postsByUser(uid) { return posts.filter((p) => p.user_id === uid); },
     async getPost(id) { return posts.find((p) => p.id === id) || null; },
     async createPost(p) { const v = { id: randomUUID(), created_at: new Date().toISOString(), ...DEFAULTS.posts(), ...p }; posts.push(v); return v; },
@@ -79,6 +102,32 @@ export function memoryStore() {
 }
 
 /** AI that returns whatever the test queued next. */
+function inBox(p, f) {
+  if (p.lat == null || p.lng == null) return false;
+  return p.lat >= f.s && p.lat <= f.n && p.lng >= f.w && p.lng <= f.e;
+}
+function mapWhere(p, f) {
+  const has = (a, v) => !Array.isArray(a) || !a.length || a.includes(v);
+  if (p.kind !== (f.kind || "listing")) return false;
+  if (!has(f.deals, p.deal)) return false;
+  const catOn = !!f.cat_dev || (Array.isArray(f.cat_types) && f.cat_types.length);
+  if (catOn && !((f.cat_dev && p.poster_type === "developer") || (f.cat_types || []).includes(p.property_type || ""))) return false;
+  if (!has(f.types, p.property_type || "")) return false;
+  if (f.beds != null && !(Math.max(p.bedrooms || 0, 0) >= f.beds)) return false;
+  if (f.pmin != null && !(p.price >= f.pmin)) return false;
+  if (f.pmax != null && !(p.price <= f.pmax)) return false;
+  if (f.smin != null && !(p.size_sqft >= f.smin)) return false;
+  if (f.smax != null && !(p.size_sqft <= f.smax)) return false;
+  if (!has(f.by, p.poster_type)) return false;
+  if (Array.isArray(f.amen) && f.amen.length && !f.amen.every((a) => (p.amenities || []).includes(a))) return false;
+  if (f.photos && !(Array.isArray(p.photos) && p.photos.length)) return false;
+  if (p.kind !== "listing") {
+    const scope = f.req_scope || "own";
+    if (!(scope === "all" || (scope === "share" && p.deal === "share") || (f.me && p.user_id === f.me))) return false;
+  }
+  return true;
+}
+
 export function scriptedAI() {
   const queue = [];
   return {
