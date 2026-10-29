@@ -230,3 +230,6 @@ alter table public.posts add column if not exists room text;             -- whic
 alter table public.posts add column if not exists suits text;            -- any / male / female / couples
 alter table public.posts add column if not exists bills_included boolean;
 alter table public.posts add column if not exists move_in text;
+
+-- Amenities chips (safe to re-run).
+alter table public.posts add column if not exists amenities jsonb not null default '[]'::jsonb;
