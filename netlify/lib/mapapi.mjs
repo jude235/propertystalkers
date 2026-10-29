@@ -129,9 +129,14 @@ export async function mapRoutes(c) {
     const { viewer } = await loadViewer();
     const p = await store.getPost(one[1]);
     if (!p || !canSee(p, viewer)) return json({ error: "This listing isn't available any more." }, 404);
-    const near = p.lat == null ? [] : await store.mapPins({ w: p.lng - 0.05, e: p.lng + 0.05, s: p.lat - 0.05, n: p.lat + 0.05, kind: "listing", deals: [p.deal], lim: 400 });
+    // Everything else this page needs, fetched at the same time (each trip to the database takes a while).
+    const [near, avatars, watchedRows, hiddenRows] = await Promise.all([
+      p.lat == null ? [] : store.mapPins({ w: p.lng - 0.05, e: p.lng + 0.05, s: p.lat - 0.05, n: p.lat + 0.05, kind: "listing", deals: [p.deal], lim: 400 }),
+      store.avatarsFor([p.user_id]),
+      viewer ? store.rows("watches", { user_id: viewer.id, post_id: p.id }) : [],
+      viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: p.id }) : []
+    ]);
     const info = marketInfo(near.some((x) => x.id === p.id) ? near : [...near, p]).get(p.id) || {};
-    const avatars = await store.avatarsFor([p.user_id]);
     p.contact_avatar = avatars[p.user_id] || null;
     const out = toPublic(p, viewer);
     const insider = viewer && (viewer.id === p.user_id || viewer.isAdmin);
@@ -140,8 +145,8 @@ export async function mapRoutes(c) {
     out.price_cut_pct = info.cut_pct || 0;
     out.good_deal = !!info.deal;
     out.warnings = flags.filter((x) => insider || PUBLIC_FLAGS.includes(x)).map((x) => FLAG_TEXT[x]).filter(Boolean);
-    out.watched = viewer ? (await store.rows("watches", { user_id: viewer.id, post_id: p.id })).length > 0 : false;
-    out.hidden = viewer ? (await store.rows("hidden_posts", { user_id: viewer.id, post_id: p.id })).length > 0 : false;
+    out.watched = watchedRows.length > 0;
+    out.hidden = hiddenRows.length > 0;
     out.cobroke = !!p.cobroke && (insider || !!(viewer && viewer.isBroker));
     out.needs_confirm = !!(insider && p.stale_notified_at);
     out.nphotos = out.photos.length;
