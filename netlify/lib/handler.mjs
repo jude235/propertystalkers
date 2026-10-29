@@ -370,7 +370,7 @@ export async function handle(req, deps) {
         city: pick("city"), country: pick("country"), rera_number: pick("rera_number"), company: pick("company"),
         possession: pick("possession"), configs: pick("configs"), description: pick("description"),
         unit_number: pick("unit_number"), size_sqft: pick("size_sqft"), maps_link: b.maps_link,
-        room_type: pick("room_type"), room: pick("room"), suits: pick("suits"), bills_included: pick("bills_included"), move_in: pick("move_in"),
+        room_type: pick("room_type"), room: pick("room"), suits: pick("suits"), bills_included: pick("bills_included"), move_in: pick("move_in"), amenities: pick("amenities"),
         share_offer: post.kind === "listing"
       });
       if (!v.ok) return json({ error: v.ask }, 400);

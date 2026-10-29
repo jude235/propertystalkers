@@ -6,6 +6,9 @@ export const COMMERCIAL_TYPES = ["office", "shop", "warehouse"];
 /** "Let's share": what is being shared, and who it suits. */
 export const ROOM_TYPES = ["private_room", "shared_room", "bed_space", "whole_unit"];
 export const SUITS = ["any", "male", "female", "couples"];
+export const AMENITIES = ["wifi", "ac", "furnished", "parking", "pool", "gym", "security", "balcony", "lift", "power_backup", "kitchen",
+  "maid", "laundry", "meals", "pets", "metro", "garden", "view"];
+export const cleanAmenities = (a) => (Array.isArray(a) ? [...new Set(a.filter((x) => AMENITIES.includes(x)))] : []);
 
 export const LIMITS = {
   importBatch: 10,       // DLD projects per admin import call (keeps each call under the host's request cap)
@@ -221,6 +224,7 @@ export function validateProposal(input = {}) {
       suits: deal === "share" ? (SUITS.includes(input.suits) ? input.suits : "any") : null,
       bills_included: deal === "share" && typeof input.bills_included === "boolean" ? input.bills_included : null,
       move_in: deal === "share" ? clean(input.move_in, 40) : null,
+      amenities: kind === "listing" ? cleanAmenities(input.amenities) : [],
       maps_link: cleanMapsLink(input.maps_link),
       description: clean(input.description, 400),
       notes
@@ -295,6 +299,7 @@ export function toPublic(post, viewer) {
     suits: post.suits || null,
     bills_included: post.bills_included ?? null,
     move_in: post.move_in || null,
+    amenities: Array.isArray(post.amenities) ? post.amenities : [],
     unit_number: insider ? post.unit_number || null : null,
     contact_on_tap: gated,
     description: post.description,

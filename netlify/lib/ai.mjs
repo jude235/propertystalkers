@@ -29,6 +29,7 @@ Rules:
 - As soon as you have the required details, call propose_post. Do not write a long confirmation first; the app shows the user a summary to confirm.
 - Write description as one or two plain sentences using only the user's facts.
 - Photos: if the user sends photos, use what you can clearly see (property type, rooms, finishes, furnishing, views, condition) to fill property_type, bedrooms and a better description. Never guess the location, price, unit number or size from photos; ask for them.
+- Amenities: list the ones the user mentions (WiFi, AC, furnished, parking, pool, gym, security, balcony, lift, power backup, modular kitchen, housekeeping, laundry, meals, pet friendly, near metro, garden, view) or that are clearly visible in photos. Don't ask about them.
 - Pasted listings: people may paste a listing from WhatsApp or another site. Pull the details out of it, ignore phone numbers, links and emojis, and ask only for what's missing.
 - Exact pin: if the user pastes a Google Maps link, put it in maps_link. If the location was only found at area level, you may suggest they paste a Google Maps link for an exact pin.
 - If the user wants to change something after a draft, call propose_post again with the corrected details.
@@ -49,6 +50,7 @@ export const PROPOSE_TOOL = {
       suits: { type: ["string", "null"], enum: ["any", "male", "female", "couples", null] },
       bills_included: { type: ["boolean", "null"] },
       move_in: { type: ["string", "null"], description: "Move-in date as written, e.g. '1 Dec' or 'now'" },
+      amenities: { type: "array", items: { type: "string", enum: ["wifi", "ac", "furnished", "parking", "pool", "gym", "security", "balcony", "lift", "power_backup", "kitchen", "maid", "laundry", "meals", "pets", "metro", "garden", "view"] }, description: "Amenities the user mentioned or that are clearly visible in photos" },
       property_type: { type: "string", enum: ["apartment", "villa", "independent_house", "plot", "office", "shop", "warehouse", "other"] },
       unit_number: { type: ["string", "null"], description: "Unit / flat / villa / office / plot number (landlords and brokers). Private." },
       size_sqft: { type: ["integer", "null"], description: "Size in square feet (built-up area, or plot area for land)" },
