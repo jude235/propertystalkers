@@ -24,6 +24,9 @@ function bearer(req) {
   return h.startsWith("Bearer ") ? h.slice(7) : null;
 }
 
+/** Google sign-in client ID for propertystalkers.com (public, shown to every browser). */
+export const GOOGLE_CLIENT_ID = "824308350413-bj2i9au6m3579c8u11sn2ak4lkmgcat8.apps.googleusercontent.com";
+
 /** deps: { store, ai, geo, env: { SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_MAPS_BROWSER_KEY, GOOGLE_MAP_ID, ADMIN_EMAILS } } */
 export async function handle(req, deps) {
   const { store, ai, geo, env } = deps;
@@ -45,7 +48,9 @@ export async function handle(req, deps) {
         supabaseUrl: env.SUPABASE_URL,
         supabaseAnonKey: env.SUPABASE_ANON_KEY,
         mapsKey: env.GOOGLE_MAPS_BROWSER_KEY,
-        mapId: env.GOOGLE_MAP_ID || "DEMO_MAP_ID"
+        mapId: env.GOOGLE_MAP_ID || "DEMO_MAP_ID",
+        // Google sign-in: the public "client ID" (not a secret). Set GOOGLE_CLIENT_ID to change it.
+        googleClientId: env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID
       });
     }
 
