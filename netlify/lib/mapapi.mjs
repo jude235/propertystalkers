@@ -10,6 +10,10 @@ import { attachEnv, fillEnv } from "./envq.mjs";
 export const PIN_LIMIT = 300;
 /** Below this zoom level, always send counts (a whole country or continent is in view). */
 export const PIN_MIN_ZOOM = 9;
+/** Zoomed out, the new map look asks for one tiny dot per listing (position and colour only), up to this many. */
+export const DOT_LIMIT = 5000;
+/** Dot colour code: s sale, r rent, c co-living, h holiday home, n new project, q request. */
+const dotCode = (d) => (d.kind === "request" ? "q" : d.dev ? "n" : ({ sale: "s", rent: "r", share: "c", stay: "h" })[d.deal] || "s");
 
 /** Read the visible area, the chips and the filters from the request. Returns null if the area is missing or bad. */
 export function mapFilter(url, viewer) {
@@ -122,6 +126,15 @@ export async function mapRoutes(c) {
         const pins = await withEnv(await pinsFor(store, rows, viewer));
         if (later && maybeRunJobs) await later(() => maybeRunJobs(deps));
         return json({ ...base, mode: "pins", pins, total: pins.length });
+      }
+    }
+    // Dots: every listing as a tiny coloured dot (a few bytes each), when there aren't too many.
+    if (url.searchParams.get("dots") === "1" && store.mapDots) {
+      const rows = (await Promise.all(boxes(f).map((b) => store.mapDots(dbF(b, { lim: DOT_LIMIT + 1 }))))).flat();
+      if (rows.length <= DOT_LIMIT) {
+        const dots = rows.map((d) => [Math.round(d.lat * 1e5) / 1e5, Math.round(d.lng * 1e5) / 1e5, dotCode({ ...d, kind: d.kind || f.kind })]);
+        if (later && maybeRunJobs) await later(() => maybeRunJobs(deps));
+        return json({ ...base, mode: "dots", dots, total: dots.length });
       }
     }
     const clusters = (await Promise.all(boxes(f).map((b) => store.mapClusters(dbF(b))))).flat()

@@ -82,6 +82,9 @@ export function makeStore({ url, serviceKey }) {
     async mapClusters(f) {
       return must(await sb.rpc("map_clusters", { f: tidyF(f) }));
     },
+    async mapDots(f) {
+      return must(await sb.rpc("map_dots", { f: tidyF(f) }));
+    },
     async postsByIds(ids) {
       if (!ids.length) return [];
       return must(await sb.from("posts").select(LEAN).in("id", ids.slice(0, 200)).eq("status", "active"));
