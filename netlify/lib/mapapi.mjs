@@ -42,11 +42,23 @@ export function mapFilter(url, viewer) {
     by: list("by", ["landlord", "broker", "developer", "host"]),
     amen: list("amen", AMENITIES),
     photos: q("photos") === "1" || null,
+    // Listed within N days ("1", "7", "30"), or on the market for over 90 days ("90+").
+    maxage: ["1", "7", "30"].includes(q("age")) ? Number(q("age")) : null,
+    minage: q("age") === "90+" ? 90 : null,
+    cut: q("cut") === "1" || null,
+    ppmin: num("ppmin", 0, 1e9), ppmax: num("ppmax", 0, 1e9),
+    words: keywords(q("q")),
     me: viewer ? viewer.id : null,
     req_scope: viewer && (viewer.isAdmin || viewer.isBroker) ? "all" : viewer && viewer.sharesSpace ? "share" : "own",
     // Grid square size for counts: about a quarter of a map tile at this zoom.
     cell: 360 / Math.pow(2, Math.round(z)) / 4
   };
+}
+
+/** Free-text keywords: up to 5 plain words (letters, digits, dashes), each at least 2 characters. */
+export function keywords(raw) {
+  const w = String(raw || "").toLowerCase().normalize("NFKC").split(/\s+/).map((x) => x.replace(/[^\p{L}\p{N}-]/gu, "")).filter((x) => x.length >= 2);
+  return [...new Set(w)].slice(0, 5);
 }
 
 /** One rectangle, or two when the view crosses the date line. */
