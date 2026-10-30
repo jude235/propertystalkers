@@ -14,7 +14,7 @@ create index if not exists hidden_posts_user_idx on public.hidden_posts (user_id
 -- f (jsonb): w s e n, kind ('listing' | 'request'), deals [], cat_dev bool, cat_types [], types [], beds, pmin, pmax,
 -- smin, smax, by [], amen [], photos bool, me (uuid), req_scope ('all' | 'share' | 'own'), lim, cell
 create or replace function public.map_where(p public.posts, f jsonb) returns boolean
-language sql immutable parallel safe as $$
+language sql stable parallel safe as $$
   select
     p.kind = coalesce(f->>'kind', 'listing')
     -- Chips add up: a listing shows if it matches any chosen deal or any chosen category.
@@ -34,6 +34,18 @@ language sql immutable parallel safe as $$
     and (f->'by' is null or jsonb_array_length(f->'by') = 0 or (f->'by') ? p.poster_type)
     and (f->'amen' is null or jsonb_array_length(f->'amen') = 0 or coalesce(p.amenities, '[]'::jsonb) @> (f->'amen'))
     and (coalesce((f->>'photos')::boolean, false) = false or jsonb_array_length(coalesce(p.photos, '[]'::jsonb)) > 0)
+    -- Listed within N days / on the market over N days
+    and (f->>'maxage' is null or p.created_at >= now() - ((f->>'maxage')::int * interval '1 day'))
+    and (f->>'minage' is null or p.created_at <= now() - ((f->>'minage')::int * interval '1 day'))
+    -- Price reduced since first posted
+    and (coalesce((f->>'cut')::boolean, false) = false or (p.first_price is not null and p.price is not null and p.price < p.first_price))
+    -- Price per sq ft
+    and (f->>'ppmin' is null or (p.size_sqft > 0 and p.price is not null and p.price::numeric / p.size_sqft >= (f->>'ppmin')::numeric))
+    and (f->>'ppmax' is null or (p.size_sqft > 0 and p.price is not null and p.price::numeric / p.size_sqft <= (f->>'ppmax')::numeric))
+    -- Keywords: every word must appear in the description, building, area or city
+    and (f->'words' is null or jsonb_array_length(f->'words') = 0 or not exists (
+      select 1 from jsonb_array_elements_text(f->'words') w
+      where (coalesce(p.description, '') || ' ' || coalesce(p.building, '') || ' ' || coalesce(p.locality, '') || ' ' || coalesce(p.city, '')) not ilike '%' || w || '%'))
     and (
       p.kind = 'listing'
       or coalesce(f->>'req_scope', 'own') = 'all'
