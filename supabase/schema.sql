@@ -255,3 +255,11 @@ create table if not exists public.hidden_posts (
   primary key (user_id, post_id)
 );
 alter table public.hidden_posts enable row level security;
+
+-- ===================== Area air and noise (cache; filled by the server) =====================
+create table if not exists public.area_env (
+  key        text primary key,          -- 'air:25.08,55.14' (~3 km), 'noise:25.080,55.140' (~200 m), 'budget:YYYY-MM-DD'
+  data       jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.area_env enable row level security;  -- server only; no public access
