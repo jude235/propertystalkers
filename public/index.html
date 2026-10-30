@@ -280,6 +280,9 @@
 
   /* Role picker */
   .roles { display: grid; gap: 10px; margin-top: 4px; }
+  .legal { font-size: 12px; color: var(--muted); text-align: center; margin: 16px 0 0; }
+  .legal a { color: inherit; }
+  .gsi-btn { display: flex; justify-content: center; min-height: 44px; }
   .oauth-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; border: 1px solid var(--line); color: var(--ink); }
   .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 14px 0 4px; }
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
@@ -996,6 +999,7 @@ async function boot() {
     S.session = data.session;
   } catch (e) { S.session = null; }
   S.userId = S.session ? S.session.user.id : null;
+  if (!S.session) googleOneTap();
   S.sb.auth.onAuthStateChange((_event, session) => {
     S.session = session;
     const id = session ? session.user.id : null;
@@ -2782,6 +2786,56 @@ async function authProviders() {
 
 const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
 
+/* ---------------- Google sign-in ----------------
+   Google's own button and the "Continue as …" pop-up give us a signed token from Google; Supabase checks it
+   through our /sb address, so this works even where *.supabase.co is blocked (no redirect to Supabase). */
+let gsiLoad = null, gNonce = null, gInit = null;
+function loadGsi() {
+  if (!gsiLoad) gsiLoad = new Promise((ok, no) => {
+    const sc = document.createElement("script");
+    sc.src = "https://accounts.google.com/gsi/client"; sc.async = true;
+    sc.onload = () => (window.google && google.accounts ? ok(google) : no(new Error("gsi")));
+    sc.onerror = () => { gsiLoad = null; no(new Error("gsi")); };
+    document.head.appendChild(sc);
+  });
+  return gsiLoad;
+}
+async function sha256hex(t) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+/** Ready to use Google? (client ID set, Google switched on in Supabase, not inside the app). */
+async function googleReady() {
+  if (IN_APP || !S.cfg || !S.cfg.googleClientId || !window.crypto || !crypto.subtle) return null;
+  const pv = await authProviders();
+  if (!pv.google) return null;
+  if (!gInit) gInit = (async () => {
+    const g = await loadGsi();
+    gNonce = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random())) + Date.now();
+    g.accounts.id.initialize({ client_id: S.cfg.googleClientId, nonce: await sha256hex(gNonce), callback: onGoogleCredential,
+      auto_select: false, cancel_on_tap_outside: true, itp_support: true, use_fedcm_for_prompt: true, context: "signin" });
+    return g;
+  })().catch((e) => { gInit = null; throw e; });
+  return gInit;
+}
+async function onGoogleCredential(resp) {
+  if (!resp || !resp.credential) return;
+  let error;
+  try { ({ error } = await withTimeout(S.sb.auth.signInWithIdToken({ provider: "google", token: resp.credential, nonce: gNonce }), 20000)); }
+  catch (e) { error = e; }
+  if (error) { toast("Google sign-in didn't work. Please try again, or use your email."); return; }
+  if (sheet.dataset.view === "signin") closeSheet();
+  toast("You're signed in with Google.");
+}
+/* The small "Continue as …" box for people already signed in to Google (shown once, a moment after the map). */
+function googleOneTap() {
+  if (S.session || IN_APP) return;
+  setTimeout(async () => {
+    if (S.session) return;
+    try { const g = await googleReady(); if (g && !S.session) g.accounts.id.prompt(); } catch (e) {}
+  }, 2500);
+}
+
 function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 }
@@ -2802,10 +2856,18 @@ function renderSignIn(reason, mode) {
         : `<label class="field"><span>Email</span><input type="email" id="ident" autocomplete="email" placeholder="you@example.com"></label>`}
       <button class="btn accent" style="width:100%" id="signin-btn">Send me a code</button>
       <p class="error" id="signin-err" hidden></p>
-    </form>`;
+    </form>
+    <p class="legal">By continuing you agree to the <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a>.</p>`;
   authProviders().then((pv) => {
     const box = $("#oauth");
-    if (box && pv.google && !IN_APP) { // Google doesn't allow its sign-in inside apps' web views
+    if (box && pv.google && !IN_APP && S.cfg.googleClientId) { // Google doesn't allow its sign-in inside apps' web views
+      box.innerHTML = `<div class="gsi-btn" id="gsi-btn"></div><div class="or"><span>or</span></div>`;
+      googleReady().then((g) => {
+        const slot = $("#gsi-btn");
+        if (!g || !slot) return;
+        g.accounts.id.renderButton(slot, { type: "standard", theme: "outline", size: "large", shape: "pill", text: "continue_with", logo_alignment: "center", width: Math.min(400, Math.max(240, slot.clientWidth || 320)) });
+      }).catch(() => { if (box) box.innerHTML = ""; });
+    } else if (box && pv.google && !IN_APP) {
       box.innerHTML = `<button class="btn oauth-btn" id="google-btn" type="button">${GOOGLE_G}<span>Continue with Google</span></button><div class="or"><span>or</span></div>`;
       $("#google-btn").addEventListener("click", async () => {
         const { error } = await S.sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
