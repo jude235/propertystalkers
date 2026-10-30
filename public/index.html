@@ -444,6 +444,7 @@
   .map-card { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 25; width: min(400px, calc(100% - 24px)); display: grid; grid-template-columns: 128px 1fr;
     background: #fff; color: #10201a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); animation: mc-in .18s ease; }
   .map-card.nophoto { grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .map-card { bottom: 92px; } }  /* above the post button */
   @keyframes mc-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
   .mc-photo { position: relative; min-height: 150px; background: #dfe6e2; }
   .mc-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -461,13 +462,13 @@
   .mc-meta .env-chip { background: #eef2f0; color: #26352e; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .mc-view { margin-top: 6px; padding: 8px 12px; font-size: 13px; }
   /* Colour key */
-  .map-key { position: fixed; left: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  .map-key { position: fixed; left: 12px; bottom: calc(128px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
     font-size: 12px; font-weight: 600; padding: 7px 11px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); display: none; }
   html.look-new .map-key { display: block; }
-  @media (max-width: 759px) { .map-key { bottom: calc(192px + env(safe-area-inset-bottom)); } }
-  .key-pop { position: fixed; left: 12px; z-index: 30; bottom: calc(118px + env(safe-area-inset-bottom)); background: #fff; color: #10201a; border-radius: 14px; padding: 12px 14px;
+  @media (max-width: 759px) { .map-key { bottom: calc(244px + env(safe-area-inset-bottom)); } }
+  .key-pop { position: fixed; left: 12px; z-index: 30; bottom: calc(170px + env(safe-area-inset-bottom)); background: #fff; color: #10201a; border-radius: 14px; padding: 12px 14px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .3); font-size: 12.5px; width: 230px; }
-  @media (max-width: 759px) { .key-pop { bottom: calc(234px + env(safe-area-inset-bottom)); } }
+  @media (max-width: 759px) { .key-pop { bottom: calc(286px + env(safe-area-inset-bottom)); } }
   .key-pop h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6b5a2a; }
   .key-pop .kr { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
   .key-pop .kr i { width: 12px; height: 12px; border-radius: 50%; background: var(--pc); flex: 0 0 auto; }
@@ -1616,7 +1617,7 @@ function mortgageGuess(p) {
   // A rough monthly payment: 20% down, 25 years, 4.5% a year. Shown as a guide only.
   if (p.kind !== "listing" || p.deal !== "sale" || !p.price || isDev(p)) return "";
   const loan = p.price * 0.8, i = 0.045 / 12, n = 300, m = (loan * i) / (1 - Math.pow(1 + i, -n));
-  return amount({ ...p, price: Math.round(m) });
+  return amount({ ...p, price: m >= 10000 ? Math.round(m / 1000) * 1000 : Math.round(m / 100) * 100 });
 }
 function perSqft(p) {
   if (!p.price || !p.size_sqft || p.kind !== "listing" || p.deal !== "sale" || isDev(p)) return "";
