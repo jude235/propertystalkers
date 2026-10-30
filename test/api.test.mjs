@@ -57,7 +57,8 @@ test("config hides server secrets", async () => {
   const { call } = setup();
   const r = await call("GET", "/config");
   assert.equal(r.status, 200);
-  assert.deepEqual(Object.keys(r.body).sort(), ["mapId", "mapsKey", "supabaseAnonKey", "supabaseUrl"]);
+  // The Google sign-in client ID is public by design (every browser needs it); no secrets.
+  assert.deepEqual(Object.keys(r.body).sort(), ["googleClientId", "mapId", "mapsKey", "supabaseAnonKey", "supabaseUrl"]);
 });
 
 test("validation: broker without RERA becomes landlord; location and city required", () => {
