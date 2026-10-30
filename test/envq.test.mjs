@@ -83,3 +83,16 @@ test("map pins and listing details carry area air and noise", async () => {
   const full = (await call(`/posts/${p.id}`)).post;
   assert.equal(full.env.air.label, "Good");
 });
+
+test("noise tries the next OpenStreetMap server when one is busy", async () => {
+  const { makeEnvq, OVERPASS } = await import("../netlify/lib/envq.mjs");
+  const hit = [];
+  const fetchImpl = async (url) => {
+    hit.push(url);
+    if (url === OVERPASS[0]) return new Response("busy", { status: 504 });
+    return new Response(JSON.stringify({ elements: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const r = await makeEnvq({ airKey: "", fetchImpl }).noise(25.08, 55.14);
+  assert.equal(r.label, "Quiet");
+  assert.deepEqual(hit, OVERPASS.slice(0, 2));
+});
