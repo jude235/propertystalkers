@@ -5,6 +5,7 @@ import { makeStore } from "./db.mjs";
 import { makeAI } from "./ai.mjs";
 import { makeGeo } from "./geo.mjs";
 import { makeMailer } from "./notify.mjs";
+import { makeEnvq } from "./envq.mjs";
 
 const REQUIRED = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "ANTHROPIC_API_KEY",
   "GOOGLE_MAPS_BROWSER_KEY", "GOOGLE_GEOCODING_KEY"];
@@ -32,6 +33,7 @@ function depsFor(env) {
       store: makeStore({ url: env.SUPABASE_URL, serviceKey: env.SUPABASE_SERVICE_ROLE_KEY }),
       ai: makeAI({ apiKey: env.ANTHROPIC_API_KEY, model: env.AI_MODEL || "claude-haiku-5-5" }),
       geo: makeGeo({ apiKey: env.GOOGLE_GEOCODING_KEY }),
+      envq: makeEnvq({ airKey: env.GOOGLE_AIR_QUALITY_KEY || env.GOOGLE_GEOCODING_KEY }),
       mail: makeMailer({ apiKey: env.BREVO_API_KEY, from: env.MAIL_FROM || "alerts@propertystalkers.com", site: env.SITE_URL || "https://propertystalkers.com" })
     } };
   }

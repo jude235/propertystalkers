@@ -4,6 +4,7 @@
 // Full details (description, contact, warnings) come from GET /posts/<id> when someone opens a listing.
 import { DEALS, PROPERTY_TYPES, COMMERCIAL_TYPES, AMENITIES, isUuid, clean, collapseUnits, canSee, accessSummary, toPublic } from "./core.mjs";
 import { marketInfo, FLAG_TEXT, PUBLIC_FLAGS } from "./market.mjs";
+import { attachEnv, fillEnv } from "./envq.mjs";
 
 /** More pins than this in view -> send counts per area instead. */
 export const PIN_LIMIT = 300;
@@ -91,6 +92,12 @@ async function countIn(store, f) {
 export async function mapRoutes(c) {
   const { path, method, url, deps, json, readJson, loadViewer, user, later, maybeRunJobs } = c;
   const { store } = deps;
+  // Area air and noise from the cache; any missing areas are looked up after the reply.
+  const withEnv = async (pins) => {
+    const missing = await attachEnv(store, pins);
+    if (missing.length && deps.envq && later) await later(() => fillEnv(store, deps.envq, missing));
+    return pins;
+  };
 
   /* ---------- the map: pins or counts for the visible area ---------- */
   if (path === "/map" && method === "GET") {
@@ -105,14 +112,14 @@ export async function mapRoutes(c) {
     if (mode === "list") {
       const lim = Math.min(Math.max(Number(url.searchParams.get("lim")) || 30, 1), 60);
       const rows = (await Promise.all(boxes(f).map((b) => store.mapPins(dbF(b, { lim }))))).flat();
-      return json({ ...base, mode: "pins", pins: await pinsFor(store, rows, viewer), total: await countIn(store, f) });
+      return json({ ...base, mode: "pins", pins: await withEnv(await pinsFor(store, rows, viewer)), total: await countIn(store, f) });
     }
 
     const minZoom = Number.isFinite(Number(deps.env && deps.env.MAP_PIN_MIN_ZOOM)) && deps.env.MAP_PIN_MIN_ZOOM !== "" ? Number(deps.env.MAP_PIN_MIN_ZOOM) : PIN_MIN_ZOOM;
     if (f.z >= minZoom) {
       const rows = (await Promise.all(boxes(f).map((b) => store.mapPins(dbF(b, { lim: PIN_LIMIT + 1 }))))).flat();
       if (rows.length <= PIN_LIMIT) {
-        const pins = await pinsFor(store, rows, viewer);
+        const pins = await withEnv(await pinsFor(store, rows, viewer));
         if (later && maybeRunJobs) await later(() => maybeRunJobs(deps));
         return json({ ...base, mode: "pins", pins, total: pins.length });
       }
@@ -152,6 +159,7 @@ export async function mapRoutes(c) {
     out.needs_confirm = !!(insider && p.stale_notified_at);
     out.nphotos = out.photos.length;
     out.photo = out.photos[0] || null;
+    await withEnv([out]);
     return json({ post: out });
   }
 
@@ -163,7 +171,7 @@ export async function mapRoutes(c) {
     const rows = await store.postsByIds(ids);
     const order = new Map(ids.map((id, k) => [id, k]));
     const pins = (await pinsFor(store, rows, viewer, { collapse: false })).sort((x, y) => order.get(x.id) - order.get(y.id));
-    return json({ pins });
+    return json({ pins: await withEnv(pins) });
   }
 
   /* ---------- search by building, area, city or developer ---------- */
@@ -177,7 +185,7 @@ export async function mapRoutes(c) {
       const hidden = new Set((await store.rows("hidden_posts", { user_id: viewer.id, post_id: { in: rows.map((r) => r.id) } })).map((h) => h.post_id));
       rows = rows.filter((r) => !hidden.has(r.id));
     }
-    return json({ pins: (await pinsFor(store, rows, viewer)).slice(0, 20) });
+    return json({ pins: await withEnv((await pinsFor(store, rows, viewer)).slice(0, 20)) });
   }
 
   /* ---------- the signed-in person's shortlist, and their own posts ---------- */
@@ -187,7 +195,7 @@ export async function mapRoutes(c) {
     const ids = (await store.rows("watches", { user_id: user.id }, { order: "created_at", asc: false, limit: 300 })).map((w) => w.post_id);
     const rows = await store.postsByIds(ids);
     const order = new Map(ids.map((id, k) => [id, k]));
-    return json({ pins: (await pinsFor(store, rows, viewer, { collapse: false })).sort((x, y) => order.get(x.id) - order.get(y.id)) });
+    return json({ pins: await withEnv((await pinsFor(store, rows, viewer, { collapse: false })).sort((x, y) => order.get(x.id) - order.get(y.id))) });
   }
   if (path === "/me/posts" && method === "GET") {
     if (!user) return json({ error: "Please sign in." }, 401);
