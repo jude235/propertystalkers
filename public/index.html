@@ -149,6 +149,23 @@
   .fopts { display: flex; flex-wrap: wrap; gap: 8px; }
   .fopt { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: #ffffff; color: var(--ink); cursor: pointer; font-size: 14px; font-weight: 500; }
   .fopt[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .fquick { padding-bottom: 4px; }
+  .fquick .fopts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 2px 18px; }
+  .fquick .fopts::-webkit-scrollbar { display: none; }
+  .fquick .fopt { flex: 0 0 auto; border-color: var(--brass); }
+  .fkw { margin: 0; }
+  .rng { padding: 2px 4px 6px; }
+  .rng-val { font-size: 15px; font-weight: 700; color: var(--muted); margin-bottom: 12px; }
+  .rng.on .rng-val { color: var(--brand); }
+  .rng-track { position: relative; height: 28px; }
+  .rng-track::before { content: ""; position: absolute; left: 0; right: 0; top: 12px; height: 4px; border-radius: 2px; background: var(--line); }
+  .rng-fill { position: absolute; top: 12px; height: 4px; border-radius: 2px; background: var(--brand); }
+  .rng-track input { position: absolute; left: -2px; right: -2px; width: calc(100% + 4px); top: 0; height: 28px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+  .rng-track input::-webkit-slider-runnable-track { background: none; height: 28px; }
+  .rng-track input::-moz-range-track { background: none; }
+  .rng-track input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 26px; height: 26px; margin-top: 1px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); cursor: grab; }
+  .rng-track input::-moz-range-thumb { pointer-events: auto; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); cursor: grab; }
+  .rng-track input:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--brass); }
   .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .frow .field { margin: 0; }
   .fhint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
@@ -1313,7 +1330,12 @@ function chipQuery() {
     if (a.by.length) q.set("by", a.by.join(","));
     if (a.amen.length) q.set("amen", a.amen.join(","));
     if (a.photos) q.set("photos", "1");
+    if (a.cut) q.set("cut", "1");
+    if (num(a.ppmin)) q.set("ppmin", num(a.ppmin));
+    if (num(a.ppmax)) q.set("ppmax", num(a.ppmax));
+    if (String(a.q || "").trim()) q.set("q", String(a.q).trim().slice(0, 80));
   }
+  if (a.age) q.set("age", a.age);
   return q;
 }
 /** The visible area, a little bigger and snapped to a grid, so small moves reuse the last answer. */
@@ -1393,13 +1415,14 @@ async function loadFeed() {
 }
 
 /* ---------------- more filters (the button in the search bar) ---------------- */
-const ADV0 = () => ({ types: [], beds: 0, min: "", max: "", smin: "", smax: "", by: [], amen: [], photos: false });
+const ADV0 = () => ({ types: [], beds: 0, min: "", max: "", smin: "", smax: "", by: [], amen: [], photos: false, age: "", cut: false, ppmin: "", ppmax: "", q: "" });
 S.adv = (() => { try { return { ...ADV0(), ...JSON.parse(store.get("ps_filters") || "{}") }; } catch (e) { return ADV0(); } })();
 const F_TYPES = [["apartment", "Apartment"], ["villa", "Villa"], ["independent_house", "House"], ["plot", "Plot / land"], ["office", "Office"], ["shop", "Shop"], ["warehouse", "Warehouse"]];
 const F_BY = [["landlord", "Owner"], ["broker", "Broker"], ["developer", "Developer"]];
 const num = (v) => { const n = Number(String(v ?? "").replace(/[^\d.]/g, "")); return String(v ?? "").trim() !== "" && isFinite(n) && n > 0 ? n : null; };
 function advCount(a = S.adv) {
-  return [a.types.length, a.beds, num(a.min) || num(a.max), num(a.smin) || num(a.smax), a.by.length, a.amen.length, a.photos].filter(Boolean).length;
+  return [a.types.length, a.beds, num(a.min) || num(a.max), num(a.smin) || num(a.smax), a.by.length, a.amen.length, a.photos,
+    a.age, a.cut, num(a.ppmin) || num(a.ppmax), String(a.q || "").trim()].filter(Boolean).length;
 }
 function bedsOf(p) {
   if (p.bedrooms) return Number(p.bedrooms);
@@ -1417,6 +1440,17 @@ function passAdv(p, a = S.adv) {
     if (a.by.length && !a.by.includes(p.poster_type)) return false;
     if (a.amen.length && !a.amen.every((x) => (p.amenities || []).includes(x))) return false;
     if (a.photos && !(p.nphotos || (p.photos && p.photos.length))) return false;
+    if (a.cut && !(p.price_cut_pct > 0)) return false;
+    const plo = num(a.ppmin), phi = num(a.ppmax);
+    if (plo || phi) {
+      const pps = p.size_sqft > 0 && p.price ? p.price / p.size_sqft : null;
+      if (pps == null || (plo && pps < plo) || (phi && pps > phi)) return false;
+    }
+    // (Keywords are matched by the server, which has the full description.)
+  }
+  if (a.age && p.created_at) {
+    const days = (Date.now() - new Date(p.created_at).getTime()) / 86400000;
+    if (a.age === "90+" ? days < 90 : days > Number(a.age)) return false;
   }
   return true;
 }
@@ -1430,23 +1464,91 @@ function updateFilterBadge() {
 function saveAdv() { store.set("ps_filters", JSON.stringify(S.adv)); }
 function clearAdv() { S.adv = ADV0(); saveAdv(); renderMarkers(); refreshMap(); }
 
+/* ---------------- range sliders (two handles) for price, size and price per sq ft ----------------
+   The handles move along fixed steps that grow with the number, so small and large values are both easy to pick.
+   Far left = no minimum, far right = no maximum. */
+const RANGES = {
+  price: { keys: ["min", "max"], stops: [0, 1000, 2500, 5000, 10000, 25000, 50000, 75000, 100000, 150000, 250000, 500000, 750000, 1e6, 1.5e6, 2e6, 2.5e6, 3e6, 4e6, 5e6, 7.5e6, 1e7, 1.5e7, 2e7, 3e7, 5e7], money: true },
+  size: { keys: ["smin", "smax"], stops: [0, 250, 400, 500, 600, 750, 900, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000, 5000, 7500, 10000, 20000], unit: " sq ft" },
+  pps: { keys: ["ppmin", "ppmax"], stops: [0, 250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000, 5000, 7500], money: true, unit: "/sq ft" }
+};
+/** The currency most listings on screen use, for the slider labels. */
+function viewCurrency() {
+  const c = {};
+  (S.posts || []).forEach((p) => { if (p.currency) c[p.currency] = (c[p.currency] || 0) + 1; });
+  return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] || "AED";
+}
+function rangeLabel(kind, v) {
+  const R = RANGES[kind];
+  if (!R.money) return Number(v).toLocaleString("en-US") + (R.unit || "");
+  const cur = viewCurrency();
+  return amount({ price: v, currency: cur }) + (R.unit || "");
+}
+const stopIndex = (stops, v, high) => {
+  const n = num(v);
+  if (!n) return high ? stops.length - 1 : 0;
+  let i = stops.findIndex((x) => x >= n);
+  if (i < 0) i = stops.length - 1;
+  return i;
+};
+function rangeHtml(kind, lo, hi) {
+  const R = RANGES[kind], last = R.stops.length - 1;
+  return `<div class="rng" data-kind="${kind}">
+    <div class="rng-val" aria-live="polite"></div>
+    <div class="rng-track"><div class="rng-fill"></div>
+      <input type="range" class="rng-lo" min="0" max="${last}" step="1" value="${stopIndex(R.stops, lo, false)}" aria-label="Minimum">
+      <input type="range" class="rng-hi" min="0" max="${last}" step="1" value="${stopIndex(R.stops, hi, true)}" aria-label="Maximum">
+    </div></div>`;
+}
+function bindRange(el, f, onChange) {
+  const kind = el.dataset.kind, R = RANGES[kind], last = R.stops.length - 1, [kLo, kHi] = R.keys;
+  const lo = el.querySelector(".rng-lo"), hi = el.querySelector(".rng-hi"), fill = el.querySelector(".rng-fill"), val = el.querySelector(".rng-val");
+  const show = () => {
+    let a = +lo.value, b = +hi.value;
+    if (a > b) { if (document.activeElement === lo) lo.value = a = b; else hi.value = b = a; }
+    f[kLo] = a > 0 ? String(R.stops[a]) : "";
+    f[kHi] = b < last ? String(R.stops[b]) : "";
+    lo.style.zIndex = a >= last - 1 ? 3 : 1;  // so the left handle can still be grabbed when both sit at the far right
+    fill.style.left = (a / last) * 100 + "%";
+    fill.style.right = (100 - (b / last) * 100) + "%";
+    const L = a > 0 ? rangeLabel(kind, R.stops[a]) : null, H = b < last ? rangeLabel(kind, R.stops[b]) : null;
+    val.textContent = !L && !H ? "Any" : L && H ? `${L} – ${H}` : L ? `${L} or more` : `Up to ${H}`;
+    el.classList.toggle("on", !!(L || H));
+  };
+  [lo, hi].forEach((x) => x.addEventListener("input", () => { show(); onChange(); }));
+  show();
+}
+
+/* One-tap filters at the top; each one is a shortcut for a setting further down. */
+const QUICK = [
+  ["week", "🆕 New this week", (f) => f.age === "7", (f, on) => { f.age = on ? "7" : ""; }],
+  ["cut", "↓ Price reduced", (f) => !!f.cut, (f, on) => { f.cut = on; }],
+  ["owner", "🔑 Owners only", (f) => f.by.length === 1 && f.by[0] === "landlord", (f, on) => { f.by = on ? ["landlord"] : []; }],
+  ["furn", "🛋 Furnished", (f) => f.amen.includes("furnished"), (f, on) => { f.amen = on ? [...new Set([...f.amen, "furnished"])] : f.amen.filter((x) => x !== "furnished"); }],
+  ["photos", "📷 With photos", (f) => !!f.photos, (f, on) => { f.photos = on; }]
+];
+const F_AGE = [["", "Any time"], ["1", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90+", "Over 90 days"]];
 function openFilters() {
-  const f = JSON.parse(JSON.stringify(S.adv));
+  const f = { ...ADV0(), ...JSON.parse(JSON.stringify(S.adv)) };
   const req = S.tab === "request";
   const opts = (key, list, multi = true) => `<div class="fopts" data-key="${key}">${list.map(([v, l]) =>
     `<button type="button" class="fopt" data-v="${esc(v)}" aria-pressed="${multi ? f[key].includes(v) : String(f[key]) === String(v)}">${esc(l)}</button>`).join("")}</div>`;
   openSheet("filters", "Filters");
   $("#sheet-body").innerHTML = `
+    ${req ? "" : `<div class="fsec fquick"><div class="fopts" data-key="quick">${QUICK.map(([k, l, isOn]) => `<button type="button" class="fopt" data-q="${k}" aria-pressed="${isOn(f)}">${esc(l)}</button>`).join("")}</div></div>
+    <div class="fsec"><h3>Keywords</h3><label class="field fkw"><input id="f-q" type="search" placeholder="e.g. sea view, upgraded, corner unit" value="${esc(f.q)}" maxlength="80" autocomplete="off"></label>
+      <p class="fhint">Matches words in the description, building or area.</p></div>`}
     <div class="fsec"><h3>Property type</h3>${opts("types", F_TYPES)}</div>
     <div class="fsec"><h3>Bedrooms</h3>${opts("beds", [[0, "Any"], [1, "1+"], [2, "2+"], [3, "3+"], [4, "4+"], [5, "5+"]], false)}</div>
-    <div class="fsec"><h3>${req ? "Budget" : "Price"}</h3>
-      <div class="frow"><label class="field"><span>Min</span><input id="f-min" inputmode="numeric" placeholder="No min" value="${esc(f.min)}"></label>
-      <label class="field"><span>Max</span><input id="f-max" inputmode="numeric" placeholder="No max" value="${esc(f.max)}"></label></div>
+    <div class="fsec"><h3>${req ? "Budget" : "Price"}</h3>${rangeHtml("price", f.min, f.max)}
       <p class="fhint">In the listing's own currency. Rents are per month, holiday homes per night.</p></div>
-    <div class="fsec"><h3>Size (sq ft)</h3>
-      <div class="frow"><label class="field"><span>Min</span><input id="f-smin" inputmode="numeric" placeholder="No min" value="${esc(f.smin)}"></label>
-      <label class="field"><span>Max</span><input id="f-smax" inputmode="numeric" placeholder="No max" value="${esc(f.smax)}"></label></div></div>
-    ${req ? "" : `<div class="fsec"><h3>Listed by</h3>${opts("by", F_BY)}</div>
+    ${req ? "" : `<div class="fsec"><h3>Price per sq ft</h3>${rangeHtml("pps", f.ppmin, f.ppmax)}
+      <p class="fhint">Compare value inside a building or area. Only listings that give their size.</p></div>`}
+    <div class="fsec"><h3>Size (sq ft)</h3>${rangeHtml("size", f.smin, f.smax)}</div>
+    <div class="fsec"><h3>${req ? "Posted" : "Listed"}</h3>${opts("age", F_AGE, false)}
+      ${req ? "" : `<p class="fhint">"Over 90 days" finds homes that have been on the market a while: often room to negotiate.</p>`}</div>
+    ${req ? "" : `<div class="fsec"><h3>Price changes</h3>${opts("cut", [[false, "Any"], [true, "Price reduced"]], false)}</div>
+    <div class="fsec"><h3>Listed by</h3>${opts("by", F_BY.map(([v, l]) => [v, v === "landlord" ? "Owner (no commission)" : l]))}</div>
     <div class="fsec"><h3>Must have</h3>${opts("amen", Object.entries(AMENITIES))}</div>
     <div class="fsec"><h3>Photos</h3>${opts("photos", [[false, "Any"], [true, "With photos only"]], false)}</div>`}`;
   $("#sheet-foot").innerHTML = `<div class="ffoot"><button class="btn" id="f-clear" type="button">Clear all</button><button class="btn accent" id="f-show" type="button"></button></div>`;
@@ -1467,20 +1569,24 @@ function openFilters() {
       } catch (e) { if ($("#f-show")) $("#f-show").textContent = "Show results"; }
     }, 250);
   };
+  // Keep every button in step with the settings (the quick row and the sections below share settings).
+  const sync = () => {
+    body.querySelectorAll('.fopts[data-key="quick"] .fopt').forEach((b) => { const q = QUICK.find((x) => x[0] === b.dataset.q); b.setAttribute("aria-pressed", String(q[2](f))); });
+    body.querySelectorAll('.fopts:not([data-key="quick"])').forEach((g) => {
+      const key = g.dataset.key;
+      g.querySelectorAll(".fopt").forEach((b) => b.setAttribute("aria-pressed", String(Array.isArray(f[key]) ? f[key].includes(b.dataset.v) : String(f[key]) === b.dataset.v)));
+    });
+  };
   body.querySelectorAll(".fopts").forEach((g) => g.addEventListener("click", (e) => {
     const b = e.target.closest(".fopt"); if (!b) return;
     const key = g.dataset.key;
-    if (Array.isArray(f[key])) {
-      f[key] = f[key].includes(b.dataset.v) ? f[key].filter((x) => x !== b.dataset.v) : [...f[key], b.dataset.v];
-      b.setAttribute("aria-pressed", String(f[key].includes(b.dataset.v)));
-    } else {
-      f[key] = key === "photos" ? b.dataset.v === "true" : Number(b.dataset.v);
-      g.querySelectorAll(".fopt").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    }
-    count();
+    if (key === "quick") { const q = QUICK.find((x) => x[0] === b.dataset.q); q[3](f, !q[2](f)); }
+    else if (Array.isArray(f[key])) f[key] = f[key].includes(b.dataset.v) ? f[key].filter((x) => x !== b.dataset.v) : [...f[key], b.dataset.v];
+    else f[key] = key === "photos" || key === "cut" ? b.dataset.v === "true" : key === "age" ? b.dataset.v : Number(b.dataset.v);
+    sync(); count();
   }));
-  [["#f-min", "min"], ["#f-max", "max"], ["#f-smin", "smin"], ["#f-smax", "smax"]].forEach(([id, key]) =>
-    $(id).addEventListener("input", (e) => { f[key] = e.target.value; count(); }));
+  const kw = $("#f-q"); if (kw) kw.addEventListener("input", (e) => { f.q = e.target.value; count(); });
+  body.querySelectorAll(".rng").forEach((r) => bindRange(r, f, count));
   $("#f-clear").addEventListener("click", () => { clearAdv(); closeSheet(); toast("Filters cleared."); });
   $("#f-show").addEventListener("click", () => { S.adv = f; saveAdv(); closeSheet(); closeDetails(); renderMarkers(); refreshMap(); });
   count();
