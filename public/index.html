@@ -383,6 +383,19 @@
   .lc-heart { right: 8px; font-size: 19px; }
   .lc-x { left: 8px; font-size: 14px; }
   .lc-heart[aria-pressed="true"] { background: #fff; color: #d6336c; }
+  /* Area air and noise: two small see-through marks down the right side of the photo. */
+  .lc-env { position: absolute; right: 8px; top: 52px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; }
+  .env-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 6px; border-radius: 999px; background: rgba(0, 0, 0, .34);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: rgba(255, 255, 255, .92); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+  .env-chip i, .area-env .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .25); }
+  .l1 { background: #3ecf6e; } .l2 { background: #f2c94c; } .l3 { background: #f2994a; } .l4 { background: #eb5757; }
+  .area-env { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+  .area-env h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--brass-ink); }
+  .ae-row { display: grid; grid-template-columns: 10px 1fr; column-gap: 9px; align-items: baseline; margin: 6px 0; }
+  .ae-row .dot { width: 9px; height: 9px; transform: translateY(1px); }
+  .ae-row b { font-size: 14px; font-weight: 600; }
+  .ae-row small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .ae-src { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
   .lcard .lc-info { display: flex; align-items: baseline; gap: 8px; border-top: 0; padding: 9px 12px 10px; min-width: 0; }
   .lcard .lc-info .lp { flex: 0 0 auto; font-size: 15px; }
   .lcard .lc-info .lc-what { flex: 1; min-width: 0; font-size: 13px; color: rgba(243, 235, 221, .82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1629,6 +1642,7 @@ async function openDetails(id, opts = {}) {
       <p class="loc">${esc(placeOf(p))}</p>
       <p class="price">${esc(priceOf(p))}</p>
       ${badgeHtml(p)}
+      ${areaEnvHtml(p)}
       ${p.hidden ? `<div class="hidden-note">You hid this listing, so it's off your map. <button type="button" class="linkish" id="unhide-btn">Unhide</button></div>` : ""}
       ${p.needs_confirm ? `<div class="confirm-banner"><span>Is this still available?</span><button class="btn accent" id="still-here">Yes, still available</button></div>` : ""}
       ${(p.warnings || []).length ? `<div class="warn-box"><b>${p.mine ? "Please check" : "Safety check"}</b>${p.warnings.map(esc).join("<br>")}</div>` : ""}
@@ -2194,6 +2208,7 @@ function listCard(p) {
       <div class="lc-photos"><div class="lc-track">${slots.map((src, i) => `<img ${src ? (i ? `data-src="${esc(src)}"` : `src="${esc(src)}"`) : ""} data-k="${i}" alt="" ${i ? "" : `loading="lazy" `}decoding="async" draggable="false">`).join("")}</div></div>
       ${n > 1 ? `<span class="lc-count">1 / ${n}</span>` : ""}
       ${tag ? `<span class="lc-tag">${esc(tag)}</span>` : ""}
+      ${envChips(p)}
       ${can ? `<button type="button" class="lc-x" aria-label="Hide this listing">✕</button>
       <button type="button" class="lc-heart" aria-pressed="${!!p.watched}" aria-label="${p.watched ? "Remove from shortlist" : "Add to shortlist"}">${p.watched ? "♥" : "♡"}</button>` : ""}
       <div class="litem lc-info" data-id="${esc(p.id)}"><span class="lp">${esc(priceOf(p))}</span><span class="lc-what">${esc(shortTitle(p))}${shortPlace(p) ? " · " + esc(shortPlace(p)) : ""}</span></div>
@@ -3533,6 +3548,23 @@ function aiBubble(text) {
   const d = bubble("ai", "");
   if (d) d.innerHTML = esc(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-*•] /gm, "• ").replace(/^#{1,4} /gm, "");
   return d;
+}
+
+/* ---------------- area air and noise ---------------- */
+function envChips(p) {
+  const e = p.env;
+  if (!e || (!e.air && !e.noise) || p.kind === "request") return "";
+  const air = e.air && e.air.aqi != null ? `<span class="env-chip" title="Air today: ${esc(e.air.label)}"><i class="l${e.air.lvl}"></i>AQI ${e.air.aqi}</span>` : "";
+  const noise = e.noise ? `<span class="env-chip" title="Noise (estimate): ${esc(e.noise.label)}"><i class="l${e.noise.lvl}"></i>${esc(e.noise.label)}</span>` : "";
+  return `<div class="lc-env" aria-label="Area: ${e.air ? "air " + esc(e.air.label) + ", " : ""}${e.noise ? "noise " + esc(e.noise.label) : ""}">${air}${noise}</div>`;
+}
+function areaEnvHtml(p) {
+  const e = p.env;
+  if (!e || (!e.air && !e.noise) || p.kind === "request") return "";
+  const air = e.air ? `<div class="ae-row"><span class="dot l${e.air.lvl}"></span><b>Air today: ${esc(e.air.label)} · AQI ${e.air.aqi}</b><small>${e.air.main ? "Mostly " + esc(e.air.main) + ". " : ""}0–50 good, 51–100 moderate, over 100 unhealthy for some people.</small></div>` : "";
+  const noise = e.noise ? `<div class="ae-row"><span class="dot l${e.noise.lvl}"></span><b>Noise: ${esc(e.noise.label)} (estimate)</b><small>${e.noise.why && e.noise.why.length ? esc(e.noise.why.join(" · ")) : "No highways, rail lines, runways or nightlife close by."}</small></div>` : "";
+  return `<div class="area-env"><h3>The area</h3>${air}${noise}
+    <p class="ae-src">For the area, not this exact home.${e.air ? " Air: Google, updated daily." : ""}${e.noise ? " Noise: estimated from map data © OpenStreetMap contributors." : ""}</p></div>`;
 }
 
 function badgeHtml(p) {
