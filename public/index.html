@@ -1148,7 +1148,9 @@ async function initMap() {
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
   addMapTint(S.map);
-  if (NEW_LOOK) { addDotLayer(S.map); S.map.addListener("click", (e) => { if (!tapDot(e)) closeMapCard(); }); }
+  // On phones Google Maps also reports a tap on a pin as a tap on the map, about a third of a second later
+  // (it waits to rule out a double-tap). Ignore that one, or it would close the card the pin just opened.
+  if (NEW_LOOK) { addDotLayer(S.map); S.map.addListener("click", (e) => { if (Date.now() - (S.pinTapAt || 0) < 900) return; if (!tapDot(e)) closeMapCard(); }); }
   S.map.addListener("idle", () => {
     updateListCount();
     renderBanner();
@@ -1637,7 +1639,8 @@ function makeTpin(p) {
   el.innerHTML = `<button type="button" class="tpin" aria-label="${esc(titleOf(p) + ", " + placeOf(p) + (p.price ? ", " + priceOf(p) : ""))}"><b>${esc(pinLetter(p))}</b></button>`
     + (p.price_cut_pct >= 3 ? `<span class="cut" title="Price cut">↓</span>` : "") + (p.watched ? `<span class="fav">♥</span>` : "")
     + `<span class="ptip">${esc(pinLabel(p).replace(/ · share$/, ""))}</span>`;
-  el.addEventListener("click", (e) => { e.stopPropagation(); showMapCard(p.id); });
+  el.addEventListener("pointerdown", () => { S.pinTapAt = Date.now(); });
+  el.addEventListener("click", (e) => { e.stopPropagation(); S.pinTapAt = Date.now(); showMapCard(p.id); });
   return { el, sig: pinSig(p), marker: new S.Marker({ position: { lat: p.lat, lng: p.lng }, content: el, title: titleOf(p) }) };
 }
 function makePin(p) {
@@ -2551,8 +2554,8 @@ async function openList(mode) {
   let items, note = "", total;
   if (short) {
     items = await shortlistPins();
-  } else if (S.mapMode === "clusters") {
-    // Zoomed out: show the newest few in view; zooming in shows them all.
+  } else if (S.mapMode === "clusters" || S.mapMode === "dots") {
+    // Zoomed out (counts or dots, so no full pins loaded): show the newest few in view; zooming in shows them all.
     const q = screenQuery(chipQuery());
     q.set("mode", "list"); q.set("lim", "30");
     try {
