@@ -6,9 +6,11 @@
 // Everything is cached in the area_env table, so showing it costs one quick database read; lookups happen after the reply.
 
 const AIR_CELL = 0.03, NOISE_CELL = 0.002;
-const AIR_TTL = 24 * 3600e3, NOISE_TTL = 90 * 24 * 3600e3, FAIL_TTL = 6 * 3600e3;
+const AIR_TTL = 24 * 3600e3, NOISE_TTL = 90 * 24 * 3600e3, FAIL_TTL = 3600e3;
 export const AIR_DAILY_CAP = 300;
-const PER_REQUEST = { air: 4, noise: 3 };
+const PER_REQUEST = { air: 4, noise: 2 };
+// Public OpenStreetMap (Overpass) servers. They get busy at times, so try each in turn and give up quickly on a slow one.
+export const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
 
 const cellOf = (v, size) => (Math.round(v / size) * size).toFixed(size < 0.01 ? 3 : 2);
 export const airKey = (lat, lng) => `air:${cellOf(lat, AIR_CELL)},${cellOf(lng, AIR_CELL)}`;
@@ -111,13 +113,24 @@ async function lookupNoise(lat, lng, fetchImpl) {
     way(around:4000,${lat},${lng})[aeroway=runway];
     node(around:200,${lat},${lng})[amenity~"^(nightclub|bar|pub)$"];
   );out tags geom qt;`;
-  const res = await fetchImpl("https://overpass-api.de/api/interpreter", {
-    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "PropertyStalkers/1.0 (+https://propertystalkers.com)" },
-    body: "data=" + encodeURIComponent(q)
-  });
-  if (!res.ok) throw new Error("noise " + res.status);
-  const d = await res.json();
-  return scoreNoise(lat, lng, d.elements || []);
+  let lastErr = null;
+  for (const url of OVERPASS) {
+    const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : null;
+    try {
+      const res = await fetchImpl(url, {
+        method: "POST", signal: ctl ? ctl.signal : undefined,
+        headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "PropertyStalkers/1.0 (+https://propertystalkers.com)" },
+        body: "data=" + encodeURIComponent(q)
+      });
+      if (!res.ok) throw new Error("noise " + res.status);
+      const d = await res.json();
+      if (!d || !Array.isArray(d.elements)) throw new Error("noise bad reply");
+      return scoreNoise(lat, lng, d.elements);
+    } catch (e) { lastErr = e; }
+    finally { if (timer) clearTimeout(timer); }
+  }
+  throw lastErr || new Error("noise unavailable");
 }
 
 /* ---------- cache, attach, fill ---------- */
