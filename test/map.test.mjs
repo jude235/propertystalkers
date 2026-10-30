@@ -121,3 +121,16 @@ test("hidden listings stay off this person's map", async () => {
   const anon = (await call("GET", `/map?${area}&deals=sale`)).body.pins.map((p) => p.id);
   assert.ok(anon.includes(sale.id));
 });
+
+test("zoomed out, the new look gets one tiny dot per listing (position and colour code only)", async () => {
+  const { call, sale, rent, dev } = await setup();
+  const r = await call("GET", "/map?w=40&s=0&e=100&n=40&z=4&deals=sale,rent&cats=project&dots=1");
+  assert.equal(r.body.mode, "dots");
+  const byPos = new Map(r.body.dots.map((d) => [d[0] + "," + d[1], d[2]]));
+  assert.equal(byPos.get(sale.lat + "," + sale.lng), "s");
+  assert.equal(byPos.get(rent.lat + "," + rent.lng), "r");
+  assert.equal(byPos.get(dev.lat + "," + dev.lng), "n");
+  assert.ok(r.body.dots.every((d) => d.length === 3), "nothing but position and colour");
+  const old = await call("GET", "/map?w=40&s=0&e=100&n=40&z=4&deals=sale");
+  assert.equal(old.body.mode, "clusters", "the current look still gets counts");
+});

@@ -68,6 +68,11 @@ export function memoryStore() {
       return posts.filter((p) => p.status === "active" && inBox(p, f) && mapWhere(p, f) && !hidden.has(p.id))
         .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, Math.min(f.lim || 400, 1000)).map((p) => ({ ...p }));
     },
+    async mapDots(f) {
+      const hidden = f.me ? new Set(tbl("hidden_posts").filter((h) => h.user_id === f.me).map((h) => h.post_id)) : new Set();
+      return posts.filter((p) => p.status === "active" && inBox(p, f) && mapWhere(p, f) && !hidden.has(p.id)).slice(0, f.lim || 5000)
+        .map((p) => ({ lat: p.lat, lng: p.lng, deal: p.deal, dev: p.poster_type === "developer", kind: p.kind }));
+    },
     async mapClusters(f) {
       const cells = new Map();
       for (const p of posts) {
