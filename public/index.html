@@ -1113,10 +1113,11 @@ function loadGoogleMaps() {
   });
 }
 
-/* ---------------- the new map look, while we try it ----------------
-   Open the site with ?look=new to switch it on on this device, ?look=old to switch it off. */
+/* ---------------- the map look ----------------
+   The new look (letter pins, dots, a card on the map) is the default. ?look=old brings back the previous look on
+   this device, ?look=new returns to the new one. */
 try { const q = new URLSearchParams(location.search).get("look"); if (q === "new" || q === "old") store.set("ps_look", q); } catch (e) {}
-const NEW_LOOK = store.get("ps_look") === "new";
+const NEW_LOOK = store.get("ps_look") !== "old";
 if (NEW_LOOK) document.documentElement.classList.add("look-new");
 
 async function initMap() {
