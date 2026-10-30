@@ -134,3 +134,24 @@ test("zoomed out, the new look gets one tiny dot per listing (position and colou
   const old = await call("GET", "/map?w=40&s=0&e=100&n=40&z=4&deals=sale");
   assert.equal(old.body.mode, "clusters", "the current look still gets counts");
 });
+
+test("filters: listed within, on the market a while, price reduced, price per sq ft, keywords", async () => {
+  const { call, store, owner } = await setup();
+  const base = { kind: "listing", poster_type: "landlord", status: "active", currency: "AED", city: "Dubai", locality: "Marina", precision: "area", photos: [],
+    contact_name: "O", contact_phone: "971501111111", unit_number: "9", deal: "sale", property_type: "apartment", lat: 25.08, lng: 55.13, user_id: owner.id };
+  const daysAgo = (d) => new Date(Date.now() - d * 86400000).toISOString();
+  const fresh = await store.createPost({ ...base, price: 1200000, size_sqft: 1000, description: "Brand new, sea view, high floor", created_at: daysAgo(0.2) });
+  const old = await store.createPost({ ...base, price: 900000, first_price: 1000000, size_sqft: 1000, description: "Upgraded kitchen", created_at: daysAgo(120) });
+  const mid = await store.createPost({ ...base, price: 3000000, size_sqft: 1000, description: "Burj view penthouse", created_at: daysAgo(10) });
+  const ids = async (q) => (await call("GET", `/map?w=55.0&e=55.3&s=25.0&n=25.2&z=13&deals=sale&${q}`)).body.pins.map((p) => p.id).filter((id) => [fresh.id, old.id, mid.id].includes(id)).sort();
+  assert.deepEqual(await ids("age=1"), [fresh.id]);
+  assert.deepEqual(await ids("age=30"), [fresh.id, mid.id].sort());
+  assert.deepEqual(await ids("age=90%2B"), [old.id], "on the market over 90 days");
+  assert.deepEqual(await ids("cut=1"), [old.id]);
+  assert.deepEqual(await ids("ppmin=1000&ppmax=1500"), [fresh.id]);
+  assert.deepEqual(await ids("q=SEA+view"), [fresh.id], "all words, any case");
+  assert.deepEqual(await ids("q=view"), [fresh.id, mid.id].sort());
+  assert.deepEqual(await ids("q=%25%25+_"), [fresh.id, old.id, mid.id].sort(), "wildcards are ignored, not used as patterns");
+  const n = (await call("GET", `/map?w=55.0&e=55.3&s=25.0&n=25.2&z=13&deals=sale&cut=1&mode=count`)).body.total;
+  assert.equal(n, 1, "counts use the same filters");
+});

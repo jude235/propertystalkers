@@ -126,6 +126,17 @@ function mapWhere(p, f) {
   if (!has(f.by, p.poster_type)) return false;
   if (Array.isArray(f.amen) && f.amen.length && !f.amen.every((a) => (p.amenities || []).includes(a))) return false;
   if (f.photos && !(Array.isArray(p.photos) && p.photos.length)) return false;
+  const ageDays = (Date.now() - new Date(p.created_at).getTime()) / 86400000;
+  if (f.maxage != null && !(ageDays <= f.maxage)) return false;
+  if (f.minage != null && !(ageDays >= f.minage)) return false;
+  if (f.cut && !(p.first_price && p.price && p.price < p.first_price)) return false;
+  const pps = p.size_sqft > 0 && p.price ? p.price / p.size_sqft : null;
+  if (f.ppmin != null && !(pps != null && pps >= f.ppmin)) return false;
+  if (f.ppmax != null && !(pps != null && pps <= f.ppmax)) return false;
+  if (Array.isArray(f.words) && f.words.length) {
+    const text = [p.description, p.building, p.locality, p.city].filter(Boolean).join(" ").toLowerCase();
+    if (!f.words.every((w) => text.includes(w))) return false;
+  }
   if (p.kind !== "listing") {
     const scope = f.req_scope || "own";
     if (!(scope === "all" || (scope === "share" && p.deal === "share") || (f.me && p.user_id === f.me))) return false;
