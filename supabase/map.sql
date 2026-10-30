@@ -73,3 +73,17 @@ revoke execute on function public.map_where(public.posts, jsonb) from public, an
 grant execute on function public.map_pins(jsonb) to service_role;
 grant execute on function public.map_clusters(jsonb) to service_role;
 grant execute on function public.map_where(public.posts, jsonb) to service_role;
+
+-- Dots for the zoomed-out map: one row per listing, position and colour only (skips listings this person hid).
+create or replace function public.map_dots(f jsonb) returns table (lat float8, lng float8, deal text, dev boolean, kind text)
+language sql stable parallel safe as $$
+  select p.lat, p.lng, p.deal, p.poster_type = 'developer', p.kind
+  from public.posts p
+  where p.status = 'active'
+    and point(p.lng, p.lat) <@ box(point((f->>'w')::float8, (f->>'s')::float8), point((f->>'e')::float8, (f->>'n')::float8))
+    and public.map_where(p, f)
+    and (f->>'me' is null or not exists (select 1 from public.hidden_posts h where h.user_id = (f->>'me')::uuid and h.post_id = p.id))
+  limit least(coalesce((f->>'lim')::int, 5000), 20000)
+$$;
+revoke execute on function public.map_dots(jsonb) from public, anon, authenticated;
+grant execute on function public.map_dots(jsonb) to service_role;
