@@ -416,6 +416,62 @@
   @media (prefers-reduced-motion: reduce) { .count-tab .chev { animation: none; opacity: .8; } }
   @media (min-width: 760px) { .count-tab { top: 55%; } }
   .cluster.area { border: 0; cursor: pointer; font: inherit; }
+
+  /* ---------- the new map look (?look=new) ----------
+     Small pins coloured by deal with one letter for the type; no price on the map until a pin is tapped.
+     Zoomed out: every listing is a tiny dot. Tapping a pin opens a small card on the map. */
+  :root { --c-s: #0f766e; --c-r: #2563eb; --c-c: #7c3aed; --c-h: #ea580c; --c-n: #b8860b; --c-q: #7a5a27; }
+  .tpin-wrap { position: relative; width: 26px; height: 32px; cursor: pointer; }
+  .tpin { position: absolute; left: 1px; top: 0; width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    background: var(--pc); box-shadow: 0 2px 6px rgba(0, 0, 0, .35); padding: 0; cursor: pointer; transition: transform .12s ease; }
+  .tpin b { display: grid; place-items: center; width: 100%; height: 100%; transform: rotate(45deg); color: #fff; font: 800 11px/1 "Plus Jakarta Sans", sans-serif; }
+  .tpin-wrap.n .tpin b { color: #2b2105; }
+  .tpin-wrap .cut, .tpin-wrap .fav { position: absolute; top: -5px; right: -6px; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff;
+    display: grid; place-items: center; font: 800 9px/1 sans-serif; color: #fff; pointer-events: none; }
+  .tpin-wrap .cut { background: #e11d74; }
+  .tpin-wrap .fav { background: #fff; color: #e11d74; border-color: #e11d74; right: auto; left: -6px; }
+  .tpin-wrap:hover .tpin { transform: rotate(-45deg) scale(1.12); }
+  .tpin-wrap .ptip { display: none; position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #fff; color: #10201a;
+    font: 700 12px/1 "Plus Jakarta Sans", sans-serif; padding: 6px 9px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0, 0, 0, .3); pointer-events: none; }
+  .tpin-wrap.active { z-index: 5; }
+  .tpin-wrap.active .tpin { background: #fff; border-color: var(--pc); transform: rotate(-45deg) scale(1.3); }
+  .tpin-wrap.active .tpin b { color: var(--pc); }
+  .tpin-wrap.active .ptip { display: block; }
+  .s { --pc: var(--c-s); } .r { --pc: var(--c-r); } .c { --pc: var(--c-c); } .h { --pc: var(--c-h); } .n { --pc: var(--c-n); } .q { --pc: var(--c-q); }
+  .dot-layer { position: absolute; pointer-events: none; }
+  html.look-new.is-roadmap .map-tint { display: none; }
+  /* The card that opens on the map when a pin is tapped */
+  .map-card { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 25; width: min(400px, calc(100% - 24px)); display: grid; grid-template-columns: 128px 1fr;
+    background: #fff; color: #10201a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); animation: mc-in .18s ease; }
+  .map-card.nophoto { grid-template-columns: 1fr; }
+  @keyframes mc-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .mc-photo { position: relative; min-height: 150px; background: #dfe6e2; }
+  .mc-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .mc-photo .mc-heart { position: absolute; left: 6px; top: 6px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .45); color: #fff; font-size: 15px; cursor: pointer; }
+  .mc-photo .mc-heart[aria-pressed="true"] { background: #fff; color: #d6336c; }
+  .mc-body { padding: 11px 12px 12px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .mc-top { display: flex; align-items: flex-start; gap: 6px; }
+  .mc-price { flex: 1; font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+  .mc-price i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--pc); margin-right: 6px; transform: translateY(-1px); }
+  .mc-x, .mc-hide { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; border: 0; background: #eef2f0; color: #36463f; cursor: pointer; font-size: 12px; }
+  .mc-sub { font-size: 12px; color: #5b6b64; }
+  .mc-what { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mc-where { font-size: 12.5px; color: #5b6b64; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mc-meta { font-size: 11.5px; color: #5b6b64; display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; }
+  .mc-meta .env-chip { background: #eef2f0; color: #26352e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .mc-view { margin-top: 6px; padding: 8px 12px; font-size: 13px; }
+  /* Colour key */
+  .map-key { position: fixed; left: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    font-size: 12px; font-weight: 600; padding: 7px 11px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); display: none; }
+  html.look-new .map-key { display: block; }
+  @media (max-width: 759px) { .map-key { bottom: calc(192px + env(safe-area-inset-bottom)); } }
+  .key-pop { position: fixed; left: 12px; z-index: 30; bottom: calc(118px + env(safe-area-inset-bottom)); background: #fff; color: #10201a; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3); font-size: 12.5px; width: 230px; }
+  @media (max-width: 759px) { .key-pop { bottom: calc(234px + env(safe-area-inset-bottom)); } }
+  .key-pop h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6b5a2a; }
+  .key-pop .kr { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .key-pop .kr i { width: 12px; height: 12px; border-radius: 50%; background: var(--pc); flex: 0 0 auto; }
+  .key-pop .letters { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
   /* Bottom sheets follow the finger when pulled down to close. */
   .panel.pulling, .sheet.pulling { transition: none !important; }
   .hidden-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--soft); font-size: 13px; color: var(--muted); }
@@ -706,6 +762,7 @@
   <g class="r-eyes"><circle cx="12.5" cy="16.5" r="2.2" fill="#fff"/><circle cx="19.5" cy="16.5" r="2.2" fill="#fff"/></g>
   <rect x="12" y="22.5" width="8" height="1.6" rx=".8" fill="#0b2c22"/></svg><span>Stalker</span></button>
 <button class="locate" id="locate" aria-label="Show where I am" title="Show where I am"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+<button class="map-key" id="map-key" type="button" aria-label="What the colours and letters mean">Key</button>
 <button class="maptype" id="maptype" aria-label="Switch map style">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
   <span id="maptype-label">Map</span>
@@ -1055,6 +1112,12 @@ function loadGoogleMaps() {
   });
 }
 
+/* ---------------- the new map look, while we try it ----------------
+   Open the site with ?look=new to switch it on on this device, ?look=old to switch it off. */
+try { const q = new URLSearchParams(location.search).get("look"); if (q === "new" || q === "old") store.set("ps_look", q); } catch (e) {}
+const NEW_LOOK = store.get("ps_look") === "new";
+if (NEW_LOOK) document.documentElement.classList.add("look-new");
+
 async function initMap() {
   const { Map } = await google.maps.importLibrary("maps");
   const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
@@ -1062,10 +1125,11 @@ async function initMap() {
   let start = { lat: 24, lng: 64, zoom: 4 };
   try { const v = JSON.parse(store.get("ps_view") || "null"); if (v && Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom)) start = v; } catch (e) {}
   S.map = new Map($("#map"), {
-    center: { lat: start.lat, lng: start.lng }, zoom: start.zoom, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || "hybrid",
+    center: { lat: start.lat, lng: start.lng }, zoom: start.zoom, mapId: S.cfg.mapId, mapTypeId: store.get("ps_maptype") || (NEW_LOOK ? "roadmap" : "hybrid"),
     disableDefaultUI: true, zoomControl: true, gestureHandling: "greedy", clickableIcons: false
   });
   addMapTint(S.map);
+  if (NEW_LOOK) { addDotLayer(S.map); S.map.addListener("click", (e) => { if (!tapDot(e)) closeMapCard(); }); }
   S.map.addListener("idle", () => {
     updateListCount();
     renderBanner();
@@ -1107,6 +1171,7 @@ async function addMapTint(map) {
 function updateMapTypeButton() {
   const sat = S.map && S.map.getMapTypeId && S.map.getMapTypeId() !== "roadmap";
   $("#maptype-label").textContent = sat ? "Map" : "Satellite";
+  document.documentElement.classList.toggle("is-roadmap", !sat);
 }
 $("#maptype").addEventListener("click", () => {
   if (!S.map) return;
@@ -1286,6 +1351,7 @@ async function refreshMap(force = false) {
   if (!box) return;
   const q = chipQuery();
   Object.entries(box).forEach(([k, v]) => q.set(k, v));
+  if (NEW_LOOK) q.set("dots", "1");
   const path = "/map?" + q.toString();
   const seq = ++mapSeq;
   if (force) mapMemo.clear();
@@ -1310,6 +1376,7 @@ async function refreshMap(force = false) {
   S.mapMode = data.mode;
   S.total = data.total;
   S.clusters = data.mode === "clusters" ? data.clusters : [];
+  S.dots = data.mode === "dots" ? data.dots : [];
   S.posts = data.mode === "pins" ? data.pins.map(cachePut) : [];
   if (!S.signedIn) applyLocalSaved();
   S.loaded = true;
@@ -1435,6 +1502,7 @@ function inView(p) {
 /** How many listings are on screen (pins, or the sum of the area counts when zoomed out). */
 function viewCount() {
   if (S.mapMode === "clusters") return S.clusters.filter(inView).reduce((t, c) => t + c.n, 0);
+  if (S.mapMode === "dots") return (S.dots || []).filter((d) => inView({ lat: d[0], lng: d[1] })).length;
   return visiblePosts().filter(inView).length;
 }
 const shortNum = (n) => (n >= 10000 ? Math.round(n / 1000) + "k" : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n));
@@ -1445,8 +1513,27 @@ function updateListCount() {
   $("#show-list").classList.toggle("zero", !n);
 }
 
-function pinSig(p) { return [pinLabel(p), p.kind, p.deal, isDev(p), commonWith(p).length].join("|"); }
+function pinSig(p) { return [pinLabel(p), p.kind, p.deal, isDev(p), commonWith(p).length, NEW_LOOK ? [p.property_type, !!p.watched, p.price_cut_pct >= 3].join() : ""].join("|"); }
+const TYPE_LETTER = { apartment: "A", villa: "V", independent_house: "H", plot: "P", office: "O", shop: "S", warehouse: "W" };
+const DEAL_NAME = { s: "For sale", r: "For rent", c: "Co-living", h: "Holiday home", n: "New project", q: "Request" };
+function pinCode(p) { return p.kind === "request" ? "q" : isDev(p) ? "n" : ({ sale: "s", rent: "r", share: "c", stay: "h" })[p.deal] || "s"; }
+function pinLetter(p) {
+  if (isDev(p)) return "N";
+  if (p.deal === "share") return p.room_type === "whole_unit" ? "F" : "R";
+  return TYPE_LETTER[p.property_type] || (p.bedrooms ? String(Math.min(p.bedrooms, 9)) : "•");
+}
+/** New look: a small pin coloured by deal, one letter for the type, a ↓ for a price cut, ♥ if shortlisted. */
+function makeTpin(p) {
+  const el = document.createElement("div");
+  el.className = "tpin-wrap " + pinCode(p) + (p.id === S.activeId ? " active" : "");
+  el.innerHTML = `<button type="button" class="tpin" aria-label="${esc(titleOf(p) + ", " + placeOf(p) + (p.price ? ", " + priceOf(p) : ""))}"><b>${esc(pinLetter(p))}</b></button>`
+    + (p.price_cut_pct >= 3 ? `<span class="cut" title="Price cut">↓</span>` : "") + (p.watched ? `<span class="fav">♥</span>` : "")
+    + `<span class="ptip">${esc(pinLabel(p).replace(/ · share$/, ""))}</span>`;
+  el.addEventListener("click", (e) => { e.stopPropagation(); showMapCard(p.id); });
+  return { el, sig: pinSig(p), marker: new S.Marker({ position: { lat: p.lat, lng: p.lng }, content: el, title: titleOf(p) }) };
+}
 function makePin(p) {
+  if (NEW_LOOK) return makeTpin(p);
   const el = document.createElement("button");
   el.className = "pin" + (p.kind === "request" ? " req" : "") + (isDev(p) ? " dev" : "") + (p.deal === "share" && p.kind === "listing" ? " share" : "") + (p.deal === "stay" && p.kind === "listing" ? " stay" : "") + (p.id === S.activeId ? " active" : "");
   el.textContent = pinLabel(p).replace(/ · share$/, "");
@@ -1468,6 +1555,134 @@ function makeAreaMark(c) {
   m.map = S.map;
   return m;
 }
+
+/* ---------------- new look: dots when zoomed out ----------------
+   One canvas draws every listing as a tiny coloured dot. Tap near a dot to zoom in there. */
+const DOT_COLOUR = { s: "#0f766e", r: "#2563eb", c: "#7c3aed", h: "#ea580c", n: "#b8860b", q: "#7a5a27" };
+async function addDotLayer(map) {
+  try {
+    const { OverlayView } = await google.maps.importLibrary("maps");
+    if (!OverlayView) return;
+    class DotLayer extends OverlayView {
+      constructor() { super(); this.dots = []; }
+      onAdd() { this.cv = document.createElement("canvas"); this.cv.className = "dot-layer"; this.getPanes().overlayLayer.appendChild(this.cv); }
+      setDots(d) { this.dots = d || []; this.draw(); }
+      draw() {
+        const pr = this.getProjection(), m = this.getMap(), cv = this.cv;
+        if (!pr || !m || !cv) return;
+        const b = m.getBounds();
+        if (!b || !this.dots.length) { cv.width = cv.height = 0; return; }
+        const ne = pr.fromLatLngToDivPixel(b.getNorthEast()), sw = pr.fromLatLngToDivPixel(b.getSouthWest());
+        const x0 = sw.x, y0 = ne.y, w = Math.max(1, Math.round(ne.x - sw.x)), h = Math.max(1, Math.round(sw.y - ne.y)), dpr = window.devicePixelRatio || 1;
+        Object.assign(cv.style, { left: x0 + "px", top: y0 + "px", width: w + "px", height: h + "px" });
+        cv.width = w * dpr; cv.height = h * dpr;
+        const ctx = cv.getContext("2d");
+        ctx.scale(dpr, dpr);
+        const z = m.getZoom(), r = z < 6 ? 2.4 : z < 8 ? 3.2 : 4.2;
+        ctx.lineWidth = 1; ctx.strokeStyle = "rgba(255,255,255,.9)";
+        this.px = [];
+        for (const d of this.dots) {
+          const p = pr.fromLatLngToDivPixel(new google.maps.LatLng(d[0], d[1]));
+          const x = p.x - x0, y = p.y - y0;
+          if (x < -8 || y < -8 || x > w + 8 || y > h + 8) continue;
+          ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = DOT_COLOUR[d[2]] || DOT_COLOUR.s; ctx.fill(); ctx.stroke();
+          this.px.push([p.x, p.y, d]);
+        }
+      }
+      onRemove() { if (this.cv) this.cv.remove(); }
+    }
+    S.dotLayer = new DotLayer();
+    S.dotLayer.setMap(map);
+    if (S.mapMode === "dots") S.dotLayer.setDots(S.dots);
+  } catch (e) { /* the map works without the dots */ }
+}
+/** A tap on the map near a dot zooms in there. Returns true if it did. */
+function tapDot(e) {
+  const L = S.dotLayer;
+  if (S.mapMode !== "dots" || !L || !L.px || !L.px.length || !e || !e.latLng) return false;
+  const pr = L.getProjection(); if (!pr) return false;
+  const t = pr.fromLatLngToDivPixel(e.latLng);
+  let best = null, bd = 18 * 18;
+  for (const [x, y, d] of L.px) { const dd = (x - t.x) ** 2 + (y - t.y) ** 2; if (dd < bd) { bd = dd; best = d; } }
+  if (!best) return false;
+  S.map.setCenter({ lat: best[0], lng: best[1] });
+  S.map.setZoom(Math.min(Math.round(S.map.getZoom()) + 3, 15));
+  return true;
+}
+
+/* ---------------- new look: the card on the map ---------------- */
+function mortgageGuess(p) {
+  // A rough monthly payment: 20% down, 25 years, 4.5% a year. Shown as a guide only.
+  if (p.kind !== "listing" || p.deal !== "sale" || !p.price || isDev(p)) return "";
+  const loan = p.price * 0.8, i = 0.045 / 12, n = 300, m = (loan * i) / (1 - Math.pow(1 + i, -n));
+  return amount({ ...p, price: Math.round(m) });
+}
+function perSqft(p) {
+  if (!p.price || !p.size_sqft || p.kind !== "listing" || p.deal !== "sale" || isDev(p)) return "";
+  const cur = p.currency || "INR";
+  return (cur === "INR" ? "₹" : SYMBOL[cur] || cur + " ") + Math.round(p.price / p.size_sqft).toLocaleString("en-US") + "/sq ft";
+}
+function closeMapCard() {
+  const c = $("#map-card");
+  if (c) c.remove();
+  if (S.activeId && !panel.classList.contains("open")) setActive(null);
+}
+function showMapCard(id) {
+  const p = getPost(id);
+  if (!p) return openDetails(id);
+  closeMapCard();
+  setActive(p.id);
+  const code = pinCode(p), can = canSave(p), photo = p.kind === "listing";
+  const bits = [what(p) !== "property" ? cap(what(p)) : DEAL_NAME[code], sizeOf(p)].filter(Boolean).join(" · ");
+  const pps = perSqft(p), mort = mortgageGuess(p);
+  const card = document.createElement("div");
+  card.id = "map-card";
+  card.className = "map-card " + code + (photo ? "" : " nophoto");
+  card.setAttribute("role", "dialog"); card.setAttribute("aria-label", titleOf(p));
+  card.innerHTML = `${photo ? `<div class="mc-photo"><img src="${esc(p.photo ? cardPhoto(p.photo) : placeholder(p.id))}" alt="" decoding="async">${can ? `<button type="button" class="mc-heart" aria-pressed="${!!p.watched}" aria-label="${p.watched ? "Remove from shortlist" : "Add to shortlist"}">${p.watched ? "♥" : "♡"}</button>` : ""}</div>` : ""}
+    <div class="mc-body">
+      <div class="mc-top"><div class="mc-price"><i></i>${esc(p.price ? pinLabel(p).replace(/ · share$/, "") : priceOf(p))}</div>${can ? `<button type="button" class="mc-hide" aria-label="Hide this listing" title="Hide">⊘</button>` : ""}<button type="button" class="mc-x" aria-label="Close">✕</button></div>
+      ${pps ? `<div class="mc-sub">${esc(pps)}</div>` : ""}
+      <div class="mc-what">${esc(bits || titleOf(p))}</div>
+      <div class="mc-where">${esc(placeOf(p))}</div>
+      <div class="mc-meta">${p.created_at ? `<span>Listed ${esc(ago(p.created_at))}</span>` : ""}${mort ? `<span title="Rough guide: 20% down, 25 years, 4.5% a year">Mortgage ≈ ${esc(mort)}/mo</span>` : ""}${p.env && p.env.air ? `<span class="env-chip"><i class="l${p.env.air.lvl}"></i>AQI ${p.env.air.aqi}</span>` : ""}${p.env && p.env.noise ? `<span class="env-chip"><i class="l${p.env.noise.lvl}"></i>${esc(p.env.noise.label)}</span>` : ""}</div>
+      <button type="button" class="btn primary mc-view">View${photo ? " home" : ""}</button>
+    </div>`;
+  $("#map-wrap").appendChild(card);
+  const view = () => { card.remove(); openDetails(p.id); };
+  card.querySelector(".mc-view").addEventListener("click", view);
+  if (photo) card.querySelector(".mc-photo img").addEventListener("click", view);
+  card.querySelector(".mc-x").addEventListener("click", closeMapCard);
+  const heart = card.querySelector(".mc-heart");
+  if (heart) heart.addEventListener("click", async () => {
+    try { await setShortlist(p, !p.watched); } catch (err) { return toast(err.message); }
+    heart.textContent = p.watched ? "♥" : "♡"; heart.setAttribute("aria-pressed", String(!!p.watched));
+    toast(p.watched ? "Added to your shortlist ♥" : "Removed from your shortlist.");
+    renderMarkers();
+  });
+  const hide = card.querySelector(".mc-hide");
+  if (hide) hide.addEventListener("click", async () => {
+    try { await setHiddenId(p.id, true); } catch (err) { return toast(err.message); }
+    closeMapCard(); renderMarkers(); updateListCount();
+    undoToast("Hidden from your map.", async () => { try { await setHiddenId(p.id, false); renderMarkers(); } catch (err) { toast(err.message); } });
+  });
+  // Pull the card down to close it.
+  let y0 = null, dy = 0;
+  card.addEventListener("touchstart", (e) => { y0 = e.touches[0].clientY; dy = 0; card.style.transition = "none"; }, { passive: true });
+  card.addEventListener("touchmove", (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); card.style.translate = `0 ${dy}px`; }, { passive: true });
+  card.addEventListener("touchend", () => { if (y0 === null) return; y0 = null; card.style.transition = "translate .15s ease"; if (dy > 70) closeMapCard(); else card.style.translate = ""; });
+}
+$("#map-key").addEventListener("click", () => {
+  const old = $("#key-pop");
+  if (old) return old.remove();
+  const pop = document.createElement("div");
+  pop.id = "key-pop"; pop.className = "key-pop";
+  pop.innerHTML = `<h4>Colours</h4>${["s", "r", "c", "h", "n"].map((k) => `<div class="kr ${k}"><i></i>${DEAL_NAME[k]}</div>`).join("")}
+    <h4 style="margin-top:10px">Letters</h4><div class="letters"><span><b>A</b> Apartment</span><span><b>V</b> Villa</span><span><b>H</b> House</span><span><b>P</b> Plot</span><span><b>O</b> Office</span><span><b>S</b> Shop</span><span><b>W</b> Warehouse</span><span><b>R</b> Room</span><span><b>N</b> New project</span><span><b>↓</b> Price cut</span></div>`;
+  document.body.appendChild(pop);
+  pop.addEventListener("click", () => pop.remove());
+});
 
 function renderMarkers() {
   const canSeeRequests = !!(S.access && S.access.requests) || !!(S.me && S.me.counts && S.me.counts.requests);
@@ -1494,7 +1709,12 @@ function renderMarkers() {
     const m = makePin(p);
     S.markers.set(p.id, m); S.pinEls.set(p.id, m.el); add.push(m.marker);
   }
-  if (window.markerClusterer) {
+  if (NEW_LOOK) {
+    // No grouping into numbers: every pin shows (at most a few hundred are in view).
+    drop.forEach((m) => (m.map = null));
+    add.forEach((m) => (m.map = S.map));
+    if (S.dotLayer) S.dotLayer.setDots(S.mapMode === "dots" ? S.dots : []);
+  } else if (window.markerClusterer) {
     if (!S.clusterer) {
       S.clusterer = new markerClusterer.MarkerClusterer({
         map: S.map,
@@ -2590,7 +2810,7 @@ pullToClose(sheet, closeSheet);
 $("#backdrop").addEventListener("click", closeSheet);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if ($("#pv")) closeViewer(); else if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
+  if ($("#pv")) closeViewer(); else if ($("#map-card")) closeMapCard(); else if (sheet.classList.contains("open")) closeSheet(); else closeDetails();
 });
 
 /* ---------------- inside the Android / iPhone app ---------------- */
@@ -2601,6 +2821,7 @@ if (IN_APP) {
     // Android back button: close whatever is open first, and only then leave the app.
     window.Capacitor.addListener("App", "backButton", () => {
       if ($("#pv")) { closeViewer(); return; }
+      if ($("#map-card")) { closeMapCard(); return; }
       const pick = $("#picker");
       if (pick && !pick.hidden) { $("#pk-close").click(); return; }
       if (sheet.classList.contains("open")) { closeSheet(); return; }
