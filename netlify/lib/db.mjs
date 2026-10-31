@@ -4,6 +4,19 @@ import { createClient } from "@supabase/supabase-js";
 /** The fields the map and the list need. No descriptions, contact details or unit numbers. */
 export const LEAN = "id,user_id,kind,poster_type,deal,property_type,bedrooms,price,currency,building,locality,city,country,lat,lng,photos,room_type,suits,guests,interests,size_sqft,unit_key,status,created_at,first_price,price_changed_at,configs,building_key,amenities,company,possession,rera_number";
 
+/** Signed-in checks remembered per server copy: token -> { user, until }. */
+const userCache = new Map();
+const USER_CACHE_MS = 60_000;
+/** When a sign-in token runs out (ms), read from the token itself; null if it can't be read. */
+export function tokenExpiry(token) {
+  try {
+    const part = String(token).split(".")[1];
+    if (!part) return null;
+    const json = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=")));
+    return Number.isFinite(json.exp) ? json.exp * 1000 : null;
+  } catch (e) { return null; }
+}
+
 export function makeStore({ url, serviceKey }) {
   const sb = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   // Map filters: drop empty values so the database never sees nulls where it expects lists.
@@ -49,9 +62,21 @@ export function makeStore({ url, serviceKey }) {
     },
     async getUser(token) {
       if (!token) return null;
+      // A token checked in the last minute is trusted again without another trip to the auth server
+      // (every tap on a listing needs it). Never past the token's own expiry.
+      const now = Date.now();
+      const hit = userCache.get(token);
+      if (hit && hit.until > now) return hit.user;
       const { data, error } = await sb.auth.getUser(token);
-      if (error || !data || !data.user) return null;
-      return { id: data.user.id, email: data.user.email || null, phone: data.user.phone || null };
+      if (error || !data || !data.user) { userCache.delete(token); return null; }
+      const user = { id: data.user.id, email: data.user.email || null, phone: data.user.phone || null };
+      const exp = tokenExpiry(token);
+      const until = Math.min(now + USER_CACHE_MS, exp ? exp - 5000 : now + USER_CACHE_MS);
+      if (until > now) {
+        if (userCache.size >= 500) userCache.delete(userCache.keys().next().value);
+        userCache.set(token, { user, until });
+      }
+      return user;
     },
     async getProfile(id) {
       return must(await sb.from("profiles").select("*").eq("id", id).maybeSingle());

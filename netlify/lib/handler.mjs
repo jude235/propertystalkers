@@ -60,8 +60,11 @@ export async function handle(req, deps) {
 
     async function loadViewer() {
       if (!user) return { viewer: null, profile: null };
-      const profile = await store.getProfile(user.id);
-      const shares = await store.rows("posts", { user_id: user.id, kind: "listing", deal: "share", status: "active" }, { limit: 1 });
+      // Both at once: each trip to the database takes a while.
+      const [profile, shares] = await Promise.all([
+        store.getProfile(user.id),
+        store.rows("posts", { user_id: user.id, kind: "listing", deal: "share", status: "active" }, { limit: 1 })
+      ]);
       return { viewer: makeViewer({ user, profile, isAdmin, sharesSpace: shares.length > 0 }), profile };
     }
 

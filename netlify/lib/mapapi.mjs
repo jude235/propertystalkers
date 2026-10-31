@@ -159,15 +159,17 @@ export async function mapRoutes(c) {
   const one = path.match(/^\/posts\/([^/]+)$/);
   if (one && method === "GET") {
     if (!isUuid(one[1])) return json({ error: "Not found" }, 404);
-    const { viewer } = await loadViewer();
-    const p = await store.getPost(one[1]);
+    // Who is asking and the listing itself, at the same time (each trip to the database takes a while).
+    const [{ viewer }, p] = await Promise.all([loadViewer(), store.getPost(one[1])]);
     if (!p || !canSee(p, viewer)) return json({ error: "This listing isn't available any more." }, 404);
-    // Everything else this page needs, fetched at the same time (each trip to the database takes a while).
-    const [near, avatars, watchedRows, hiddenRows] = await Promise.all([
+    // Everything else this page needs, also at the same time, including the area's air and noise.
+    const spot = { id: p.id, lat: p.lat, lng: p.lng };
+    const [near, avatars, watchedRows, hiddenRows, missingEnv] = await Promise.all([
       p.lat == null ? [] : store.mapPins({ w: p.lng - 0.05, e: p.lng + 0.05, s: p.lat - 0.05, n: p.lat + 0.05, kind: "listing", deals: [p.deal], lim: 400 }),
       store.avatarsFor([p.user_id]),
       viewer ? store.rows("watches", { user_id: viewer.id, post_id: p.id }) : [],
-      viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: p.id }) : []
+      viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: p.id }) : [],
+      attachEnv(store, [spot]).catch(() => [])
     ]);
     const info = marketInfo(near.some((x) => x.id === p.id) ? near : [...near, p]).get(p.id) || {};
     p.contact_avatar = avatars[p.user_id] || null;
@@ -184,7 +186,8 @@ export async function mapRoutes(c) {
     out.needs_confirm = !!(insider && p.stale_notified_at);
     out.nphotos = out.photos.length;
     out.photo = out.photos[0] || null;
-    await withEnv([out]);
+    if (spot.env) out.env = spot.env;
+    if (missingEnv.length && deps.envq && later) await later(() => fillEnv(store, deps.envq, missingEnv));
     return json({ post: out });
   }
 
