@@ -1304,16 +1304,25 @@ function cachePut(p) {
   S.cache.set(p.id, v);
   return v;
 }
-async function loadFull(id) {
+const fullReqs = new Map();   // id -> the details request already on its way
+function loadFull(id) {
   const c = S.cache.get(id);
-  if (c && c._full) return c;
-  try {
-    const { post } = await api("/posts/" + encodeURIComponent(id));
-    const v = cachePut({ ...post, _full: true });
-    if (!S.signedIn) { v.watched = LOCAL.get("ps_short").includes(v.id); v.hidden = LOCAL.get("ps_hidden").includes(v.id); }
-    return v;
-  } catch (e) { return null; }
+  if (c && c._full) return Promise.resolve(c);
+  if (fullReqs.has(id)) return fullReqs.get(id);
+  const req = (async () => {
+    try {
+      const { post } = await api("/posts/" + encodeURIComponent(id));
+      const v = cachePut({ ...post, _full: true });
+      if (!S.signedIn) { v.watched = LOCAL.get("ps_short").includes(v.id); v.hidden = LOCAL.get("ps_hidden").includes(v.id); }
+      return v;
+    } catch (e) { return null; }
+    finally { fullReqs.delete(id); }
+  })();
+  fullReqs.set(id, req);
+  return req;
 }
+/** Start fetching a listing's full details before it's opened (its card is showing on the map). */
+function prefetchFull(id) { if (id) loadFull(id); }
 function chipQuery() {
   const a = S.adv, q = new URLSearchParams();
   q.set("kind", S.tab);
@@ -1744,6 +1753,7 @@ function showMapCard(id) {
   if (!p) return openDetails(id);
   closeMapCard();
   setActive(p.id);
+  prefetchFull(p.id);   // most people tap View next: have the details ready
   const code = pinCode(p), can = canSave(p), photo = p.kind === "listing";
   const bits = [what(p) !== "property" ? cap(what(p)) : DEAL_NAME[code], sizeOf(p)].filter(Boolean).join(" · ");
   const pps = perSqft(p), mort = mortgageGuess(p);
