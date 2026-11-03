@@ -1300,22 +1300,29 @@ S.markers = new Map();        // id -> { marker, el, sig }
 S.areaMarks = [];
 const getPost = (id) => S.cache.get(id) || null;
 function cachePut(p) {
-  const v = { ...(S.cache.get(p.id) || {}), ...p };
+  // Update the one copy in place, so the map, the list and an open page all see the same listing
+  // (details fetched ahead of time must not leave the map holding an older copy).
+  const old = S.cache.get(p.id);
+  if (old) { Object.assign(old, p); return old; }
+  const v = { ...p };
   S.cache.set(p.id, v);
   return v;
 }
 const fullReqs = new Map();   // id -> the details request already on its way
+const FULL_FRESH_MS = 10 * 60 * 1000;   // full details kept this long, then fetched again on open
+const hasFull = (c) => !!(c && c._full && Date.now() - (c._fullAt || 0) < FULL_FRESH_MS);
+function keepFull(post) {
+  const v = cachePut({ ...post, _full: true, _fullAt: Date.now() });
+  if (!S.signedIn) { v.watched = LOCAL.get("ps_short").includes(v.id); v.hidden = LOCAL.get("ps_hidden").includes(v.id); }
+  return v;
+}
 function loadFull(id) {
   const c = S.cache.get(id);
-  if (c && c._full) return Promise.resolve(c);
+  if (hasFull(c)) return Promise.resolve(c);
   if (fullReqs.has(id)) return fullReqs.get(id);
   const req = (async () => {
-    try {
-      const { post } = await api("/posts/" + encodeURIComponent(id));
-      const v = cachePut({ ...post, _full: true });
-      if (!S.signedIn) { v.watched = LOCAL.get("ps_short").includes(v.id); v.hidden = LOCAL.get("ps_hidden").includes(v.id); }
-      return v;
-    } catch (e) { return null; }
+    try { const { post } = await api("/posts/" + encodeURIComponent(id)); return keepFull(post); }
+    catch (e) { return null; }
     finally { fullReqs.delete(id); }
   })();
   fullReqs.set(id, req);
@@ -1323,6 +1330,21 @@ function loadFull(id) {
 }
 /** Start fetching a listing's full details before it's opened (its card is showing on the map). */
 function prefetchFull(id) { if (id) loadFull(id); }
+/**
+ * Full details for many listings in one request (a list on screen, the pins around a tapped one), so tapping
+ * any of them opens it at once. Listings already loaded or on their way are skipped.
+ */
+function prefetchDetails(ids) {
+  const want = [...new Set(ids)].filter((id) => id && !hasFull(S.cache.get(id)) && !fullReqs.has(id)).slice(0, 40);
+  if (!want.length) return;
+  const all = api("/posts/details", { method: "POST", body: JSON.stringify({ ids: want }) })
+    .then((r) => new Map((r.posts || []).map((p) => [p.id, keepFull(p)])))
+    .catch(() => new Map());
+  for (const id of want) {
+    const one = all.then((m) => m.get(id) || null).then((v) => v || (fullReqs.delete(id), loadFull(id))).finally(() => { if (fullReqs.get(id) === one) fullReqs.delete(id); });
+    fullReqs.set(id, one);
+  }
+}
 function chipQuery() {
   const a = S.adv, q = new URLSearchParams();
   q.set("kind", S.tab);
@@ -1753,7 +1775,9 @@ function showMapCard(id) {
   if (!p) return openDetails(id);
   closeMapCard();
   setActive(p.id);
-  prefetchFull(p.id);   // most people tap View next: have the details ready
+  // Most people tap View next, or another pin nearby: fetch the details of this one and its neighbours in one go.
+  const d2 = (q) => (q.lat - p.lat) ** 2 + (q.lng - p.lng) ** 2;
+  prefetchDetails([p.id, ...visiblePosts().filter((q) => q.id !== p.id && inView(q)).sort((a, b) => d2(a) - d2(b)).slice(0, 29).map((q) => q.id)]);
   const code = pinCode(p), can = canSave(p), photo = p.kind === "listing";
   const bits = [what(p) !== "property" ? cap(what(p)) : DEAL_NAME[code], sizeOf(p)].filter(Boolean).join(" · ");
   const pps = perSqft(p), mort = mortgageGuess(p);
@@ -1947,11 +1971,11 @@ async function openDetails(id, opts = {}) {
   // Show what the map already knows straight away; the full details follow a moment later.
   const quick = getPost(id);
   const seq = (S.detailSeq = (S.detailSeq || 0) + 1);
-  if (quick && !quick._full) showQuickDetails(quick, opts);
+  if (quick && !hasFull(quick)) showQuickDetails(quick, opts);
   const p = await loadFull(id);
   if (seq !== S.detailSeq) return !!p;   // another listing was opened meanwhile
   if (!p) { if (quick) closeDetails(); return false; }
-  if (quick && !quick._full) opts = { ...opts, pan: false, zoom: undefined };
+  if (quick && !hasFull(quick)) opts = { ...opts, pan: false, zoom: undefined };
   if (p.kind !== S.tab) { S.tab = p.kind; S.posts = []; renderMarkers(); refreshMap(); }
   else if (p.kind === "listing" && !passChips(p)) {
     // Opened from a link or search while its type is switched off: switch it on so its pin shows.
@@ -2616,6 +2640,8 @@ async function shortlistPins() {
 }
 
 function bindListCards() {
+  // Have the full pages of the listings on show ready before anyone taps (one request for all of them).
+  prefetchDetails([...document.querySelectorAll("#panel-content .lcard")].map((c) => c.dataset.id));
   document.querySelectorAll("#panel-content .lcard").forEach((card) => {
     const p = getPost(card.dataset.id);
     if (!p) return;
@@ -4104,7 +4130,7 @@ function openViewingForm(p, kind = "viewing") {
 }
 
 async function myPosts() {
-  try { const { posts } = await api("/me/posts"); return posts.map((p) => cachePut({ ...p, _full: true })); } catch (e) { return []; }
+  try { const { posts } = await api("/me/posts"); return posts.map((p) => cachePut({ ...p, _full: true, _fullAt: Date.now() })); } catch (e) { return []; }
 }
 async function openPitchPicker(req) {
   if (!ready("Sign in to send a listing.")) return;
