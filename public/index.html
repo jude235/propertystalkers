@@ -413,6 +413,11 @@
   .ae-row b { font-size: 14px; font-weight: 600; }
   .ae-row small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
   .ae-src { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
+  /* One card for a building with several homes in the list */
+  .lgroup .lc-count { bottom: auto; top: 10px; right: 10px; font-weight: 700; background: rgba(0, 0, 0, .6); }
+  .bl-rows { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+  .bl-back { display: block; margin: 0 0 10px; font-size: 13px; font-weight: 700; }
+  .bl-row { color: var(--ink); border-bottom-color: var(--line); padding: 13px 14px; }
   .lcard .lc-info { display: flex; align-items: baseline; gap: 8px; border-top: 0; padding: 9px 12px 10px; min-width: 0; }
   .lcard .lc-info .lp { flex: 0 0 auto; font-size: 15px; }
   .lcard .lc-info .lc-what { flex: 1; min-width: 0; font-size: 13px; color: rgba(243, 235, 221, .82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1900,7 +1905,7 @@ function showGroupCard(ids) {
       </button>`).join("")}
     </div>`;
   $("#map-wrap").appendChild(card);
-  card.querySelectorAll(".gc-row").forEach((b) => b.addEventListener("click", () => { card.remove(); openDetails(b.dataset.id); }));
+  card.querySelectorAll(".gc-row").forEach((b) => b.addEventListener("click", () => { card.remove(); openDetails(b.dataset.id, { back: list.map((p) => p.id) }); }));
   card.querySelector(".mc-x").addEventListener("click", closeMapCard);
   // Pull the card down (from its top part) to close it.
   const head = card.querySelector(".gc-head");
@@ -2169,6 +2174,14 @@ async function openDetails(id, opts = {}) {
       <a class="btn wa" href="${esc(waHref(contactOf(p).phone, msg))}" target="_blank" rel="noopener">WhatsApp</a>
     </div>` : ""}`;
 
+  if (opts.back && opts.back.length > 1) {
+    // Opened from a building page: a way back to the other homes there.
+    const bk = document.createElement("button");
+    bk.type = "button"; bk.className = "linkish bl-back";
+    bk.textContent = `‹ All ${opts.back.length} homes in ${spotName(opts.back.map(getPost).filter(Boolean)).name}`;
+    bk.addEventListener("click", () => openBuilding(opts.back));
+    $("#panel-content .body").prepend(bk);
+  }
   const slides = $("#slides"), counter = $("#counter");
   if (slides && p.photos && p.photos.length) {
     slides.classList.add("zoomable");
@@ -2684,6 +2697,98 @@ function listCard(p) {
   </div>`;
 }
 
+/** "1, 2 & 3 BHK": the bedroom counts on offer in a building. */
+function bedsMix(list) {
+  const beds = [...new Set(list.map((p) => p.bedrooms || 0))].sort((a, b) => a - b);
+  const nums = beds.filter((b) => b > 0).map(String), studio = beds.includes(0);
+  const join = (a) => (a.length > 1 ? a.slice(0, -1).join(", ") + " & " + a[a.length - 1] : a[0] || "");
+  return [studio ? "Studio" : "", nums.length ? join(nums) + " BHK" : ""].filter(Boolean).join(" + ");
+}
+/** "1, 2 & 3 BHK apartments": what kinds of homes a building has. */
+function unitMix(list) {
+  const types = [...new Set(list.map((p) => TYPE[p.property_type] || "home"))];
+  return [bedsMix(list), types.length === 1 ? types[0] + "s" : "homes"].filter(Boolean).join(" ");
+}
+/** The list: homes in the same building (same spot and same building name) become one card. */
+function groupForList(items) {
+  const bySpot = new Map();
+  for (const p of items) {
+    const b = (p.building || "").trim().toLowerCase();
+    if (!b || p.kind !== "listing" || p.deal === "share") continue;
+    const k = spotKey(p) + "|" + b;
+    bySpot.set(k, [...(bySpot.get(k) || []), p]);
+  }
+  const done = new Set(), out = [];
+  for (const p of items) {
+    if (done.has(p.id)) continue;
+    const b = (p.building || "").trim().toLowerCase();
+    const g = b && bySpot.get(spotKey(p) + "|" + b);
+    if (g && g.length > 1) { g.forEach((q) => done.add(q.id)); out.push(g.slice().sort(byPrice)); }
+    else { done.add(p.id); out.push(p); }
+  }
+  return out;
+}
+function groupListCard(list) {
+  const pic = list.find((p) => p.photo || (p.photos && p.photos.length)) || list[0];
+  const cheap = list.find((p) => p.price) || list[0];
+  const sp = spotName(list);
+  const mix = bedsMix(list) || unitMix(list);
+  return `<div class="lcard lgroup" data-ids="${esc(list.map((p) => p.id).join(","))}">
+    <div class="lc-front">
+      <div class="lc-photos"><div class="lc-track"><img src="${esc(cardOf(pic))}" alt="" loading="lazy" decoding="async" draggable="false"></div></div>
+      <span class="lc-count">${list.length} homes</span>
+      ${envChips(pic)}
+      <div class="litem lc-info"><span class="lp">${esc(cheap.price ? "From " + priceOf(cheap) : priceOf(cheap))}</span><span class="lc-what">${esc(mix)} · ${esc(sp.name)}</span></div>
+    </div>
+  </div>`;
+}
+/** The building page: every home in it, one row each with size and price. Tap a row to open that home. */
+function openBuilding(ids) {
+  const list = ids.map(getPost).filter(Boolean).sort(byPrice);
+  if (!list.length) return;
+  if (list.length === 1) return openDetails(list[0].id, { pan: true });
+  const first = list[0], cheap = list.find((p) => p.price) || first, sp = spotName(list);
+  const pics = [...new Set(list.flatMap((p) => (p.photos || []).slice(0, 8)))].slice(0, 12).map(cardPhoto);
+  if (!pics.length) pics.push(placeholder(first.id));
+  const place = [first.locality, first.city].filter(Boolean).join(", ");
+  $("#panel-content").innerHTML = `
+    <div class="gallery">
+      <div class="slides" id="slides">${pics.map((src, i) => `<img src="${esc(src)}" alt="Photo ${i + 1}" loading="${i > 1 ? "lazy" : "eager"}" decoding="async">`).join("")}</div>
+      ${pics.length > 1 ? `<span class="counter" id="counter">1 / ${pics.length}</span>
+        <button class="g-nav prev" id="g-prev" aria-label="Previous photo">&#8249;</button>
+        <button class="g-nav next" id="g-next" aria-label="Next photo">&#8250;</button>` : ""}
+    </div>
+    <div class="body">
+      <span class="tag">${esc(DEAL_NAME[pinCode(first)])}</span>
+      <div class="title-row"><h1 class="title">${esc(sp.isBuilding ? sp.name : `${list.length} homes in ${sp.name}`)}</h1></div>
+      ${place ? `<p class="loc">${esc(place)}</p>` : ""}
+      <p class="price">${esc(cheap.price ? "From " + priceOf(cheap) : priceOf(cheap))}</p>
+      <p class="muted" style="margin:4px 0 12px">${esc(cap(unitMix(list)))} · ${list.length} homes</p>
+      <div class="bl-rows">${list.map((p) => `
+        <button type="button" class="gc-row bl-row" data-id="${esc(p.id)}">
+          <b>${esc(p.kind === "request" || p.deal === "share" || isDev(p) ? titleOf(p) : cap(what(p)))}</b><span class="gp">${esc(p.price ? priceOf(p) : "")}</span>
+          <small>${esc([sp.isBuilding ? "" : p.building, sizeOf(p), perSqft(p), p.photos && p.photos.length ? p.photos.length + " photos" : ""].filter(Boolean).join(" · "))}</small>
+        </button>`).join("")}
+      </div>
+    </div>`;
+  const slides = $("#slides"), counter = $("#counter");
+  if (slides && counter) {
+    const show = () => { counter.textContent = `${Math.min(pics.length, Math.round(slides.scrollLeft / (slides.clientWidth || 1)) + 1)} / ${pics.length}`; };
+    slides.addEventListener("scroll", show, { passive: true });
+    const go = (d) => { const i = Math.round(slides.scrollLeft / slides.clientWidth); slides.scrollTo({ left: ((i + d + pics.length) % pics.length) * slides.clientWidth, behavior: "smooth" }); };
+    $("#g-prev").addEventListener("click", () => go(-1));
+    $("#g-next").addEventListener("click", () => go(1));
+  }
+  prefetchDetails(list.map((p) => p.id));
+  document.querySelectorAll("#panel-content .bl-row").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { back: ids })));
+  panel.classList.remove("list-mode");
+  S.panelMode = "building";
+  panel.scrollTop = 0;
+  panel.classList.add("open");
+  panel.setAttribute("aria-hidden", "false");
+  setActive(first.id);
+}
+
 async function openList(mode) {
   if (mode) S.listMode = mode;
   const short = S.listMode === "short";
@@ -2721,7 +2826,7 @@ async function openList(mode) {
         ${nHidden ? ` <button type="button" class="linkish lh-hidden" id="manage-hidden">${nHidden} hidden</button>` : ""}</p>
       ${items.some(canSave) && !store.get("ps_swiped") ? `<p class="swipe-hint">Swipe a card right to shortlist ♥, left to hide. A short swipe on the photo flips through pictures.</p>` : ""}
     </div>
-    ${items.map(listCard).join("") || `<p class="hint" style="padding:0 18px">${short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or more options above."}</p>`}`;
+    ${(short ? items : groupForList(items)).map((x) => (Array.isArray(x) ? groupListCard(x) : listCard(x))).join("") || `<p class="hint" style="padding:0 18px">${short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or more options above."}</p>`}`;
   bindListCards();
   document.querySelectorAll("[data-lm]").forEach((b) => b.addEventListener("click", () => { panel.scrollTop = 0; openList(b.dataset.lm); }));
   const mh = $("#manage-hidden"); if (mh) mh.addEventListener("click", () => openHiddenManager());
@@ -2744,7 +2849,11 @@ async function shortlistPins() {
 
 function bindListCards() {
   // Have the full pages of the listings on show ready before anyone taps (one request for all of them).
-  prefetchDetails([...document.querySelectorAll("#panel-content .lcard")].map((c) => c.dataset.id));
+  prefetchDetails([...document.querySelectorAll("#panel-content .lcard")].flatMap((c) => (c.dataset.ids ? c.dataset.ids.split(",") : [c.dataset.id])));
+  // Building cards: tap to open the building page, which lists its homes.
+  document.querySelectorAll("#panel-content .lgroup").forEach((card) => {
+    card.querySelector(".lc-front").addEventListener("click", () => openBuilding(card.dataset.ids.split(",")));
+  });
   document.querySelectorAll("#panel-content .lcard").forEach((card) => {
     const p = getPost(card.dataset.id);
     if (!p) return;
