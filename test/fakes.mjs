@@ -92,6 +92,7 @@ export function memoryStore() {
     async sitemapRows() { return posts.filter((p) => p.status === "active" && p.kind === "listing"); },
     async postsByUser(uid) { return posts.filter((p) => p.user_id === uid); },
     async getPost(id) { return posts.find((p) => p.id === id) || null; },
+    async postsFull(ids) { return posts.filter((p) => ids.includes(p.id)).map((p) => ({ ...p })); },
     async createPost(p) { const v = { id: randomUUID(), created_at: new Date().toISOString(), ...DEFAULTS.posts(), ...p }; posts.push(v); return v; },
     async createPosts(list) { return list.map((p) => { const v = { id: randomUUID(), created_at: new Date().toISOString(), ...p }; posts.push(v); return { id: v.id }; }); },
     async existingBuildingKeys(keys) { return posts.filter((p) => p.status === "active" && keys.includes(p.building_key)).map((p) => p.building_key); },
