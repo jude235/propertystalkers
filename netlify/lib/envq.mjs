@@ -8,9 +8,12 @@
 const AIR_CELL = 0.03, NOISE_CELL = 0.002;
 const AIR_TTL = 24 * 3600e3, NOISE_TTL = 90 * 24 * 3600e3, FAIL_TTL = 3600e3;
 export const AIR_DAILY_CAP = 300;
-const PER_REQUEST = { air: 4, noise: 2 };
+// One noise lookup per request: each can take up to 20 s on the busy free servers, and background work stops at about 30 s.
+const PER_REQUEST = { air: 4, noise: 1 };
 // Public OpenStreetMap (Overpass) servers. They get busy at times, so try each in turn and give up quickly on a slow one.
-export const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+export const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+/** The free OpenStreetMap servers are often busy: give each up to 12 s, and all of them 20 s in total. */
+const NOISE_SERVER_MS = 12000, NOISE_TOTAL_MS = 20000;
 
 const cellOf = (v, size) => (Math.round(v / size) * size).toFixed(size < 0.01 ? 3 : 2);
 export const airKey = (lat, lng) => `air:${cellOf(lat, AIR_CELL)},${cellOf(lng, AIR_CELL)}`;
@@ -114,9 +117,12 @@ async function lookupNoise(lat, lng, fetchImpl) {
     node(around:200,${lat},${lng})[amenity~"^(nightclub|bar|pub)$"];
   );out tags geom qt;`;
   let lastErr = null;
+  const until = Date.now() + NOISE_TOTAL_MS;
   for (const url of OVERPASS) {
+    const left = until - Date.now();
+    if (left < 1500) break;
     const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), Math.min(NOISE_SERVER_MS, left)) : null;
     try {
       const res = await fetchImpl(url, {
         method: "POST", signal: ctl ? ctl.signal : undefined,
@@ -175,7 +181,9 @@ export async function fillEnv(store, envq, keys) {
   let done = 0;
   const air = keys.filter((k) => k.startsWith("air:")).slice(0, PER_REQUEST.air);
   const noise = keys.filter((k) => k.startsWith("noise:")).slice(0, PER_REQUEST.noise);
-  if (air.length && envq.air) {
+  // Noise and air side by side: noise is the slow one (busy public servers), so it starts at once.
+  const airPart = (async () => {
+    if (!air.length || !envq.air) return;
     const b = (await store.rows("area_env", { key: today }))[0];
     let used = (b && b.data && b.data.n) || 0;
     for (const k of air) {
@@ -186,11 +194,14 @@ export async function fillEnv(store, envq, keys) {
       catch (e) { await save(store, k, { failed: true }).catch(() => {}); }
     }
     await save(store, today, { n: used });
-  }
-  for (const k of noise) {
-    const [lat, lng] = centreOf(k);
-    try { await save(store, k, await envq.noise(lat, lng)); done++; }
-    catch (e) { await save(store, k, { failed: true }).catch(() => {}); }
-  }
+  })();
+  const noisePart = (async () => {
+    for (const k of noise) {
+      const [lat, lng] = centreOf(k);
+      try { await save(store, k, await envq.noise(lat, lng)); done++; }
+      catch (e) { await save(store, k, { failed: true }).catch(() => {}); }
+    }
+  })();
+  await Promise.all([airPart, noisePart]);
   return done;
 }
