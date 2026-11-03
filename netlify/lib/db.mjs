@@ -135,6 +135,11 @@ export function makeStore({ url, serviceKey }) {
     async getPost(id) {
       return must(await sb.from("posts").select("*").eq("id", id).maybeSingle());
     },
+    /** Several listings with every field (for their full pages). */
+    async postsFull(ids) {
+      if (!ids.length) return [];
+      return must(await sb.from("posts").select("*").in("id", ids.slice(0, 200)));
+    },
     async createPost(post) {
       return must(await sb.from("posts").insert(post).select().single());
     },

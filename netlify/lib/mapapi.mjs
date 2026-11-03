@@ -100,6 +100,61 @@ export async function pinsFor(store, rows, viewer, { collapse = true } = {}) {
   return visible.map((p) => toPin(p, viewer, info.get(p.id) || {}, watched));
 }
 
+/** Most listings sent in full by one /posts/details call. */
+export const DETAILS_MAX = 40;
+
+/**
+ * Full details for listings the viewer may see (already checked), in two rounds of database calls at most:
+ * nearby prices (for the "below market" and "price cut" notes), pictures of the posters, the viewer's
+ * shortlist and hidden marks, and the area's air and noise, all at the same time.
+ */
+async function fullDetails(store, posts, viewer, deps, later) {
+  if (!posts.length) return [];
+  const ids = posts.map((p) => p.id);
+  // Nearby prices: one query per deal and ~10 km area, however many listings are in it.
+  const groups = new Map();
+  for (const p of posts) {
+    if (p.lat == null || p.lng == null) continue;
+    const k = `${p.deal}|${Math.floor(p.lat * 10)}|${Math.floor(p.lng * 10)}`;
+    const g = groups.get(k) || { deal: p.deal, w: Infinity, e: -Infinity, s: Infinity, n: -Infinity };
+    g.w = Math.min(g.w, p.lng - 0.05); g.e = Math.max(g.e, p.lng + 0.05); g.s = Math.min(g.s, p.lat - 0.05); g.n = Math.max(g.n, p.lat + 0.05);
+    groups.set(k, g);
+  }
+  const spots = posts.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng }));
+  const [nearLists, avatars, watchedRows, hiddenRows, missingEnv] = await Promise.all([
+    Promise.all([...groups.values()].map((g) => store.mapPins({ w: g.w, e: g.e, s: g.s, n: g.n, kind: "listing", deals: [g.deal], lim: 400 }).catch(() => []))),
+    store.avatarsFor([...new Set(posts.map((p) => p.user_id))]),
+    viewer ? store.rows("watches", { user_id: viewer.id, post_id: { in: ids } }, { limit: 1000 }) : [],
+    viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: { in: ids } }, { limit: 1000 }) : [],
+    attachEnv(store, spots).catch(() => [])
+  ]);
+  const near = new Map();
+  for (const r of nearLists.flat()) near.set(r.id, r);
+  for (const p of posts) if (!near.has(p.id)) near.set(p.id, p);
+  const info = marketInfo([...near.values()]);
+  const watched = new Set(watchedRows.map((w) => w.post_id)), hidden = new Set(hiddenRows.map((h) => h.post_id));
+  const out = posts.map((p, k) => {
+    const i = info.get(p.id) || {};
+    const o = toPublic({ ...p, contact_avatar: avatars[p.user_id] || null }, viewer);
+    const insider = viewer && (viewer.id === p.user_id || viewer.isAdmin);
+    const flags = [...(Array.isArray(p.flags) ? p.flags : []), ...(i.below_pct >= 40 ? ["far_below_market"] : [])];
+    o.below_market_pct = i.below_pct >= 5 ? i.below_pct : 0;
+    o.price_cut_pct = i.cut_pct || 0;
+    o.good_deal = !!i.deal;
+    o.warnings = flags.filter((x) => insider || PUBLIC_FLAGS.includes(x)).map((x) => FLAG_TEXT[x]).filter(Boolean);
+    o.watched = watched.has(p.id);
+    o.hidden = hidden.has(p.id);
+    o.cobroke = !!p.cobroke && (insider || !!(viewer && viewer.isBroker));
+    o.needs_confirm = !!(insider && p.stale_notified_at);
+    o.nphotos = o.photos.length;
+    o.photo = o.photos[0] || null;
+    if (spots[k].env) o.env = spots[k].env;
+    return o;
+  });
+  if (missingEnv.length && deps.envq && later) await later(() => fillEnv(store, deps.envq, missingEnv));
+  return out;
+}
+
 async function countIn(store, f) {
   const parts = await Promise.all(boxes(f).map((b) => store.mapClusters(dbF(b, { cell: 360 }))));
   return parts.flat().reduce((t, c) => t + Number(c.n), 0);
@@ -162,33 +217,22 @@ export async function mapRoutes(c) {
     // Who is asking and the listing itself, at the same time (each trip to the database takes a while).
     const [{ viewer }, p] = await Promise.all([loadViewer(), store.getPost(one[1])]);
     if (!p || !canSee(p, viewer)) return json({ error: "This listing isn't available any more." }, 404);
-    // Everything else this page needs, also at the same time, including the area's air and noise.
-    const spot = { id: p.id, lat: p.lat, lng: p.lng };
-    const [near, avatars, watchedRows, hiddenRows, missingEnv] = await Promise.all([
-      p.lat == null ? [] : store.mapPins({ w: p.lng - 0.05, e: p.lng + 0.05, s: p.lat - 0.05, n: p.lat + 0.05, kind: "listing", deals: [p.deal], lim: 400 }),
-      store.avatarsFor([p.user_id]),
-      viewer ? store.rows("watches", { user_id: viewer.id, post_id: p.id }) : [],
-      viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: p.id }) : [],
-      attachEnv(store, [spot]).catch(() => [])
-    ]);
-    const info = marketInfo(near.some((x) => x.id === p.id) ? near : [...near, p]).get(p.id) || {};
-    p.contact_avatar = avatars[p.user_id] || null;
-    const out = toPublic(p, viewer);
-    const insider = viewer && (viewer.id === p.user_id || viewer.isAdmin);
-    const flags = [...(Array.isArray(p.flags) ? p.flags : []), ...(info.below_pct >= 40 ? ["far_below_market"] : [])];
-    out.below_market_pct = info.below_pct >= 5 ? info.below_pct : 0;
-    out.price_cut_pct = info.cut_pct || 0;
-    out.good_deal = !!info.deal;
-    out.warnings = flags.filter((x) => insider || PUBLIC_FLAGS.includes(x)).map((x) => FLAG_TEXT[x]).filter(Boolean);
-    out.watched = watchedRows.length > 0;
-    out.hidden = hiddenRows.length > 0;
-    out.cobroke = !!p.cobroke && (insider || !!(viewer && viewer.isBroker));
-    out.needs_confirm = !!(insider && p.stale_notified_at);
-    out.nphotos = out.photos.length;
-    out.photo = out.photos[0] || null;
-    if (spot.env) out.env = spot.env;
-    if (missingEnv.length && deps.envq && later) await later(() => fillEnv(store, deps.envq, missingEnv));
+    const [out] = await fullDetails(store, [p], viewer, deps, later);
     return json({ post: out });
+  }
+
+  /* ---------- full details of many listings in one go ----------
+     The app asks for these as soon as a list or a map card appears, so tapping a listing opens it at once
+     instead of waiting on the database (which may be far away). */
+  if (path === "/posts/details" && method === "POST") {
+    const b = await readJson(c.req);
+    const ids = [...new Set((Array.isArray(b.ids) ? b.ids : []).filter(isUuid))].slice(0, DETAILS_MAX);
+    if (!ids.length) return json({ posts: [] });
+    const [{ viewer }, rows] = await Promise.all([loadViewer(), store.postsFull(ids)]);
+    const seen = rows.filter((p) => canSee(p, viewer));
+    const order = new Map(ids.map((id, k) => [id, k]));
+    const posts = (await fullDetails(store, seen, viewer, deps, later)).sort((x, y) => order.get(x.id) - order.get(y.id));
+    return json({ posts });
   }
 
   /* ---------- several listings by id (shortlist on this device, Stalker's cards) ---------- */
