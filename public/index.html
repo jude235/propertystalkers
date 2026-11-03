@@ -1476,7 +1476,7 @@ async function loadFeed() {
 }
 
 /* ---------------- more filters (the button in the search bar) ---------------- */
-const ADV0 = () => ({ types: [], beds: 0, min: "", max: "", smin: "", smax: "", by: [], amen: [], photos: false, age: "", cut: false, ppmin: "", ppmax: "", q: "" });
+const ADV0 = () => ({ types: [], beds: 0, bedsx: false, min: "", max: "", smin: "", smax: "", by: [], amen: [], photos: false, age: "", cut: false, ppmin: "", ppmax: "", q: "" });
 S.adv = (() => { try { return { ...ADV0(), ...JSON.parse(store.get("ps_filters") || "{}") }; } catch (e) { return ADV0(); } })();
 const F_TYPES = [["apartment", "Apartment"], ["villa", "Villa"], ["independent_house", "House"], ["plot", "Plot / land"], ["office", "Office"], ["shop", "Shop"], ["warehouse", "Warehouse"]];
 const F_BY = [["landlord", "Owner"], ["broker", "Broker"], ["developer", "Developer"]];
@@ -1492,7 +1492,7 @@ function bedsOf(p) {
 }
 function passAdv(p, a = S.adv) {
   if (a.types.length && !a.types.includes(p.property_type)) return false;
-  if (a.beds && bedsOf(p) < a.beds) return false;
+  if (a.beds && (a.bedsx ? bedsOf(p) !== a.beds : bedsOf(p) < a.beds)) return false;
   const lo = num(a.min), hi = num(a.max);
   if ((lo || hi) && (p.price == null || (lo && p.price < lo) || (hi && p.price > hi))) return false;
   const slo = num(a.smin), shi = num(a.smax);
@@ -1644,6 +1644,7 @@ function openFilters() {
     if (key === "quick") { const q = QUICK.find((x) => x[0] === b.dataset.q); q[3](f, !q[2](f)); }
     else if (Array.isArray(f[key])) f[key] = f[key].includes(b.dataset.v) ? f[key].filter((x) => x !== b.dataset.v) : [...f[key], b.dataset.v];
     else f[key] = key === "photos" || key === "cut" ? b.dataset.v === "true" : key === "age" ? b.dataset.v : Number(b.dataset.v);
+    if (key === "beds") f.bedsx = false;
     sync(); count();
   }));
   const kw = $("#f-q"); if (kw) kw.addEventListener("input", (e) => { f.q = e.target.value; count(); });
@@ -2005,7 +2006,10 @@ function renderBanner() {
       ? (S.access.share_only ? "You can see people looking for a room to share, because you're sharing a space." : "You can see all buyer and tenant requests.")
       : "You can see your own requests. Buyer and tenant requests are visible only to <b>brokers with a licence / RERA number</b>.";
   } else if (S.loaded && !viewCount() && advCount()) {
-    html = `<b>Nothing here matches your filters.</b> <button type="button" class="linkish" data-clear-filters>Clear filters</button>`;
+    const what = smartLabel(S.adv, S.smartCur || "");
+    html = `<b>Nothing here${what ? " for " + esc(what) : " matches your filters"}.</b> Move the map, or <button type="button" class="linkish" data-clear-filters>clear filters</button>`;
+  } else if (S.loaded && advCount() && smartLabel(S.adv, S.smartCur || "")) {
+    html = `Showing <b>${esc(smartLabel(S.adv, S.smartCur || ""))}</b>${advCount() > smartBits(S.adv) ? " + more filters" : ""} · <button type="button" class="linkish" data-clear-filters>Clear</button>`;
   } else if (S.loaded && !viewCount()) {
     const names = [...document.querySelectorAll(".fchip[data-f]")].filter((c) => S.chips.has(c.dataset.f)).map((c) => c.textContent.trim());
     html = `<b>No ${esc(names.join(" / "))} listings in this area yet.</b> Zoom out, or tap more options above.`;
@@ -3031,6 +3035,122 @@ async function openHiddenManager() {
   draw();
 }
 
+/* ---------------- smart search: "3 bedrooms under 7m aed in Yas Island" ----------------
+   Read plain words in the search box as filters (bedrooms, price, size, type, rent or buy, must-haves) and a place.
+   Runs in the phone: no AI, nothing to pay, instant. */
+const SMART_TYPES = [[/\b(apartments?|flats?|condos?)\b/i, "apartment"], [/\bvillas?\b/i, "villa"], [/\b(town ?houses?|houses?)\b/i, "independent_house"],
+  [/\b(plots?|land)\b/i, "plot"], [/\boffices?\b/i, "office"], [/\b(shops?|retail)\b/i, "shop"], [/\bwarehouses?\b/i, "warehouse"]];
+const SMART_DEALS = [[/\b(for rent|to rent|rent(al|ing)?|lease|leasing|yearly)\b/i, "rent"], [/\b(for sale|to buy|buy(ing)?|sale|purchase)\b/i, "sale"],
+  [/\b(holiday( homes?)?|short[- ]stay|nightly|per night|vacation)\b/i, "stay"], [/\b(co-?living|shared|sharing|room ?mates?|bed ?space|partition)\b/i, "share"]];
+const SMART_AMEN = [[/\b(swimming )?pool\b/i, "pool"], [/\bgym\b/i, "gym"], [/\bparking\b/i, "parking"], [/\bbalcon(y|ies)\b/i, "balcony"],
+  [/\b(sea|lake|golf|burj|marina|city)? ?views?\b/i, "view"], [/\b(fully )?furnished\b/i, "furnished"], [/\bpets?( friendly| allowed)?\b/i, "pets"], [/\b(near )?metro\b/i, "metro"], [/\bgarden\b/i, "garden"]];
+const AMT = String.raw`((?:aed|dhs?|dirhams?|usd|\$|inr|rs\.?|₹)\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k|thousand|m|mn|mil|million|cr|crore|crores|l|lac|lakh|lakhs|b|bn|billion)?\b(\s*(?:aed|dhs?|dirhams?|usd|inr))?`;
+function smartAmount(m) {
+  if (!m) return null;
+  const n = Number(String(m[2]).replace(/,/g, ""));
+  if (!isFinite(n)) return null;
+  const u = (m[3] || "").toLowerCase();
+  const mult = { k: 1e3, thousand: 1e3, m: 1e6, mn: 1e6, mil: 1e6, million: 1e6, b: 1e9, bn: 1e9, billion: 1e9, cr: 1e7, crore: 1e7, crores: 1e7, l: 1e5, lac: 1e5, lakh: 1e5, lakhs: 1e5 }[u] || 1;
+  const v = Math.round(n * mult);
+  return v >= 1000 ? v : null;   // a bare small number is not a price ("3" is bedrooms, not AED 3)
+}
+function parseSmart(text) {
+  let t = " " + String(text || "").toLowerCase().replace(/[‐-–—]/g, "-") + " ";
+  const WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7 };
+  t = t.replace(/\b(one|two|three|four|five|six|seven)(?=\s*-?\s*(bed|br|bhk|bd))/g, (w) => String(WORDS[w]));
+  const out = { adv: {}, deal: null, project: false, bits: [], cur: "" };
+  const eat = (re) => { t = t.replace(re, " "); };
+  if (/\b(aed|dhs?|dirhams?)\b/.test(t)) out.cur = "AED"; else if (/(₹|\brs\.?|\binr\b|\blakh|\bcrore)/.test(t)) out.cur = "₹"; else if (/(\$|\busd\b)/.test(t)) out.cur = "$";
+  // Bedrooms: "3 bed", "3 bedrooms", "3br", "3 bhk"; "3+ beds", "at least 3 bedrooms" = 3 or more
+  const bedRe = /\b(at least |minimum |min )?(\d{1,2})\s*(\+|plus| or more)?\s*-?\s*(bed(room)?s?|br|bhk|b\/r|bd)\b( or more)?/i;
+  const bm = t.match(bedRe);
+  if (bm) { out.adv.beds = Math.min(Number(bm[2]), 20); out.adv.bedsx = !(bm[1] || bm[3] || bm[6]); eat(bedRe); }
+  else if (/\bstudios?\b/.test(t)) { /* studios: no bedroom filter; kept as a keyword below */ }
+  // Size: "over 1500 sq ft", "under 1000 sqft"
+  const sizeRe = /\b(under|below|less than|max(?:imum)?|up ?to|over|above|more than|min(?:imum)?|at least)?\s*(\d[\d,]*)\s*(sq\.? ?ft|sqft|square feet|sft)\b/i;
+  const sm = t.match(sizeRe);
+  if (sm) { const v = Number(sm[2].replace(/,/g, "")); if (/under|below|less|max|up/.test(sm[1] || "")) out.adv.smax = String(v); else out.adv.smin = String(v); eat(sizeRe); }
+  // Price: "between 2m and 3m", "2m-3m", "under 7m aed", "over 500k", "budget 2m", or just "7m"
+  const between = new RegExp(String.raw`\b(?:between|from)?\s*` + AMT + String.raw`\s*(?:-|to|and)\s*` + AMT, "i");
+  const bt = t.match(between);
+  if (bt && smartAmount(bt.slice(0, 5)) && smartAmount([bt[0], bt[5], bt[6], bt[7], bt[8]])) {
+    const lo = smartAmount(bt.slice(0, 5)), hi = smartAmount([bt[0], bt[5], bt[6], bt[7], bt[8]]);
+    out.adv.min = String(Math.min(lo, hi)); out.adv.max = String(Math.max(lo, hi)); eat(between);
+  } else {
+    const shortRange = new RegExp(String.raw`\b(\d+(?:\.\d+)?)\s*(?:-|to)\s*` + AMT, "i");   // "2-3m"
+    const sr = t.match(shortRange);
+    const srHi = sr && smartAmount([sr[0], sr[2], sr[3], sr[4], sr[5]]);
+    if (sr && srHi && sr[4]) { const mult = srHi / Number(String(sr[3]).replace(/,/g, "")); out.adv.min = String(Math.round(Number(sr[1]) * mult)); out.adv.max = String(srHi); eat(shortRange); }
+    else {
+      const rel = new RegExp(String.raw`\b(under|below|less than|cheaper than|max(?:imum)?|up ?to|within|budget(?: of)?|not more than|<|over|above|more than|min(?:imum)?|at least|starting|from|>)?\s*` + AMT, "i");
+      const m = t.match(rel);
+      let v = m && smartAmount([m[0], m[2], m[3], m[4], m[5]]);
+      // A plain number with no "under/over", unit or currency is only a price if it's big ("handover 2027" isn't)
+      if (v && !m[1] && !m[4] && !m[2] && !m[5] && v < 10000) v = null;
+      if (v) {
+        if (/over|above|more than|min|at least|starting|from|>/.test(m[1] || "")) out.adv.min = String(v); else out.adv.max = String(v);
+        eat(rel);
+      }
+    }
+  }
+  for (const [re, v] of SMART_TYPES) if (re.test(t)) { out.adv.types = [...new Set([...(out.adv.types || []), v])]; eat(re); }
+  for (const [re, v] of SMART_DEALS) if (!out.deal && re.test(t)) { out.deal = v; eat(re); }
+  if (/\b(off[- ]?plan|new projects?|new launch(es)?)\b/.test(t)) { out.project = true; eat(/\b(off[- ]?plan|new projects?|new launch(es)?)\b/g); }
+  for (const [re, v] of SMART_AMEN) if (re.test(t)) { out.adv.amen = [...new Set([...(out.adv.amen || []), v])]; eat(re); }
+  eat(/\b(aed|dhs?|dirhams?|usd|inr|rs)\b|[₹$]/g);
+  // What's left (after the filler words) is a place: "in Yas Island", "near Dubai Marina"
+  const place = t.replace(/\b(show|me|only|just|find|search|looking|look|for|i|we|want|need|would|like|please|properties|property|homes?|units?|listings?|places?|options?|available|with|a|an|the|in|at|near|around|close to|of|and|or|to|that|which|are|is|has|have|having|any|some|all|price|priced|cost|costing|less|than|more|under|below|above|over|max|min|budget|between|from|bedrooms?|beds?|studios?|rooms?|handover|ready|completion|new|cheap|cheapest|affordable|luxury|big|small|good|best|nice)\b/gi, " ")
+    .replace(/\b\d+\b/g, " ")
+    .replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ").trim();
+  out.place = place.length >= 3 ? place : "";
+  const has = Object.keys(out.adv).length || out.deal || out.project;
+  if (!has) return null;
+  // A short label for the banner and the search suggestion
+  const a = { ...ADV0(), ...out.adv };
+  out.label = smartLabel(a, out.cur, out.deal, out.project);
+  return out;
+}
+/** How many of the filters the label above describes (bedrooms, price, size, type, must-haves). */
+function smartBits(a) { return [a.beds, num(a.min) || num(a.max), num(a.smin) || num(a.smax), a.types && a.types.length, a.amen && a.amen.length].filter(Boolean).length; }
+function smartPrice(v, cur) {
+  const n = Number(v);
+  const s = n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0).replace(/\.0$/, "") + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n);
+  return (cur ? cur + (cur.length > 1 ? " " : "") : "") + s;
+}
+/** "3 BHK · under AED 7M · villa · for rent": what a set of filters means, in a few words. */
+function smartLabel(a, cur = "", deal = null, project = false) {
+  const bits = [];
+  if (a.beds) bits.push(a.bedsx ? `${a.beds} BHK` : `${a.beds}+ BHK`);
+  if (a.types && a.types.length) bits.push(a.types.map((x) => (F_TYPES.find((f) => f[0] === x) || [x, x])[1].toLowerCase()).join(" or "));
+  const lo = num(a.min), hi = num(a.max);
+  if (lo && hi) bits.push(`${smartPrice(lo, cur)}–${smartPrice(hi, cur)}`); else if (hi) bits.push(`under ${smartPrice(hi, cur)}`); else if (lo) bits.push(`over ${smartPrice(lo, cur)}`);
+  const slo = num(a.smin), shi = num(a.smax);
+  if (slo) bits.push(`over ${Number(slo).toLocaleString("en-US")} sq ft`); if (shi) bits.push(`under ${Number(shi).toLocaleString("en-US")} sq ft`);
+  if (a.amen && a.amen.length) bits.push("with " + a.amen.map((x) => (AMENITIES[x] || x).toLowerCase()).join(", "));
+  if (deal) bits.push({ rent: "for rent", sale: "for sale", stay: "holiday homes", share: "co-living" }[deal]);
+  if (project) bits.push("new projects");
+  return bits.join(" · ");
+}
+/** Use what was understood: set the filters (replacing earlier bedroom, price, size and type picks), then show the place. */
+function applySmart(sm, typed) {
+  closeResults(); qEl.blur();
+  const keep = S.adv;
+  S.adv = { ...keep, beds: 0, bedsx: false, min: "", max: "", smin: "", smax: "", types: [], ...sm.adv, amen: [...new Set([...(keep.amen || []), ...(sm.adv.amen || [])])] };
+  S.smartCur = sm.cur || "";
+  saveAdv();
+  if (sm.deal || sm.project) {
+    const cats = [...S.chips].filter((c) => CAT_CHIPS.includes(c));
+    S.chips = new Set([...(sm.deal ? [sm.deal] : [...S.chips].filter((c) => DEAL_CHIPS.includes(c))), ...(sm.project ? ["project"] : cats)]);
+    saveChips();
+  }
+  S.tab = "listing";
+  qEl.value = ""; $("#q-clear").hidden = true;
+  closeDetails(); closeMapCard();
+  if (sm.place) return goToPlace(sm.place, typed);
+  renderMarkers();
+  refreshMap().then(() => { if (viewCount()) openList("view"); });
+}
+
 /* ---------------- search ---------------- */
 const qEl = $("#q"), resultsEl = $("#results");
 let searchTimer, searchSel = -1;
@@ -3061,9 +3181,20 @@ function renderResults(fromServer) {
   const q = qEl.value.trim();
   $("#q-clear").hidden = !q;
   if (q.length < 2) { resultsEl.hidden = true; return; }
-  if (fromServer !== true) searchServer(q);
-  const hits = matchPosts(q);
+  const sm = parseSmart(q);
+  if (fromServer !== true && !sm) searchServer(q);
+  const hits = sm ? [] : matchPosts(q);
   searchSel = -1;
+  if (sm) {
+    resultsEl.innerHTML = `<button class="result go smart" data-smart="1"><span class="r-main"><b>Show ${esc(sm.label)}</b><small>${esc(sm.place ? "in " + sm.place : "in this map area")} · other pins are hidden</small></span></button>`
+      + (sm.place ? `<button class="result go" data-go="1">Just show “${esc(q)}” on the map</button>` : "");
+    resultsEl.hidden = false;
+    resultsEl.querySelectorAll("button").forEach((b) => {
+      b.addEventListener("pointerdown", (e) => e.preventDefault()); b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", () => (b.dataset.smart ? applySmart(sm, q) : goToPlace(sm.place)));
+    });
+    return;
+  }
   resultsEl.innerHTML = hits.slice(0, 6).map((p) => `
       <button class="result" role="option" data-id="${esc(p.id)}">
         <img src="${esc(thumbOf(p))}" alt="">
@@ -3104,7 +3235,7 @@ function showMatches(hits) {
   google.maps.event.addListenerOnce(S.map, "idle", () => { if (S.map.getZoom() > 15) S.map.setZoom(15); openList(); });
 }
 
-async function goToPlace(q) {
+async function goToPlace(q, typed) {
   closeResults();
   qEl.blur();
   try {
@@ -3138,6 +3269,8 @@ qEl.addEventListener("keydown", (e) => {
     const q = qEl.value.trim();
     if (!q) return;
     if (searchSel >= 0 && opts[searchSel]) { opts[searchSel].click(); return; }
+    const sm = parseSmart(q);
+    if (sm) return applySmart(sm, q);
     const hits = matchPosts(q);
     if (hits.length === 1) pickPost(hits[0].id);
     else if (hits.length > 1) showMatches(hits);
