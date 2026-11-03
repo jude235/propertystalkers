@@ -454,6 +454,15 @@
   .tpin-wrap.active .tpin { background: #fff; border-color: var(--pc); transform: rotate(-45deg) scale(1.3); }
   .tpin-wrap.active .tpin b { color: var(--pc); }
   .tpin-wrap.active .ptip { display: block; }
+  /* Several homes in one building: one pin with the count, drawn as a little stack */
+  .tpin-wrap.grp { width: 30px; height: 34px; }
+  .tpin-wrap.grp .stk { position: absolute; left: 6px; top: -3px; width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    background: var(--pc); opacity: .55; box-shadow: 0 2px 6px rgba(0, 0, 0, .25); pointer-events: none; }
+  .tpin-wrap.grp .tpin { top: 2px; }
+  .tpin-wrap.grp .tpin b { font-size: 12px; }
+  .tpin-wrap.grp.active .ptip { display: none; }   /* the building card already says it */
+  /* Phones: while a card is open on the map, the map buttons step aside so they don't sit on it */
+  @media (max-width: 759px) { html:has(#map-card) :is(.locate, .map-key, .maptype, #key-pop) { visibility: hidden; } }
   .s { --pc: var(--c-s); } .r { --pc: var(--c-r); } .c { --pc: var(--c-c); } .h { --pc: var(--c-h); } .n { --pc: var(--c-n); } .q { --pc: var(--c-q); }
   .dot-layer { position: absolute; pointer-events: none; }
   html.look-new.is-roadmap .map-tint { display: none; }
@@ -478,6 +487,20 @@
   .mc-meta { font-size: 11.5px; color: #5b6b64; display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; }
   .mc-meta .env-chip { background: #eef2f0; color: #26352e; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .mc-view { margin-top: 6px; padding: 8px 12px; font-size: 13px; }
+  /* The building card: every home in it, one row each */
+  .map-card.grp { grid-template-columns: 1fr; max-height: min(62vh, 460px); }
+  .gc-head { display: grid; grid-template-columns: 76px 1fr; gap: 10px; padding: 10px 12px 8px; align-items: center; border-bottom: 1px solid #e6ece9; }
+  .gc-head img { width: 76px; height: 60px; border-radius: 10px; object-fit: cover; background: #dfe6e2; }
+  .gc-title { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gc-rows { overflow-y: auto; overscroll-behavior: contain; }
+  .gc-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; width: 100%; padding: 10px 12px; border: 0; border-bottom: 1px solid #eef2f0;
+    background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+  .gc-row:last-child { border-bottom: 0; }
+  .gc-row:active { background: #f2f6f4; }
+  .gc-row b { font-size: 14px; font-weight: 700; }
+  .gc-row .gp { font-size: 14px; font-weight: 800; white-space: nowrap; }
+  .gc-row small { grid-column: 1 / -1; font-size: 12px; color: #5b6b64; }
+  .gc-row .gp::after { content: "›"; margin-left: 8px; color: #8a9893; font-weight: 700; }
   /* Colour key */
   .map-key { position: fixed; left: 12px; bottom: calc(128px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
     font-size: 12px; font-weight: 600; padding: 7px 11px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); display: none; }
@@ -1674,6 +1697,31 @@ function makeTpin(p) {
   el.addEventListener("click", (e) => { e.stopPropagation(); S.pinTapAt = Date.now(); showMapCard(p.id); });
   return { el, sig: pinSig(p), marker: new S.Marker({ position: { lat: p.lat, lng: p.lng }, content: el, title: titleOf(p) }) };
 }
+/** Homes closer than ~10 m are in the same building: they share one pin on the map. */
+const spotKey = (p) => Number(p.lat).toFixed(4) + "," + Number(p.lng).toFixed(4);
+const byPrice = (a, b) => (a.price || Infinity) - (b.price || Infinity);
+/** What to call a spot with several homes: the building when they all share one, otherwise the area. */
+function spotName(list) {
+  const b = (list[0].building || "").trim();
+  if (b && list.every((p) => (p.building || "").trim().toLowerCase() === b.toLowerCase())) return { name: b, isBuilding: true };
+  return { name: list[0].locality || list[0].city || placeOf(list[0]), isBuilding: false };
+}
+/** One pin for several homes in the same building: the count, coloured by their deal. */
+function makeGroupPin(posts) {
+  const list = posts.slice().sort(byPrice);
+  const codes = list.map(pinCode), code = codes.every((c) => c === codes[0]) ? codes[0] : codes.sort((a, b) => codes.filter((x) => x === b).length - codes.filter((x) => x === a).length)[0];
+  const cheap = list.find((p) => p.price) || list[0];
+  const el = document.createElement("div");
+  el.className = "tpin-wrap grp " + code + (list.some((p) => p.id === S.activeId) ? " active" : "");
+  const where = spotName(list).name;
+  el.innerHTML = `<span class="stk"></span><button type="button" class="tpin" aria-label="${esc(`${list.length} homes in ${where}` + (cheap.price ? `, from ${priceOf(cheap)}` : ""))}"><b>${list.length}</b></button>`
+    + (list.some((p) => p.watched) ? `<span class="fav">♥</span>` : "")
+    + `<span class="ptip">${esc(list.length + " homes" + (cheap.price ? " · from " + pinLabel(cheap).replace(/ · share$/, "") : ""))}</span>`;
+  const ids = list.map((p) => p.id);
+  el.addEventListener("pointerdown", () => { S.pinTapAt = Date.now(); });
+  el.addEventListener("click", (e) => { e.stopPropagation(); S.pinTapAt = Date.now(); showGroupCard(ids); });
+  return { el, marker: new S.Marker({ position: { lat: list[0].lat, lng: list[0].lng }, content: el, title: `${list.length} homes in ${where}` }) };
+}
 function makePin(p) {
   if (NEW_LOOK) return makeTpin(p);
   const el = document.createElement("button");
@@ -1818,6 +1866,49 @@ function showMapCard(id) {
   card.addEventListener("touchmove", (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); card.style.translate = `0 ${dy}px`; }, { passive: true });
   card.addEventListener("touchend", () => { if (y0 === null) return; y0 = null; card.style.transition = "translate .15s ease"; if (dy > 70) closeMapCard(); else card.style.translate = ""; });
 }
+/** The card for a building with several homes: one row per home, cheapest first. Tap a row to open that home. */
+function showGroupCard(ids) {
+  const list = ids.map(getPost).filter(Boolean).sort(byPrice);
+  if (!list.length) return;
+  if (list.length === 1) return showMapCard(list[0].id);
+  closeMapCard();
+  setActive(list[0].id);
+  const first = list[0], cheap = list.find((p) => p.price) || first;
+  const d2 = (q) => (q.lat - first.lat) ** 2 + (q.lng - first.lng) ** 2;
+  prefetchDetails([...list.map((p) => p.id), ...visiblePosts().filter((q) => !ids.includes(q.id) && inView(q)).sort((a, b) => d2(a) - d2(b)).slice(0, 10).map((q) => q.id)]);
+  const deals = [...new Set(list.map((p) => DEAL_NAME[pinCode(p)]))];
+  const pic = list.find((p) => p.photo) || first;
+  const card = document.createElement("div");
+  card.id = "map-card";
+  card.className = "map-card grp " + pinCode(first);
+  const sp = spotName(list);
+  const sub = sp.isBuilding ? [first.locality, first.city].filter(Boolean).join(", ") : (first.city && first.city !== sp.name ? first.city : "");
+  card.setAttribute("role", "dialog"); card.setAttribute("aria-label", `${list.length} homes in ${sp.name}`);
+  card.innerHTML = `
+    <div class="gc-head">
+      <img src="${esc(pic.photo ? cardPhoto(pic.photo) : placeholder(pic.id))}" alt="" decoding="async">
+      <div class="mc-body" style="padding:0">
+        <div class="mc-top"><div class="gc-title" style="flex:1">${esc(sp.isBuilding ? sp.name : `${list.length} homes in ${sp.name}`)}</div><button type="button" class="mc-x" aria-label="Close">✕</button></div>
+        ${sub ? `<div class="mc-where">${esc(sub)}</div>` : ""}
+        <div class="mc-price" style="font-size:14px"><i></i>${esc(`${list.length} homes · ${deals.join(" / ").toLowerCase()}${cheap.price ? " · from " + pinLabel(cheap).replace(/ · share$/, "") : ""}`)}</div>
+      </div>
+    </div>
+    <div class="gc-rows">${list.map((p) => `
+      <button type="button" class="gc-row" data-id="${esc(p.id)}">
+        <b>${esc(p.kind === "request" || p.deal === "share" || isDev(p) ? titleOf(p) : cap(what(p)))}</b><span class="gp">${esc(p.price ? pinLabel(p).replace(/ · share$/, "") : priceOf(p))}</span>
+        <small>${esc([sp.isBuilding ? "" : p.building, sizeOf(p), perSqft(p), p.photos && p.photos.length ? p.photos.length + " photos" : ""].filter(Boolean).join(" · "))}</small>
+      </button>`).join("")}
+    </div>`;
+  $("#map-wrap").appendChild(card);
+  card.querySelectorAll(".gc-row").forEach((b) => b.addEventListener("click", () => { card.remove(); openDetails(b.dataset.id); }));
+  card.querySelector(".mc-x").addEventListener("click", closeMapCard);
+  // Pull the card down (from its top part) to close it.
+  const head = card.querySelector(".gc-head");
+  let y0 = null, dy = 0;
+  head.addEventListener("touchstart", (e) => { y0 = e.touches[0].clientY; dy = 0; card.style.transition = "none"; }, { passive: true });
+  head.addEventListener("touchmove", (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); card.style.translate = `0 ${dy}px`; }, { passive: true });
+  head.addEventListener("touchend", () => { if (y0 === null) return; y0 = null; card.style.transition = "translate .15s ease"; if (dy > 70) closeMapCard(); else card.style.translate = ""; });
+}
 $("#map-key").addEventListener("click", () => {
   const old = $("#key-pop");
   if (old) return old.remove();
@@ -1843,16 +1934,28 @@ function renderMarkers() {
   if (!S.map) return;
 
   // Pins: add what's new, drop what's gone, keep the rest as they are.
-  const want = new Map((S.mapMode === "pins" ? visiblePosts() : []).map((p) => [p.id, p]));
-  const drop = [], add = [];
-  for (const [id, m] of S.markers) {
-    const p = want.get(id);
-    if (!p || m.sig !== pinSig(p)) { drop.push(m.marker); S.markers.delete(id); S.pinEls.delete(id); }
+  // New look: homes in the same building share one pin (a count), so a project doesn't scatter into many pins.
+  const want = new Map();   // marker key -> { posts, sig }
+  for (const p of S.mapMode === "pins" ? visiblePosts() : []) {
+    const k = NEW_LOOK ? "g:" + spotKey(p) : p.id;
+    const w = want.get(k) || { posts: [] };
+    w.posts.push(p);
+    want.set(k, w);
   }
-  for (const p of want.values()) {
-    if (S.markers.has(p.id)) continue;
-    const m = makePin(p);
-    S.markers.set(p.id, m); S.pinEls.set(p.id, m.el); add.push(m.marker);
+  for (const [k, w] of [...want]) {
+    if (w.posts.length === 1) { want.delete(k); want.set(w.posts[0].id, { posts: w.posts, sig: pinSig(w.posts[0]) }); }
+    else w.sig = "grp|" + w.posts.map((p) => p.id + ":" + pinSig(p)).sort().join(";");
+  }
+  const drop = [], add = [];
+  for (const [key, m] of S.markers) {
+    const w = want.get(key);
+    if (!w || m.sig !== w.sig) { drop.push(m.marker); S.markers.delete(key); (m.ids || [key]).forEach((id) => { if (S.pinEls.get(id) === m.el) S.pinEls.delete(id); }); }
+  }
+  for (const [key, w] of want) {
+    if (S.markers.has(key)) continue;
+    const m = w.posts.length > 1 ? makeGroupPin(w.posts) : makePin(w.posts[0]);
+    m.sig = w.sig; m.ids = w.posts.map((p) => p.id);
+    S.markers.set(key, m); m.ids.forEach((id) => S.pinEls.set(id, m.el)); add.push(m.marker);
   }
   if (NEW_LOOK) {
     // No grouping into numbers: every pin shows (at most a few hundred are in view).
