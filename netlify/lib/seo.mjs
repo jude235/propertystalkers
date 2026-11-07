@@ -241,6 +241,15 @@ export function propertyPage(raw, { site, all = [], canonicalId = null, supabase
   return shell({ title, description, url, image: photos[0], canonical: `${site}/property/${canonicalId || p.id}`, jsonLd: structuredData(p, url), body, site });
 }
 
+/** A review account's listing: it exists, but only its owner sees it (in the app or through Claude). */
+export function privatePage({ site }) {
+  const body = `<main><div class="gone">
+  <h1>This listing is private</h1>
+  <p>It was posted by a review account, so it isn't shown on the site.</p>
+  <a class="btn" href="/">Browse the map</a></div></main>`;
+  return shell({ title: "Private listing | Property Stalkers", description: "This listing is private.", body, robots: "noindex,nofollow", site });
+}
+
 export function gonePage({ site, post = null, all = [] }) {
   const where = post ? [post.locality, post.city].filter(Boolean).join(", ") : "";
   const body = `<main><div class="gone">
@@ -280,6 +289,7 @@ export async function handlePublic(req, { store, env }) {
   if (!UUID.test(id)) return html(gonePage({ site, all: [] }), 404);
   const post = await store.getPost(id);
   if (!post || post.kind !== "listing" || post.status === "draft" || post.lat == null) return html(gonePage({ site }), 404);
+  if (post.status === "private") return html(privatePage({ site }), 404);
   // "More in <city>": listings near this one only, never the whole table.
   const all = publicListings(await store.mapPins({ w: post.lng - 0.3, e: post.lng + 0.3, s: post.lat - 0.3, n: post.lat + 0.3, kind: "listing", lim: 200 }));
   if (post.status !== "active") return html(gonePage({ site, post, all }), 410);

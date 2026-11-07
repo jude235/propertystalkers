@@ -13,6 +13,8 @@ import { oauthRoutes } from "./oauth.mjs";
 
 const placeCache = new Map();
 
+/** Posts their owner can still edit or remove: live ones, and a review account's private ones. */
+const OWNED = ["active", "private"];
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
@@ -170,7 +172,7 @@ export async function handle(req, deps) {
       const counts = {
         shortlist: (await store.rows("watches", { user_id: user.id }, { limit: 1000 })).length,
         hidden: (await store.rows("hidden_posts", { user_id: user.id }, { limit: 2000 })).length,
-        requests: (await store.rows("posts", { user_id: user.id, kind: "request", status: "active" }, { limit: 50 })).length
+        requests: (await store.rows("posts", { user_id: user.id, kind: "request", status: { in: ["active", "private"] } }, { limit: 50 })).length
       };
       return json({ email: user.email || null, phone: user.phone || null, profile, isAdmin, access: accessSummary(viewer), counts });
     }
@@ -404,13 +406,14 @@ export async function handle(req, deps) {
         user_id: user.id,
         contact_name: profile.name,
         contact_phone: profile.phone,
-        status: "active"
+        // A review account (for app-store / directory reviewers) posts privately: nobody else sees it or is alerted.
+        status: profile.sandbox === true ? "private" : "active"
       });
       await store.deleteDraft(body.draftId);
       if (draft.poster_type === "broker" && draft.rera_number && profile.rera_number !== draft.rera_number) {
         await store.upsertProfile({ id: user.id, rera_number: draft.rera_number });
       }
-      await later(() => (post.kind === "listing" ? onListingLive(deps, post) : onRequestLive(deps, post)));
+      if (post.status === "active") await later(() => (post.kind === "listing" ? onListingLive(deps, post) : onRequestLive(deps, post)));
       const { viewer } = await loadViewer();
       return json({ post: toPublic(post, viewer) });
     }
@@ -420,7 +423,7 @@ export async function handle(req, deps) {
     if (edit && method === "PATCH") {
       if (!isUuid(edit[1])) return json({ error: "Not found" }, 404);
       const post = await store.getPost(edit[1]);
-      if (!post || post.status !== "active") return json({ error: "Not found" }, 404);
+      if (!post || !OWNED.includes(post.status)) return json({ error: "Not found" }, 404);
       if (post.user_id !== user.id && !isAdmin) return json({ error: "You can only edit your own posts." }, 403);
       const b = await readJson(req);
       const pick = (k) => (b[k] === undefined ? post[k] : b[k]);
@@ -480,7 +483,7 @@ export async function handle(req, deps) {
       }
       const before = { ...post };
       const updated = await store.updatePost(post.id, fields);
-      if (updated.kind === "listing") {
+      if (updated.kind === "listing" && updated.status === "active") {
         await later(() => (priceChanged ? onPriceChange(deps, updated, before.price) : onListingLive(deps, updated, { previous: before })));
       }
       const { viewer } = await loadViewer();
@@ -546,7 +549,7 @@ export async function handle(req, deps) {
     if (del && method === "DELETE") {
       if (!isUuid(del[1])) return json({ error: "Not found" }, 404);
       const post = await store.getPost(del[1]);
-      if (!post || post.status !== "active") return json({ error: "Not found" }, 404);
+      if (!post || !OWNED.includes(post.status)) return json({ error: "Not found" }, 404);
       if (post.user_id !== user.id && !isAdmin) return json({ error: "You can only remove your own posts." }, 403);
       await store.setPostStatus(post.id, "removed");
       return json({ ok: true });

@@ -285,6 +285,8 @@ export function makeViewer({ user, profile, isAdmin = false, sharesSpace = false
  * - You always see your own posts; admins see everything.
  */
 export function canSee(post, viewer) {
+  // Posts by a review account (profiles.sandbox) stay private: only that account and admins see them.
+  if (post.status === "private") return !!viewer && (post.user_id === viewer.id || !!viewer.isAdmin);
   if (post.status !== "active") return false;
   if (post.kind === "listing") return true;
   if (!viewer) return false;
@@ -341,6 +343,7 @@ export function toPublic(post, viewer) {
     contact_phone: gated ? null : post.contact_phone,
     contact_avatar: gated ? null : post.contact_avatar || null,
     created_at: post.created_at,
+    ...(post.status === "private" ? { private: true } : {}),
     source: String(post.building_key || "").startsWith("dld:") ? "dld" : null,
     mine,
     removable: mine || !!(viewer && viewer.isAdmin)

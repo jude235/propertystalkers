@@ -210,7 +210,7 @@ export async function features(c) {
       const others = (await store.activeByUnitKey(post.unit_key)).filter((p) => p.id !== post.id);
       if (others.length >= 3) return json({ error: "This unit is now listed 3 times by others, so it can't go back on the map." }, 409);
     }
-    await store.update("posts", { id: post.id }, { status: "active", confirmed_at: new Date().toISOString(), stale_notified_at: null });
+    await store.update("posts", { id: post.id }, { status: post.status === "private" ? "private" : "active", confirmed_at: new Date().toISOString(), stale_notified_at: null });
     return json({ ok: true });
   }
 

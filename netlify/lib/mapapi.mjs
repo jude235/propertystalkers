@@ -272,7 +272,7 @@ export async function mapRoutes(c) {
   if (path === "/me/posts" && method === "GET") {
     if (!user) return json({ error: "Please sign in." }, 401);
     const { viewer } = await loadViewer();
-    const mine = (await store.postsByUser(user.id)).filter((p) => p.status === "active")
+    const mine = (await store.postsByUser(user.id)).filter((p) => p.status === "active" || p.status === "private")
       .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
     return json({ posts: mine.map((p) => ({ ...toPublic(p, viewer), mine: true })) });
   }
