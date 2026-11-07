@@ -1,0 +1,2 @@
+# Claude connector: the protected-resource document also at the path-specific address (RFC 9728).
+/.well-known/oauth-protected-resource/mcp  /.well-known/oauth-protected-resource  200

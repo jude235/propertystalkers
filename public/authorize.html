@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect to Property Stalkers</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+  :root { --brand-deep: #0b231c; --brand: #11352b; --brand-soft: #e1f0ec; --brass: #d4af37; --brass-light: #f4ebd0;
+    --ink: #1e293b; --muted: #64748b; --line: #ece5d4; --bg: #fcfbf7; --soft: #f7f4eb; --warn-bg: #f6e7c8; --warn-ink: #5e4210; --bad: #9b1c1c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--soft); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  header { background: var(--brand-deep); border-bottom: 2px solid var(--brass); padding: 16px 20px; }
+  header a { color: #fff; font-weight: 800; font-size: 20px; text-decoration: none; letter-spacing: -.02em; }
+  header a span { color: var(--brass); }
+  main { max-width: 460px; margin: 28px auto 60px; padding: 0 16px; }
+  .card { background: var(--bg); border: 1px solid var(--line); border-radius: 16px; padding: 24px 22px; box-shadow: 0 10px 30px rgba(11,35,28,.08); }
+  h1 { font-size: 22px; line-height: 1.3; margin: 0 0 6px; letter-spacing: -.01em; }
+  p { margin: 8px 0; }
+  .muted { color: var(--muted); font-size: 14px; }
+  ul.can { padding: 0; margin: 14px 0; list-style: none; }
+  ul.can li { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--line); font-size: 15px; }
+  ul.can li:first-child { border-top: 0; }
+  ul.can svg { flex: 0 0 auto; margin-top: 3px; color: var(--brand); }
+  .who { display: flex; align-items: center; gap: 10px; background: var(--brand-soft); border-radius: 12px; padding: 10px 12px; margin: 14px 0; font-size: 14px; }
+  .who b { display: block; font-size: 15px; }
+  .who .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; background: var(--brass-light); color: #8a6d12; border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 2px; }
+  .warn { background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 10px 12px; font-size: 14px; margin: 12px 0; }
+  .err { color: var(--bad); font-size: 14px; margin: 8px 0 0; }
+  .row { display: flex; gap: 10px; margin-top: 18px; }
+  button, .btn { font: inherit; font-weight: 700; font-size: 15px; border-radius: 12px; padding: 12px 16px; cursor: pointer; border: 1px solid transparent; min-height: 46px; }
+  .primary { background: var(--brand); color: #fff; flex: 1; }
+  .primary:disabled { opacity: .6; cursor: default; }
+  .ghost { background: transparent; color: var(--brand); border-color: var(--line); }
+  .linkish { background: none; border: 0; padding: 0; min-height: 0; color: var(--brand); font-weight: 600; font-size: 14px; text-decoration: underline; cursor: pointer; }
+  .google { width: 100%; background: #fff; color: var(--ink); border-color: var(--line); display: flex; align-items: center; justify-content: center; gap: 10px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  input { width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+  input:focus, button:focus-visible { outline: 3px solid rgba(212,175,55,.5); outline-offset: 1px; }
+  .or { text-align: center; color: var(--muted); font-size: 13px; margin: 14px 0 0; }
+  .grant { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .grant:first-of-type { border-top: 0; }
+  .grant .grow { flex: 1; min-width: 0; }
+  .small { font-size: 13px; }
+  footer { text-align: center; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  footer a { color: var(--muted); }
+</style></head><body>
+<header><a href="/">property<span>stalkers</span></a></header>
+<main>
+  <div class="card" id="app" aria-live="polite"><p class="muted">Loading…</p></div>
+  <footer><a href="/connector">About the Claude connector</a> · <a href="/privacy.html">Privacy</a></footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const app = document.getElementById("app");
+  const PENDING = "ps_oauth_pending";
+  const FIELDS = ["response_type", "client_id", "redirect_uri", "state", "code_challenge", "code_challenge_method", "scope", "resource"];
+
+  // Coming back from Google or an email link lands on /authorize without the request: restore it.
+  let params = new URLSearchParams(location.search);
+  if (!params.get("client_id")) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PENDING) || "null");
+      if (saved && saved.until > Date.now() && saved.query) {
+        params = new URLSearchParams(saved.query);
+        history.replaceState(null, "", "/authorize?" + saved.query + location.hash);
+      }
+    } catch (e) {}
+  }
+  const req = Object.fromEntries(FIELDS.map((k) => [k, params.get(k) || ""]));
+  const manage = !req.client_id;
+  const remember = () => { try { localStorage.setItem(PENDING, JSON.stringify({ query: params.toString(), until: Date.now() + 30 * 60 * 1000 })); } catch (e) {} };
+  const forget = () => { try { localStorage.removeItem(PENDING); } catch (e) {} };
+
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return n;
+  };
+  const tick = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("width", "18"); s.setAttribute("height", "18"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2.4"); s.innerHTML = '<path d="M5 12.5l4.5 4.5L19 7.5"/>'; return s; };
+  const show = (...nodes) => { app.replaceChildren(...nodes.filter(Boolean)); };
+  const problem = (title, text) => show(el("h1", {}, title), el("p", { class: "muted" }, text));
+
+  let sb = null, session = null, info = null;
+
+  async function getJson(path, opts = {}) {
+    const headers = { "content-type": "application/json", ...(opts.headers || {}) };
+    if (opts.auth && session) headers.authorization = "Bearer " + session.access_token;
+    const res = await fetch(path, { ...opts, headers });
+    let body = {};
+    try { body = await res.json(); } catch (e) {}
+    return { ok: res.ok, status: res.status, body };
+  }
+
+  async function start() {
+    let cfg;
+    try { cfg = (await getJson("/api/config")).body; } catch (e) {}
+    if (!cfg || !cfg.supabaseUrl || !window.supabase) return problem("Couldn't load", "Please check your internet connection and reload this page.");
+    const ref = new URL(cfg.supabaseUrl).hostname.split(".")[0];
+    // Same sign-in as the main site (through our own /sb address), so if you're signed in there you're signed in here.
+    sb = window.supabase.createClient(location.origin + "/sb", cfg.supabaseAnonKey, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: `sb-${ref}-auth-token` }
+    });
+    try { session = (await sb.auth.getSession()).data.session; } catch (e) { session = null; }
+    sb.auth.onAuthStateChange((_e, s) => { const was = !!session; session = s; if (!was && s) route(); });
+
+    if (!manage) {
+      if (req.response_type !== "code" || !req.code_challenge || req.code_challenge_method !== "S256" || !req.redirect_uri) {
+        return problem("This link isn't complete", "Please go back to Claude and start connecting Property Stalkers again.");
+      }
+      const r = await getJson(`/api/oauth/client?client_id=${encodeURIComponent(req.client_id)}&redirect_uri=${encodeURIComponent(req.redirect_uri)}`);
+      if (!r.ok) return problem("This link can't be used", (r.body && r.body.error_description) || "Please go back to Claude and try connecting again.");
+      info = r.body;
+    }
+    route();
+  }
+
+  function route() {
+    if (!session) return signIn();
+    return manage ? connections() : consent();
+  }
+
+  /* ---------- sign in (Google or an emailed code) ---------- */
+  function signIn(msg) {
+    if (!manage) remember();
+    const err = el("p", { class: "err", hidden: "" });
+    const email = el("input", { type: "email", id: "email", autocomplete: "email", inputmode: "email", placeholder: "you@example.com", required: "" });
+    const send = el("button", { class: "primary", type: "submit", style: "width:100%;margin-top:12px" }, "Email me a code");
+    const form = el("form", { onsubmit: async (e) => {
+      e.preventDefault();
+      err.hidden = true;
+      const addr = email.value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) { err.hidden = false; err.textContent = "Please enter a valid email address."; return; }
+      send.disabled = true; send.textContent = "Sending…";
+      const { error } = await sb.auth.signInWithOtp({ email: addr, options: { emailRedirectTo: location.origin + "/authorize" } });
+      if (error) { send.disabled = false; send.textContent = "Email me a code"; err.hidden = false; err.textContent = "Couldn't send the email. Please check the address and try again."; return; }
+      codeEntry(addr);
+    } }, el("label", { for: "email" }, "Email"), email, send, err);
+    const google = el("button", { class: "google", type: "button", onclick: async () => {
+      const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/authorize" } });
+      if (error) { err.hidden = false; err.textContent = "Google sign-in isn't available right now. Please use your email."; }
+    } }, googleIcon(), "Continue with Google");
+    show(
+      el("h1", {}, manage ? "Your connected apps" : "Sign in to connect"),
+      el("p", { class: "muted" }, msg || (manage
+        ? "Sign in to see which apps can use your Property Stalkers account."
+        : `${info && info.is_claude ? "Claude" : "An app"} wants to use your Property Stalkers account. First, sign in the same way you do on the site.`)),
+      el("div", { style: "margin-top:16px" }, google),
+      el("p", { class: "or" }, "or"),
+      form
+    );
+  }
+
+  function codeEntry(addr) {
+    const err = el("p", { class: "err", hidden: "" });
+    const code = el("input", { id: "code", inputmode: "numeric", autocomplete: "one-time-code", maxlength: "10", placeholder: "6-digit code" });
+    const go = el("button", { class: "primary", type: "submit", style: "width:100%;margin-top:12px" }, "Sign in");
+    show(
+      el("h1", {}, "Check your email"),
+      el("p", { class: "muted" }, "We sent a code to ", el("b", {}, addr), ". The email also has a link you can tap instead. Can't see it? Check your spam folder."),
+      el("form", { onsubmit: async (e) => {
+        e.preventDefault();
+        const token = code.value.replace(/\s/g, "");
+        if (token.length < 6) { err.hidden = false; err.textContent = "Please enter the code from the email."; return; }
+        go.disabled = true; go.textContent = "Checking…";
+        const { error } = await sb.auth.verifyOtp({ email: addr, token, type: "email" });
+        if (error) { go.disabled = false; go.textContent = "Sign in"; err.hidden = false; err.textContent = "That code didn't work. Please check it or send a new one."; return; }
+        // onAuthStateChange moves on to the next step.
+      } }, el("label", { for: "code" }, "Code"), code, go, err),
+      el("p", { style: "margin-top:14px" }, el("button", { class: "linkish", type: "button", onclick: () => signIn() }, "Use a different email or send again"))
+    );
+    code.focus();
+  }
+
+  /* ---------- Allow / Cancel ---------- */
+  async function consent() {
+    const me = await getJson("/api/me", { auth: true });
+    if (me.status === 401) { session = null; return signIn("Your sign-in has expired. Please sign in again."); }
+    const prof = (me.body && me.body.profile) || {};
+    const name = prof.name || (session.user && session.user.email) || "your account";
+    const mail = (me.body && me.body.email) || (session.user && session.user.email) || "";
+    const who = info.is_claude ? "Claude" : info.client_name;
+    const err = el("p", { class: "err", hidden: "" });
+    const allow = el("button", { class: "primary", type: "button", onclick: () => decide("allow") }, "Allow");
+    const cancel = el("button", { class: "ghost", type: "button", onclick: () => decide("deny") }, "Cancel");
+    async function decide(decision) {
+      allow.disabled = true; cancel.disabled = true; err.hidden = true;
+      const r = await getJson("/api/oauth/approve", { method: "POST", auth: true, body: JSON.stringify({ ...req, decision }) });
+      if (r.ok && r.body.redirect) { forget(); location.replace(r.body.redirect); return; }
+      allow.disabled = false; cancel.disabled = false;
+      if (r.status === 401) { session = null; return signIn("Your sign-in has expired. Please sign in again."); }
+      err.hidden = false; err.textContent = (r.body && r.body.error_description) || "Something went wrong. Please try again.";
+    }
+    const can = [
+      "Search listings and new projects for you, and look up asking prices",
+      "See your profile, your posts and your shortlist",
+      "Get a poster's phone number when you ask for it",
+      "Show buyer and tenant requests you're allowed to see (licensed brokers)",
+      "Post, edit or remove your listings, only when you confirm it in Claude"
+    ];
+    show(
+      el("h1", {}, `Allow ${who} to use your Property Stalkers account?`),
+      info.is_claude ? null : el("p", { class: "muted" }, "App name, as the app gave it: ", el("b", {}, info.client_name)),
+      el("div", { class: "who" },
+        el("div", { class: "grow" }, el("b", {}, name), mail),
+        el("button", { class: "linkish", type: "button", onclick: async () => { await sb.auth.signOut(); session = null; signIn(); } }, "Not you?")),
+      el("p", {}, `${who} will be able to:`),
+      el("ul", { class: "can" }, can.map((t) => el("li", {}, tick(), el("span", {}, t)))),
+      info.is_local ? el("div", { class: "warn" }, "This sends you back to a program on this computer (", info.redirect_host, "). Only continue if you started it yourself.")
+        : el("p", { class: "muted small" }, "You'll go back to ", el("b", {}, info.redirect_host), info.is_claude ? el("span", { class: "badge" }, "Claude") : null, ". It never sees your password. You can disconnect at any time."),
+      el("div", { class: "row" }, cancel, allow),
+      err
+    );
+    allow.focus();
+  }
+
+  /* ---------- connected apps ---------- */
+  async function connections(note) {
+    const r = await getJson("/api/oauth/grants", { auth: true });
+    if (r.status === 401) { session = null; return signIn("Your sign-in has expired. Please sign in again."); }
+    const grants = (r.body && r.body.grants) || [];
+    const list = grants.length
+      ? grants.map((g) => el("div", { class: "grant" },
+          el("div", { class: "grow" }, el("b", {}, g.name), el("div", { class: "muted small" }, "Last connected ", new Date(g.last_used).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))),
+          el("button", { class: "ghost", type: "button", onclick: async (e) => {
+            e.target.disabled = true;
+            await getJson("/api/oauth/grants", { method: "POST", auth: true, body: JSON.stringify({ id: g.id }) });
+            connections("Disconnected.");
+          } }, "Disconnect")))
+      : [el("p", { class: "muted" }, "No apps are connected to your account.")];
+    show(
+      el("h1", {}, "Your connected apps"),
+      el("p", { class: "muted" }, "Apps like Claude that can use your Property Stalkers account. Disconnecting stops them at once; you can connect again later from the app."),
+      note ? el("p", {}, note) : null,
+      el("div", { style: "margin-top:10px" }, list),
+      grants.length > 1 ? el("p", { style: "margin-top:14px" }, el("button", { class: "linkish", type: "button", onclick: async () => {
+        await getJson("/api/oauth/grants", { method: "POST", auth: true, body: JSON.stringify({ all: true }) });
+        connections("All apps disconnected.");
+      } }, "Disconnect all")) : null,
+      el("p", { style: "margin-top:18px" }, el("a", { href: "/" }, "Back to Property Stalkers"))
+    );
+  }
+
+  function googleIcon() {
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("width", "18"); s.setAttribute("height", "18"); s.setAttribute("viewBox", "0 0 48 48");
+    s.innerHTML = '<path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/>';
+    return s;
+  }
+
+  start().catch(() => problem("Couldn't load", "Please reload this page."));
+})();
+</script>
+</body></html>
