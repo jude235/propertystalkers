@@ -19,3 +19,13 @@
   Content-Security-Policy: frame-ancestors 'none'
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+
+# Site icons (also shown by Claude for the connector).
+/favicon.ico
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=86400
+/icon-512.png
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=86400
+/apple-touch-icon.png
+  Cache-Control: public, max-age=86400
