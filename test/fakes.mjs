@@ -103,7 +103,9 @@ export function memoryStore() {
     async updateDraft(id, uid, data) { const d = drafts.get(id); if (d && d.uid === uid) d.data = data; },
     async getDraft(id, uid) { const d = drafts.get(id); return d && d.uid === uid ? d.data : null; },
     async deleteDraft(id) { drafts.delete(id); },
-    async bumpAiUsage(uid) { const n = (usage.get(uid) || 0) + 1; usage.set(uid, n); return n; }
+    async bumpAiUsage(uid) { const n = (usage.get(uid) || 0) + 1; usage.set(uid, n); return n; },
+    _counters: new Map(),
+    async bumpCounter(key, w) { const k = key + "|" + w; const n = (this._counters.get(k) || 0) + 1; this._counters.set(k, n); return n; }
   };
 }
 
