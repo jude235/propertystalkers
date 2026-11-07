@@ -27,6 +27,5 @@
     "listings"
   ],
   "authorization_response_iss_parameter_supported": true,
-  "client_id_metadata_document_supported": true,
   "service_documentation": "https://propertystalkers.com/connector"
 }
