@@ -774,7 +774,8 @@ async function dispatch(m, ctx) {
       return ok({
         protocolVersion: PROTOCOL_VERSIONS.includes(want) ? want : PROTOCOL_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { ...SERVER_INFO, websiteUrl: ctx.origin },
+        serverInfo: { ...SERVER_INFO, websiteUrl: ctx.origin,
+          icons: [{ src: ctx.origin + "/icon-512.png", mimeType: "image/png", sizes: ["512x512"] }, { src: ctx.origin + "/favicon.ico", mimeType: "image/x-icon", sizes: ["64x64"] }] },
         instructions: INSTRUCTIONS
       });
     }
