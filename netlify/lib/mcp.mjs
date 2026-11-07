@@ -301,7 +301,7 @@ export const TOOLS = [
   {
     name: "search_listings",
     title: "Search listings",
-    description: "Find homes for sale or rent, new projects, co-living rooms and holiday homes on Property Stalkers. Give a place (or a point) and any filters. Returns up to 20 listings with price, size, bedrooms, handover for new projects, a photo and the listing link. No sign-in needed; phone numbers are not included.",
+    description: "Find homes for sale or rent, new projects, co-living rooms and holiday homes on Property Stalkers. Give a place (or a point) and any filters. Returns up to 20 listings with price, size, bedrooms, handover for new projects, a photo and the listing link. New projects show a starting price for their smallest unit; get_listing has the price per size. No sign-in needed; phone numbers are not included.",
     signIn: false,
     annotations: ro("Search listings"),
     inputSchema: {
@@ -323,7 +323,10 @@ export const TOOLS = [
         more: rows.length > offset + page.length,
         listings_in_area_before_filters: total_in_area,
         results: page,
-        note: rows.length ? NOTE : "Nothing matched. Try a wider area, fewer filters, or another deal type."
+        note: !rows.length ? "Nothing matched. Try a wider area, fewer filters, or another deal type."
+          : NOTE + (page.some((x) => x.developer)
+            ? " New projects show their lowest starting price, usually for the smallest unit, and match a bedroom filter if any unit size fits. Use get_listing for the price of each size before quoting one."
+            : "")
       };
     }
   },
