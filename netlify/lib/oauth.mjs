@@ -64,8 +64,13 @@ const sameResource = (a, origin) => {
   return a.replace(/\/+$/, "") === want || a.replace(/\/+$/, "") === origin;
 };
 
-/** The two discovery documents (also served as static files from /.well-known/). */
-export function serverMetadata(origin) {
+/**
+ * The two discovery documents (also served as static files from /.well-known/).
+ * Claude's published identity (a client metadata URL) is not advertised: when it is, Claude always uses it, and fetching
+ * Claude's document from Cloudflare failed in practice, so Claude registers itself (DCR) instead. Set MCP_CIMD=1 to advertise it.
+ */
+export function serverMetadata(origin, env = {}) {
+  const cimd = env.MCP_CIMD === "1";
   return {
     issuer: origin,
     authorization_endpoint: origin + "/authorize",
@@ -80,7 +85,7 @@ export function serverMetadata(origin) {
     revocation_endpoint_auth_methods_supported: ["none"],
     scopes_supported: [SCOPE],
     authorization_response_iss_parameter_supported: true,
-    client_id_metadata_document_supported: true,
+    ...(cimd ? { client_id_metadata_document_supported: true } : {}),
     service_documentation: origin + "/connector"
   };
 }
@@ -268,7 +273,7 @@ export async function oauthRoutes(c) {
 
   if (method === "OPTIONS") return new Response(null, { status: 204, headers: publicRoutes.includes(sub) ? CORS : {} });
 
-  if (sub === "/metadata" && method === "GET") return reply(serverMetadata(origin), 200, { cors: true });
+  if (sub === "/metadata" && method === "GET") return reply(serverMetadata(origin, env), 200, { cors: true });
   if (sub === "/resource" && method === "GET") return reply(resourceMetadata(origin), 200, { cors: true });
 
   /* ----- register a client (RFC 7591) ----- */
@@ -304,7 +309,10 @@ export async function oauthRoutes(c) {
   /* ----- what the Allow page shows (no sign-in needed) ----- */
   if (sub === "/client" && method === "GET") {
     const r = await checkClient(store, url.searchParams.get("client_id"), url.searchParams.get("redirect_uri"), deps);
-    if (r.error) return reply({ error: r.error, error_description: r.text }, 400);
+    if (r.error) {
+      console.error("connector sign-in: unknown client or redirect", { client_id: str(url.searchParams.get("client_id"), 200), redirect_uri: str(url.searchParams.get("redirect_uri"), 200), error: r.error });
+      return reply({ error: r.error, error_description: r.text + " Please go back to Claude and connect again." }, 400);
+    }
     return reply({
       client_name: r.client.client_name,
       redirect_host: new URL(r.redirect_uri).host,
