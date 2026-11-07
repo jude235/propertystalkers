@@ -6,6 +6,7 @@ import { makeAI } from "./ai.mjs";
 import { makeGeo } from "./geo.mjs";
 import { makeMailer } from "./notify.mjs";
 import { makeEnvq } from "./envq.mjs";
+import { handleMcp } from "./mcp.mjs";
 
 const REQUIRED = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "ANTHROPIC_API_KEY",
   "GOOGLE_MAPS_BROWSER_KEY", "GOOGLE_GEOCODING_KEY"];
@@ -51,6 +52,23 @@ export async function serve(req, rawEnv, ctx = null) {
   // On Cloudflare, background work (alerts, emails, jobs) finishes after the reply is sent.
   const defer = ctx && typeof ctx.waitUntil === "function" ? (p) => ctx.waitUntil(p) : null;
   return handle(req, defer ? { ...deps, defer } : deps);
+}
+
+/** The Claude connector: /mcp (see mcp.mjs). */
+export async function serveMcp(req, rawEnv, ctx = null) {
+  const env = tidyEnv(rawEnv);
+  const missing = REQUIRED.filter((k) => !env[k]);
+  if (missing.length) return notConfigured(missing);
+  const deps = depsFor(env);
+  const defer = ctx && typeof ctx.waitUntil === "function" ? (p) => ctx.waitUntil(p) : null;
+  try {
+    return await handleMcp(req, defer ? { ...deps, defer } : deps);
+  } catch (e) {
+    console.error("connector failed", e);
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32603, message: "Something went wrong on our side. Please try again." } }), {
+      status: 500, headers: { "content-type": "application/json", "access-control-allow-origin": "*" }
+    });
+  }
 }
 
 /** Public pages: /property/<id> and /sitemap.xml. */

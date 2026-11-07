@@ -9,6 +9,7 @@ import { runAssistant } from "./assistant.mjs";
 import { onListingLive, onRequestLive, onPriceChange } from "./events.mjs";
 import { maybeRunJobs } from "./jobs.mjs";
 import { mapRoutes } from "./mapapi.mjs";
+import { oauthRoutes } from "./oauth.mjs";
 
 const placeCache = new Map();
 
@@ -54,9 +55,20 @@ export async function handle(req, deps) {
       });
     }
 
-    const user = await store.getUser(bearer(req));
+    // The Claude connector (mcp.mjs) calls these routes internally for a member it has already checked
+    // (deps.asUser); everyone else is identified by their normal sign-in token.
+    const viaConnector = deps.asUser !== undefined;
+    const user = viaConnector ? deps.asUser : await store.getUser(bearer(req));
     const admins = String(env.ADMIN_EMAILS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
     const isAdmin = !!(user && user.email && admins.includes(user.email.toLowerCase()));
+
+    /* ---------- sign-in for the Claude connector (OAuth); only real site sign-ins may approve ---------- */
+    if (path.startsWith("/oauth/")) {
+      if (viaConnector) return json({ error: "Not found" }, 404);
+      const r = await oauthRoutes({ path, method, req, url, user, deps });
+      if (r) return r;
+      return json({ error: "Not found" }, 404);
+    }
 
     async function loadViewer() {
       if (!user) return { viewer: null, profile: null };
@@ -292,6 +304,29 @@ export async function handle(req, deps) {
         price: b.price, currency: b.currency, possession: b.possession, description: b.description
       });
       if (r.message) return json({ error: r.message }, 400);
+      return json({ draft: r.draft });
+    }
+
+    /* ---------- a draft from structured fields (the Claude connector; Claude has already done the talking) ---------- */
+    if (path === "/drafts/structured" && method === "POST") {
+      if (needsProfile) return json({ error: "profile_required" }, 400);
+      if (!profile.role) return json({ error: "role_required" }, 400);
+      if ((await store.bumpAiUsage(user.id)) > LIMITS.aiCallsPerDay) {
+        return json({ error: "You've reached today's limit for drafts. Please try again tomorrow." }, 429);
+      }
+      const b = await readJson(req);
+      const FIELDS = ["deal", "property_type", "bedrooms", "price", "currency", "building", "locality", "city", "country", "unit_number",
+        "size_sqft", "description", "amenities", "maps_link", "company", "configs", "possession", "rera_number", "room_type", "room",
+        "suits", "bills_included", "move_in", "interests", "guests", "min_nights"];
+      const proposal = Object.fromEntries(FIELDS.filter((k) => b[k] !== undefined).map((k) => [k, b[k]]));
+      // Same as the posting assistant: the member's chosen role decides who they post as.
+      const role = roleOf(profile.role);
+      proposal.poster_type = role === "seeker" ? (String(proposal.deal || "").toLowerCase() === "sale" ? "buyer" : "tenant") : role;
+      // A broker always posts with the licence on their own profile.
+      if (profile.role === "broker") proposal.rera_number = profile.rera_number;
+      if (profile.role === "developer" && !proposal.company) proposal.company = profile.company;
+      const r = await makeDraft(proposal);
+      if (r.message) return json({ error: r.message, needs_more: true }, 400);
       return json({ draft: r.draft });
     }
 

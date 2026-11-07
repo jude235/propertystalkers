@@ -177,6 +177,10 @@ export function makeStore({ url, serviceKey }) {
     },
     async bumpAiUsage(userId) {
       return must(await sb.rpc("bump_ai_usage", { uid: userId }));
+    },
+    /** Rate limits for the Claude connector: one more call for this key in this hour; returns the count. */
+    async bumpCounter(key, windowIso) {
+      return must(await sb.rpc("bump_mcp_usage", { k: key, w: windowIso }));
     }
   };
 }
