@@ -237,6 +237,10 @@ test("discovery documents and metadata", async () => {
   assert.equal(as.body.issuer, ORIGIN);
   assert.deepEqual(as.body.code_challenge_methods_supported, ["S256"]);
   assert.equal(as.body.token_endpoint, ORIGIN + "/api/oauth/token");
+  // Claude must register itself (DCR): the client-metadata-URL method isn't advertised unless MCP_CIMD=1.
+  assert.equal(as.body.client_id_metadata_document_supported, undefined);
+  assert.ok(as.body.registration_endpoint);
+  assert.ok(as.body.token_endpoint_auth_methods_supported.includes("none"));
   const rs = await t.api("GET", "/oauth/resource");
   assert.equal(rs.body.resource, ORIGIN + "/mcp");
   assert.deepEqual(rs.body.authorization_servers, [ORIGIN]);
