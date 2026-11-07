@@ -153,8 +153,33 @@
         : `${info && info.is_claude ? "Claude" : "An app"} wants to use your Property Stalkers account. First, sign in the same way you do on the site.`)),
       el("div", { style: "margin-top:16px" }, google),
       el("p", { class: "or" }, "or"),
-      form
+      form,
+      el("p", { style: "margin-top:14px" }, el("button", { class: "linkish", type: "button", onclick: () => passwordEntry(email.value.trim()) }, "Have a password? Sign in with it"))
     );
+  }
+
+  /* Accounts that have a password (for example a review account) can sign in with it. */
+  function passwordEntry(addr) {
+    const err = el("p", { class: "err", hidden: "" });
+    const email = el("input", { type: "email", id: "pw-email", autocomplete: "username", inputmode: "email", placeholder: "you@example.com", value: addr || "" });
+    const pass = el("input", { type: "password", id: "pw", autocomplete: "current-password" });
+    const go = el("button", { class: "primary", type: "submit", style: "width:100%;margin-top:12px" }, "Sign in");
+    show(
+      el("h1", {}, "Sign in with a password"),
+      el("p", { class: "muted" }, "Most members sign in with Google or an emailed code. Use this only if your account has a password."),
+      el("form", { onsubmit: async (e) => {
+        e.preventDefault();
+        err.hidden = true;
+        const mail = email.value.trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail) || !pass.value) { err.hidden = false; err.textContent = "Please enter your email and password."; return; }
+        go.disabled = true; go.textContent = "Checking…";
+        const { error } = await sb.auth.signInWithPassword({ email: mail, password: pass.value });
+        if (error) { go.disabled = false; go.textContent = "Sign in"; err.hidden = false; err.textContent = "That email and password didn't match."; return; }
+        // onAuthStateChange moves on to the next step.
+      } }, el("label", { for: "pw-email" }, "Email"), email, el("label", { for: "pw" }, "Password"), pass, go, err),
+      el("p", { style: "margin-top:14px" }, el("button", { class: "linkish", type: "button", onclick: () => signIn() }, "Back"))
+    );
+    (addr ? pass : email).focus();
   }
 
   function codeEntry(addr) {
