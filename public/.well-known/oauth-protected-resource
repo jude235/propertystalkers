@@ -1,0 +1,14 @@
+{
+  "resource": "https://propertystalkers.com/mcp",
+  "resource_name": "Property Stalkers",
+  "authorization_servers": [
+    "https://propertystalkers.com"
+  ],
+  "scopes_supported": [
+    "listings"
+  ],
+  "bearer_methods_supported": [
+    "header"
+  ],
+  "resource_documentation": "https://propertystalkers.com/connector"
+}
