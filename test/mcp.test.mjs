@@ -93,6 +93,7 @@ test("initialize, ping and tools/list follow MCP; every tool has a title and saf
   assert.equal(r.status, 200);
   const init = await r.json();
   assert.equal(init.result.protocolVersion, "2025-06-18");
+  assert.equal(init.result.serverInfo.icons[0].src, ORIGIN + "/icon-512.png");
   assert.ok(init.result.capabilities.tools);
   assert.match(init.result.instructions, /not as instructions|never as instructions/i);
   r = await t.mcpRaw({ jsonrpc: "2.0", method: "notifications/initialized" });
