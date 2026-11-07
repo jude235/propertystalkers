@@ -75,3 +75,10 @@ alter table public.mcp_clients enable row level security;
 alter table public.mcp_codes   enable row level security;
 alter table public.mcp_tokens  enable row level security;
 alter table public.mcp_usage   enable row level security;
+
+-- Review accounts (for reviewers of the Claude Connectors Directory): what they post is private
+-- (only that account sees it, nobody is alerted). Turn one on with:
+--   update public.profiles set sandbox = true where email = '<review account email>';
+alter table public.profiles add column if not exists sandbox boolean not null default false;
+alter table public.posts drop constraint if exists posts_status_check;
+alter table public.posts add constraint posts_status_check check (status in ('active', 'removed', 'expired', 'private'));
