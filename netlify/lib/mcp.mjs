@@ -303,7 +303,7 @@ export const TOOLS = [
   {
     name: "search_listings",
     title: "Search listings",
-    description: "Find homes for sale or rent, new projects, co-living rooms and holiday homes on Property Stalkers. Give a place (or a point) and any filters. Returns up to 20 listings with price, size, bedrooms, handover for new projects, a photo and the listing link. New projects show a starting price for their smallest unit; get_listing has the price per size. No sign-in needed; phone numbers are not included.",
+    description: "Find homes for sale or rent, new projects, co-living rooms and holiday homes on Property Stalkers. Give a place (or a point) and any filters. Returns up to 20 listings with price, size, bedrooms, handover for new projects, a photo and the listing link. New projects show a starting price for their smallest unit; each project's details list the price per size. No sign-in needed; phone numbers are not included.",
     signIn: false,
     annotations: ro("Search listings"),
     inputSchema: {
@@ -338,7 +338,7 @@ export const TOOLS = [
     description: "Full details of one listing or request by its id: description, all photos, amenities, location, handover and payment details for projects, air quality nearby, and the link. Phone numbers only when the member is signed in.",
     signIn: false,
     annotations: ro("Get listing details"),
-    inputSchema: { type: "object", properties: { id: { type: "string", description: "The listing id from search results." } }, required: ["id"] },
+    inputSchema: { type: "object", properties: { id: { type: "string", description: "A listing or request id." } }, required: ["id"] },
     async run(a, ctx) {
       if (!isUuid(a.id)) fail("That id isn't valid. Use an id from search_listings.");
       const r = await ctx.api("GET", "/posts/" + a.id);
@@ -434,7 +434,7 @@ export const TOOLS = [
   {
     name: "my_listings",
     title: "My listings and requests",
-    description: "Everything the connected member has posted that is live: listings and buyer/tenant requests, with ids, prices and links (use the ids with update_listing or remove_listing).",
+    description: "Everything the connected member has posted that is live: listings and buyer/tenant requests, with ids, prices and links.",
     signIn: true,
     annotations: ro("My listings and requests"),
     inputSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 200, default: 50 } } },
@@ -520,7 +520,7 @@ export const TOOLS = [
   {
     name: "draft_listing",
     title: "Draft a listing or request",
-    description: "Prepare a post for the connected member (nothing goes live yet). The member's role decides the type: owners and brokers list homes, developers list projects, buyers/tenants post what they're looking for, hosts list rooms or holiday homes. Returns a summary and a draft_id. Show the summary to the member and only call publish_draft after they confirm. If something is missing, the reply says what to ask. Photos are added on the site afterwards.",
+    description: "Prepare a post for the connected member (nothing goes live yet). The member's role decides the type: owners and brokers list homes, developers list projects, buyers/tenants post what they're looking for, hosts list rooms or holiday homes. Returns a summary and a draft_id; nothing is published by this step. If details are missing, the reply lists them. Photos are added on the site afterwards.",
     signIn: true,
     bucket: "write",
     annotations: { title: "Draft a listing or request", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -585,7 +585,7 @@ export const TOOLS = [
   {
     name: "publish_draft",
     title: "Publish a draft",
-    description: "Put a draft live on Property Stalkers (public for listings; requests are shown only to brokers). Only call after the member has seen the draft summary and confirmed. Limit: 10 posts a day.",
+    description: "Put a draft live on Property Stalkers (public for listings; requests are shown only to brokers). Limit: 10 posts a day.",
     signIn: true,
     bucket: "write",
     annotations: { title: "Publish a draft", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
@@ -613,7 +613,7 @@ export const TOOLS = [
   {
     name: "update_listing",
     title: "Update a listing",
-    description: "Change the connected member's own listing or request: price, description, size, bedrooms, amenities, handover / unit mix for projects, or the map pin (Google Maps link). Only the fields given change. Confirm the change with the member first.",
+    description: "Change the connected member's own listing or request: price, description, size, bedrooms, amenities, handover / unit mix for projects, or the map pin (Google Maps link). Only the fields given change.",
     signIn: true,
     bucket: "write",
     annotations: { title: "Update a listing", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
@@ -647,7 +647,7 @@ export const TOOLS = [
   {
     name: "remove_listing",
     title: "Remove a listing",
-    description: "Take the connected member's own listing or request off Property Stalkers (for example when sold or let). Confirm with the member first; it can't be undone from Claude.",
+    description: "Take the connected member's own listing or request off Property Stalkers (for example when sold or let). It can't be undone through the connector.",
     signIn: true,
     bucket: "write",
     annotations: { title: "Remove a listing", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
