@@ -495,3 +495,54 @@ test("every tool in the list has a handler and a schema", () => {
     assert.ok(tool.description.length > 40, tool.name);
   }
 });
+
+test("a review account posts privately: only it sees the post, nobody is alerted, and it can still edit and remove", async () => {
+  const t = setup();
+  const { broker } = await seed(t);
+  const watcher = await t.person("watcher@ps.in", { role: "seeker" });
+  await t.store.insert("saved_searches", { user_id: watcher.id, criteria: { deal: "sale" }, label: "Anything for sale" });
+  const reviewer = await t.person("review@ps.in", { name: "Review Account", phone: "+971500000009", role: "broker", licence: "12345" });
+  await t.store.upsertProfile({ id: reviewer.id, sandbox: true });
+  const draft = (c, unit) => t.call("draft_listing", { deal: "sale", property_type: "apartment", bedrooms: 2, price: 3100000, size_sqft: 1250, unit_number: unit,
+    building: "Creek Bay", locality: "Dubai Creek Harbour", city: "Dubai", country: "United Arab Emirates" }, c.access_token);
+
+  // Control: an ordinary broker's post alerts the watcher.
+  const cb = await t.connect(broker);
+  const normal = await t.call("publish_draft", { draft_id: (await draft(cb, "1101")).data.draft_id }, cb.access_token);
+  assert.equal(normal.error, null, normal.error);
+  const before = (await t.store.rows("notifications", { user_id: watcher.id })).length;
+  assert.equal(before, 1, "an ordinary post alerts saved searches");
+
+  const cr = await t.connect(reviewer);
+  const d = await draft(cr, "3301");
+  assert.equal(d.error, null, d.error);
+  const p = await t.call("publish_draft", { draft_id: d.data.draft_id }, cr.access_token);
+  assert.equal(p.error, null, p.error);
+  assert.match(p.data.visibility, /Private/);
+  const row = t.store._posts.find((x) => x.id === p.data.id);
+  assert.equal(row.status, "private");
+  assert.equal((await t.store.rows("notifications", { user_id: watcher.id })).length, before, "nobody is alerted");
+
+  // Others can't find or open it; the review account can.
+  const found = await t.call("search_listings", { place: "Dubai Creek Harbour" });
+  assert.ok(!found.data.results.some((x) => x.id === row.id), "not in search");
+  assert.match((await t.call("get_listing", { id: row.id })).error, /isn't available|not found|no longer/i);
+  assert.match((await t.call("get_listing", { id: row.id }, cb.access_token)).error, /isn't available|not found|no longer/i);
+  const own = await t.call("get_listing", { id: row.id }, cr.access_token);
+  assert.equal(own.error, null, own.error);
+  assert.match(own.data.visibility, /Private/);
+  assert.equal(own.data.mine, true);
+  const mine = await t.call("my_listings", {}, cr.access_token);
+  assert.equal(mine.data.count, 1);
+  assert.match(mine.data.posts[0].visibility, /Private/);
+  assert.equal((await t.api("GET", "/me", { token: reviewer.token })).body.counts.requests, 0);
+
+  // Edit and remove still work, and stay private.
+  const up = await t.call("update_listing", { id: row.id, price: 2900000 }, cr.access_token);
+  assert.equal(up.error, null, up.error);
+  assert.equal(t.store._posts.find((x) => x.id === row.id).status, "private");
+  assert.equal((await t.store.rows("notifications", { user_id: watcher.id })).length, before, "an edit alerts nobody either");
+  const rm = await t.call("remove_listing", { id: row.id }, cr.access_token);
+  assert.equal(rm.data.removed, true);
+  assert.equal(t.store._posts.find((x) => x.id === row.id).status, "removed");
+});

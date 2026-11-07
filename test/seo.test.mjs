@@ -93,3 +93,16 @@ test("other paths are left alone", async () => {
   assert.equal(await handlePublic(get("/api/feed"), deps), null);
   assert.equal(await handlePublic(new Request("https://propertystalkers.com/sitemap.xml", { method: "POST" }), deps), null);
 });
+
+test("a review account's private listing has no public page and isn't in the sitemap", async () => {
+  const { deps, store } = await setup();
+  const hush = await store.createPost({ kind: "listing", poster_type: "broker", status: "private", deal: "sale", property_type: "apartment", bedrooms: 2, price: 2900000,
+    currency: "AED", building: "Secret Tower", locality: "Dubai Marina", city: "Dubai", lat: 25.08, lng: 55.14, user_id: "rev", contact_name: "Review", contact_phone: "971500000009" });
+  const res = await handlePublic(get("/property/" + hush.id), deps);
+  assert.equal(res.status, 404);
+  const html = await res.text();
+  assert.match(html, /private/);
+  assert.doesNotMatch(html, /Secret Tower|971500000009|Review/);
+  const map = await (await handlePublic(get("/sitemap.xml"), deps)).text();
+  assert.doesNotMatch(map, new RegExp(hush.id));
+});
