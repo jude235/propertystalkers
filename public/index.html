@@ -413,6 +413,56 @@
   .ae-row b { font-size: 14px; font-weight: 600; }
   .ae-row small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
   .ae-src { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
+  /* Listing extras: market panel, cost calculator, map links, notes, similar homes, compare */
+  .mkt .dot.l0 { background: var(--muted); }
+  .calc { margin: 14px 0 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+  .calc summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px;
+    font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--brass-ink); }
+  .calc summary::-webkit-details-marker { display: none; }
+  .calc summary span { letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 600; font-size: 14px; }
+  .calc summary span::after { content: "  +"; color: var(--muted); font-weight: 500; }
+  .calc[open] summary span::after { content: "  –"; }
+  .calc-in { padding: 0 14px 12px; }
+  .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .calc-grid label { display: block; font-size: 12px; color: var(--muted); }
+  .calc-grid input { width: 100%; margin-top: 3px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 15px; background: #fff; color: var(--ink); }
+  .calc-grid input:focus, .note:focus { outline: 2px solid var(--brass); outline-offset: -1px; }
+  .calc-out { margin: 10px 0 2px; }
+  .calc-out div { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; }
+  .calc-out b { font-weight: 700; white-space: nowrap; }
+  .calc-out .tot { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; font-weight: 700; }
+  .calc .sec-h { margin: 14px 0 8px; }
+  .map-links a:only-child { grid-column: 1 / -1; }
+  .note { display: block; width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-size: 14px; background: #fff; color: var(--ink); resize: vertical; }
+  .sim-row { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 8px 0; border: 0; border-top: 1px solid var(--line);
+    background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+  .sim-row:first-child { border-top: 0; }
+  .sim-row img { width: 64px; height: 50px; border-radius: 9px; object-fit: cover; background: var(--soft); }
+  .sim-row > span { min-width: 0; }
+  .sim-row b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sim-row small { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sim-row .sp { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .list-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+  .lh-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .lh-row .lh-line { flex: 1; min-width: 0; }
+  /* The sort control reads as a small text link, so the list head stays one line tall (its tap area is larger than it looks). */
+  .lh-row select { -webkit-appearance: none; appearance: none; flex: 0 0 auto; max-width: 46%; margin: -8px 0; padding: 8px 16px 8px 8px; border: 0; border-radius: 0; color: #f3ebdd;
+    font: inherit; font-size: 12px; font-weight: 700; line-height: 16px; text-overflow: ellipsis; cursor: pointer;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f3ebdd' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 2px center; }
+  .list-tools button { -webkit-appearance: none; appearance: none; border: 1px solid rgba(243, 235, 221, .28); border-radius: 999px; background: none; color: #f3ebdd;
+    padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .lh-row select option { color: #1e293b; background: #fff; }
+  .list-tabs { overflow-x: auto; scrollbar-width: none; }
+  .list-tabs button { flex: 1 0 auto; }
+  .cmp-wrap { overflow-x: auto; margin: 0 -6px; padding-bottom: 6px; }
+  .cmp { border-collapse: collapse; font-size: 13.5px; }
+  .cmp th { position: sticky; left: 0; z-index: 1; background: var(--bg); padding: 8px 10px 8px 6px; text-align: left; vertical-align: top; white-space: nowrap;
+    font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .cmp td { min-width: 148px; max-width: 190px; padding: 8px 10px; vertical-align: top; border-left: 1px solid var(--line); }
+  .cmp tr + tr th, .cmp tr + tr td { border-top: 1px solid var(--line); }
+  .cmp img { display: block; width: 100%; height: 88px; margin-bottom: 6px; border-radius: 10px; object-fit: cover; background: var(--soft); }
+  .cmp .best { color: #1d5b33; font-weight: 700; }
+  .cmp .btn { width: 100%; padding: 8px; font-size: 13px; }
   /* One card for a building with several homes in the list */
   .lgroup .lc-count { bottom: auto; top: 10px; right: 10px; font-weight: 700; background: rgba(0, 0, 0, .6); }
   .bl-rows { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
@@ -2120,6 +2170,7 @@ async function openDetails(id, opts = {}) {
       <p class="price">${esc(priceOf(p))}</p>
       ${badgeHtml(p)}
       ${areaEnvHtml(p)}
+      ${marketHtml(p)}
       ${p.hidden ? `<div class="hidden-note">You hid this listing, so it's off your map. <button type="button" class="linkish" id="unhide-btn">Unhide</button></div>` : ""}
       ${p.needs_confirm ? `<div class="confirm-banner"><span>Is this still available?</span><button class="btn accent" id="still-here">Yes, still available</button></div>` : ""}
       ${(p.warnings || []).length ? `<div class="warn-box"><b>${p.mine ? "Please check" : "Safety check"}</b>${p.warnings.map(esc).join("<br>")}</div>` : ""}
@@ -2150,6 +2201,7 @@ async function openDetails(id, opts = {}) {
         <div class="amen interests">${p.interests.map((a) => `<span class="${myInterests().includes(a) ? "same" : ""}">${myInterests().includes(a) ? ICON.check : ""}${esc(INTERESTS[a] || a)}</span>`).join("")}</div>
         ${!myInterests().length && !p.mine ? `<p class="hint">Add your interests in My profile to see what you have in common.</p>` : ""}` : ""}
       ${(p.amenities || []).length ? `<div class="sec-h">Amenities</div><div class="amen">${p.amenities.map((a) => `<span>${ICON.check}${esc(AMENITIES[a] || a)}</span>`).join("")}</div>` : ""}
+      ${calcHtml(p)}
       <div class="contact" id="contact-box">
         ${p.contact_on_tap && !S.contacts[p.id] ? `<div class="contact-head">
           <div class="avatar">${LOGO_MINI}</div>
@@ -2165,6 +2217,7 @@ async function openDetails(id, opts = {}) {
       </div>` : ""}
       ${!p.mine && p.kind === "request" && S.access && S.access.requests ? `<div class="act-row"><button class="btn" id="pitch-btn" style="grid-column:1/-1">Send them one of my listings</button></div>` : ""}
       ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.${p.mine ? " Add a Google Maps link in Edit for an exact pin." : ""}</p>` : ""}
+      ${mapLinksHtml(p)}${noteHtml(p)}${similarHtml(p)}
       ${p.source === "dld" && !p.mine ? `<div class="claim"><p class="hint">Listed from Dubai Land Department project records.</p>
         <a class="btn claim-btn" id="claim-post" href="${esc(waHref(p.contact_phone, `Hi, I represent ${p.company || "the developer"} and would like to claim the project "${p.building}" on Property Stalkers: ${location.origin}/#p=${p.id}`))}" target="_blank" rel="noopener">Developer? Claim this project</a></div>` : ""}
       ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
@@ -2223,6 +2276,7 @@ async function openDetails(id, opts = {}) {
   on("#cobroke-btn", () => openViewingForm(p, "cobroke"));
   on("#check-btn", () => { openAssistant({ post_id: p.id }); setTimeout(() => { const m = $("#msg"); if (m) { m.value = "Is the price fair? What should I offer?"; askSend(); } }, 50); });
   on("#pitch-btn", () => openPitchPicker(p));
+  bindExtras(p);
   on("#still-here", async (e) => { e.currentTarget.disabled = true; try { await api(`/posts/${p.id}/confirm`, { method: "POST" }); toast("Thanks! It stays on the map."); await loadFeed(); openDetails(p.id); } catch (err) { toast(err.message); } });
   const rm = $("#remove-post");
   if (rm) rm.addEventListener("click", () => removePost(p.id));
@@ -2338,11 +2392,13 @@ function pullToClose(el, close) {
 }
 pullToClose(panel, closeDetails);
 
-window.addEventListener("hashchange", () => { if (S.map && /(^#p=|[#&]p=|repair=|^#inbox$)/.test(location.hash)) openFromHash(); });
+window.addEventListener("hashchange", () => { if (S.map && /(^#p=|[#&]p=|repair=|^#inbox$|^#list=)/.test(location.hash)) openFromHash(); });
 function openFromHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get("repair")) return openRepairForm(h.get("repair"));
   if (location.hash === "#inbox") return openInbox();
+  const list = h.get("list");
+  if (list) return openSharedList(list.split(",").filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 40));
   const id = h.get("p");
   if (id) openDetails(id, { zoom: 15 }).then((ok) => { if (!ok) toast("That post is no longer available, or only visible to some members."); });
 }
@@ -2795,11 +2851,13 @@ function openBuilding(ids) {
 
 async function openList(mode) {
   if (mode) S.listMode = mode;
-  const short = S.listMode === "short";
+  const short = S.listMode === "short", shared = S.listMode === "shared";
   const seq = (S.listSeq = (S.listSeq || 0) + 1);
   let items, note = "", total;
   if (short) {
     items = await shortlistPins();
+  } else if (shared) {
+    items = S.sharedItems || [];
   } else if (S.mapMode === "clusters" || S.mapMode === "dots") {
     // Zoomed out (counts or dots, so no full pins loaded): show the newest few in view; zooming in shows them all.
     const q = screenQuery(chipQuery());
@@ -2816,22 +2874,32 @@ async function openList(mode) {
   }
   if (seq !== S.listSeq) return;
   if (total === undefined) total = items.length;
-  const ranked = !short && S.chips.has("share") && myInterests().length;
+  const sortKey = store.get("ps_sort") || "";
+  const ranked = !sortKey && !short && !shared && S.chips.has("share") && myInterests().length;
   if (ranked) items = items.slice().sort((a, b) => commonWith(b).length - commonWith(a).length);
+  if (sortKey) items = sortItems(items, sortKey);
   const nHidden = savedCount("hidden");
   $("#panel-content").innerHTML = `
     <div class="list-head">
       <div class="list-tabs" role="tablist">
-        <button type="button" role="tab" data-lm="view" aria-pressed="${!short}">In this view (${shortNum(short ? viewCount() : total)})</button>
+        <button type="button" role="tab" data-lm="view" aria-pressed="${!short && !shared}">In this view (${shortNum(short || shared ? viewCount() : total)})</button>
         <button type="button" role="tab" data-lm="short" aria-pressed="${short}">♥ Shortlisted (${savedCount("shortlist")})</button>
+        ${S.sharedItems ? `<button type="button" role="tab" data-lm="shared" aria-pressed="${shared}">Shared (${S.sharedItems.length})</button>` : ""}
       </div>
-      <p class="lh-line">${short ? (S.signedIn ? "We'll tell you if any of these drop in price." : "Kept on this device. Sign in to keep them and get price-drop alerts.")
+      <div class="lh-row"><p class="lh-line">${shared ? "A list someone shared with you. Tap ♡ to keep the ones you like." : short ? (S.signedIn ? "We'll tell you if any of these drop in price." : "Kept on this device. Sign in to keep them and get price-drop alerts.")
         : note || (ranked ? "Best co-living matches first." : "Move the map to see more.")}
-        ${nHidden ? ` <button type="button" class="linkish lh-hidden" id="manage-hidden">${nHidden} hidden</button>` : ""}</p>
+        ${nHidden ? ` <button type="button" class="linkish lh-hidden" id="manage-hidden">${nHidden} hidden</button>` : ""}</p>${items.length > 1 ? `<select id="list-sort" aria-label="Sort the list">${SORTS.map(([v, t]) => `<option value="${v}"${v === sortKey ? " selected" : ""}>${t}</option>`).join("")}</select>` : ""}</div>
       ${items.some(canSave) && !store.get("ps_swiped") ? `<p class="swipe-hint">Swipe a card right to shortlist ♥, left to hide. A short swipe on the photo flips through pictures.</p>` : ""}
+      ${short && items.length ? `<div class="list-tools">
+        ${items.length > 1 ? `<button type="button" id="cmp-btn">Compare</button>` : ""}
+        <button type="button" id="share-list">Share list</button>
+      </div>` : ""}
     </div>
-    ${(short ? items : groupForList(items)).map((x) => (Array.isArray(x) ? groupListCard(x) : listCard(x))).join("") || `<p class="hint" style="padding:0 18px">${short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or more options above."}</p>`}`;
+    ${(short || shared ? items : groupForList(items)).map((x) => (Array.isArray(x) ? groupListCard(x) : listCard(x))).join("") || `<p class="hint" style="padding:0 18px">${shared ? (S.sharedItems ? "These homes are no longer available." : "Loading…") : short ? "Nothing shortlisted yet. Swipe a listing right, or tap ♡." : "Nothing here yet. Try another area or more options above."}</p>`}`;
   bindListCards();
+  const ls = $("#list-sort"); if (ls) ls.addEventListener("change", () => { store.set("ps_sort", ls.value); panel.scrollTop = 0; openList(); });
+  const cb = $("#cmp-btn"); if (cb) cb.addEventListener("click", () => openCompare());
+  const sl = $("#share-list"); if (sl) sl.addEventListener("click", () => shareShortlist(items));
   document.querySelectorAll("[data-lm]").forEach((b) => b.addEventListener("click", () => { panel.scrollTop = 0; openList(b.dataset.lm); }));
   const mh = $("#manage-hidden"); if (mh) mh.addEventListener("click", () => openHiddenManager());
   if (S.panelMode !== "list") panel.scrollTop = 0;
@@ -4271,6 +4339,193 @@ function envChips(p) {
   const noise = e.noise ? `<span class="env-chip" title="Noise (estimate): ${esc(e.noise.label)}"><i class="l${e.noise.lvl}"></i>${esc(e.noise.label)}</span>` : "";
   return `<div class="lc-env" aria-label="Area: ${e.air ? "air " + esc(e.air.label) + ", " : ""}${e.noise ? "noise " + esc(e.noise.label) : ""}">${air}${noise}</div>`;
 }
+/* ---------------- listing extras: market panel, cost calculator, map links, notes, similar homes ---------------- */
+const moneyIn = (n, cur) => amount({ price: n, currency: cur });
+const psfIn = (n, cur) => (cur === "INR" ? "₹" : SYMBOL[cur] || cur + " ") + Math.round(n).toLocaleString("en-US") + "/sq ft";
+/** "This home in the market": its price and time listed against similar homes nearby, price changes, and how many people saved it. */
+function marketHtml(p) {
+  const m = p.market;
+  if (!m || p.kind !== "listing") return "";
+  const cur = p.currency || "INR", rows = [];
+  if (m.median_psf && p.price && p.size_sqft) {
+    const psf = p.price / p.size_sqft, diff = Math.round(((psf - m.median_psf) / m.median_psf) * 100);
+    const lvl = diff <= -10 ? 1 : diff >= 10 ? 3 : 2;
+    rows.push(`<div class="ae-row"><span class="dot l${lvl}"></span><b>Price per sq ft: ${lvl === 1 ? "low" : lvl === 3 ? "high" : "typical"} for the area</b><small>${esc(psfIn(psf, cur))} here. Similar homes nearby ask around ${esc(psfIn(m.median_psf, cur))}${diff ? ` (this one is ${Math.abs(diff)}% ${diff < 0 ? "lower" : "higher"})` : ""}.</small></div>`);
+  }
+  const days = Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000);
+  if (m.avg_days != null && isFinite(days) && days >= 0) {
+    const lvl = days <= m.avg_days * 0.5 ? 1 : days >= m.avg_days * 1.5 && days - m.avg_days >= 14 ? 3 : 2;
+    rows.push(`<div class="ae-row"><span class="dot l${lvl}"></span><b>${lvl === 1 ? "New to the market" : lvl === 3 ? "Listed longer than most" : "Typical time on the market"}</b><small>Listed ${days === 0 ? "today" : days === 1 ? "1 day ago" : days + " days ago"}. Similar homes nearby have been listed ${m.avg_days < 1 ? "less than a day" : m.avg_days === 1 ? "1 day" : m.avg_days + " days"} on average.</small></div>`);
+  }
+  if (m.first_price && p.price) {
+    const pct = Math.round(((p.price - m.first_price) / m.first_price) * 100), down = p.price < m.first_price;
+    rows.push(`<div class="ae-row"><span class="dot l${down ? 1 : 3}"></span><b>Price ${down ? "reduced" : "raised"} since it was first listed</b><small>Started at ${esc(moneyIn(m.first_price, cur))}, now ${esc(amount(p))}${pct ? ` (${pct > 0 ? "+" : "−"}${Math.abs(pct)}%)` : ""}.</small></div>`);
+  }
+  if (m.saves > 0 || p.mine) rows.push(`<div class="ae-row"><span class="dot l0"></span><b>Shortlisted by ${m.saves} ${m.saves === 1 ? "person" : "people"}</b><small>${p.mine ? "People who saved your listing to watch its price." : "People who saved this home to watch its price."}</small></div>`);
+  if (!rows.length) return "";
+  return `<div class="area-env mkt" id="mkt"><h3>This home in the market</h3>${rows.join("")}
+    <p class="ae-src">Compared with similar homes listed here nearby${m.comps ? ` (${m.comps} of them)` : ""}. These are asking prices, not sale prices.</p></div>`;
+}
+
+/** Usual one-off buying fees where we know them (the person can change every number). */
+function feeDefaults(p) {
+  if (!/emirates|uae/i.test(p.country || "")) return { gov: "", agent: "", reg: "" };
+  return { gov: /abu dhabi/i.test(p.city || "") ? 2 : 4, agent: 2, reg: 0.25 };
+}
+function calcHtml(p) {
+  if (p.kind !== "listing" || p.deal !== "sale" || !p.price || isDev(p)) return "";
+  const f = feeDefaults(p), cur = p.currency || "INR";
+  const fld = (id, label, v) => `<label>${label}<input id="${id}" inputmode="decimal" autocomplete="off" placeholder="0" value="${esc(v)}"></label>`;
+  return `<details class="calc" id="calc"><summary>What will it cost?<span id="c-sum"></span></summary><div class="calc-in">
+    <div class="calc-grid">
+      ${fld("c-price", `Price (${esc(cur)})`, Number(p.price).toLocaleString("en-US"))}
+      ${fld("c-down", "Down payment %", 20)}
+      ${fld("c-rate", "Interest % a year", 4.5)}
+      ${fld("c-years", "Years", 25)}
+    </div>
+    <div class="calc-out" id="c-out"></div>
+    <div class="sec-h">One-off costs you can adjust</div>
+    <div class="calc-grid">
+      ${fld("c-gov", "Government transfer fee %", f.gov)}
+      ${fld("c-agent", "Agent fee %", f.agent)}
+      ${fld("c-reg", "Mortgage registration, % of loan", f.reg)}
+    </div>
+    <div class="calc-out" id="c-out2"></div>
+    <p class="ae-src">A guide only. Interest rates, fees and the down payment a bank asks for vary and change. Smaller fixed fees and tax on the agent's fee are not included. Check with the bank, the land department and your broker.</p>
+  </div></details>`;
+}
+function bindCalc(p) {
+  const box = $("#calc");
+  if (!box) return;
+  const cur = p.currency || "INR", n = (id) => num($(id).value) || 0;
+  const run = () => {
+    const price = n("#c-price"), down = Math.min(100, n("#c-down")), rate = n("#c-rate"), years = Math.max(1, Math.min(50, n("#c-years") || 25));
+    const cash = (price * down) / 100, loan = Math.max(0, price - cash), i = rate / 100 / 12, k = Math.round(years * 12);
+    const monthly = loan ? (i ? (loan * i) / (1 - Math.pow(1 + i, -k)) : loan / k) : 0;
+    const gov = (price * n("#c-gov")) / 100, agent = (price * n("#c-agent")) / 100, reg = (loan * n("#c-reg")) / 100;
+    const m = (v) => esc(moneyIn(Math.round(v), cur));
+    $("#c-sum").textContent = monthly ? `≈ ${moneyIn(Math.round(monthly), cur)} a month` : "";
+    $("#c-out").innerHTML = `<div><span>Loan</span><b>${m(loan)}</b></div><div><span>Monthly payment</span><b>${m(monthly)}</b></div><div><span>Interest over ${years} years</span><b>${m(Math.max(0, monthly * k - loan))}</b></div>`;
+    $("#c-out2").innerHTML = `<div><span>Down payment</span><b>${m(cash)}</b></div>${gov ? `<div><span>Government transfer fee</span><b>${m(gov)}</b></div>` : ""}${agent ? `<div><span>Agent fee</span><b>${m(agent)}</b></div>` : ""}${reg ? `<div><span>Mortgage registration</span><b>${m(reg)}</b></div>` : ""}<div class="tot"><span>Cash needed at the start</span><b>${m(cash + gov + agent + reg)}</b></div>`;
+  };
+  box.querySelectorAll("input").forEach((el) => el.addEventListener("input", run));
+  run();
+}
+
+function mapLinksHtml(p) {
+  if (p.kind !== "listing" || p.lat == null || p.lng == null) return "";
+  const ll = `${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`;
+  return `<div class="act-row map-links"><a class="btn" id="dir-link" href="https://www.google.com/maps/dir/?api=1&destination=${ll}" target="_blank" rel="noopener">Directions</a>${p.precision === "area" ? "" : `<a class="btn" id="sv-link" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ll}" target="_blank" rel="noopener">Street View</a>`}</div>`;
+}
+
+/** Private notes on listings, kept on this device. */
+const NOTES = {
+  all() { try { const v = JSON.parse(store.get("ps_notes") || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } },
+  get(id) { return this.all()[id] || ""; },
+  set(id, text) {
+    const a = this.all();
+    if (String(text).trim()) a[id] = String(text).slice(0, 1000); else delete a[id];
+    const keys = Object.keys(a);
+    if (keys.length > 300) delete a[keys[0]];
+    store.set("ps_notes", JSON.stringify(a));
+  }
+};
+function noteHtml(p) {
+  if (p.kind !== "listing" || p.mine) return "";
+  return `<div class="sec-h">My notes</div><textarea class="note" id="my-note" rows="2" maxlength="1000" placeholder="Only you can see this. Saved on this device.">${esc(NOTES.get(p.id))}</textarea>`;
+}
+
+/** Homes like this one among those already loaded: same kind of deal and property, close in bedrooms and price, nearest first. */
+function similarTo(p, max = 4) {
+  if (p.kind !== "listing" || p.lat == null || p.lng == null) return [];
+  const km = (q) => { const dy = (q.lat - p.lat) * 111, dx = (q.lng - p.lng) * 111 * Math.cos((p.lat * Math.PI) / 180); return Math.sqrt(dx * dx + dy * dy); };
+  const sameType = (q) => q.property_type === p.property_type || (COMMERCIAL.includes(q.property_type) && COMMERCIAL.includes(p.property_type));
+  return [...S.cache.values()]
+    .filter((q) => q.id !== p.id && q.kind === "listing" && !q.hidden && q.deal === p.deal && isDev(q) === isDev(p) && (q.currency || "INR") === (p.currency || "INR") && sameType(q)
+      && q.lat != null && q.lng != null && km(q) <= 8
+      && (!p.bedrooms || !q.bedrooms || Math.abs(q.bedrooms - p.bedrooms) <= 1)
+      && (!p.price || !q.price || (q.price >= p.price * 0.65 && q.price <= p.price * 1.35)))
+    .map((q) => ({ q, score: km(q) / 8 + (p.price && q.price ? Math.abs(q.price - p.price) / p.price : 0.3) + (p.bedrooms && q.bedrooms && q.bedrooms !== p.bedrooms ? 0.15 : 0) }))
+    .sort((a, b) => a.score - b.score).slice(0, max).map((x) => x.q);
+}
+function similarHtml(p) {
+  const list = similarTo(p);
+  if (!list.length) return "";
+  return `<div class="sec-h">Similar homes nearby</div><div class="sim" id="sim">${list.map((q) => `<button type="button" class="sim-row" data-id="${esc(q.id)}"><img src="${esc(cardOf(q))}" alt="" loading="lazy" decoding="async"><span><b>${esc(titleOf(q))}</b><small>${esc([placeOf(q), sizeOf(q)].filter(Boolean).join(" · "))}</small></span><span class="sp">${esc(q.price ? pinLabel(q) : "")}</span></button>`).join("")}</div>`;
+}
+function bindExtras(p) {
+  bindCalc(p);
+  const note = $("#my-note");
+  if (note) note.addEventListener("input", () => NOTES.set(p.id, note.value));
+  document.querySelectorAll("#sim .sim-row").forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.id, { pan: true })));
+}
+
+/* ---------------- the list: sorting, comparing a shortlist, sharing it by link ---------------- */
+const SORTS = [["", "Sort"], ["new", "Newest first"], ["plow", "Price: low to high"], ["phigh", "Price: high to low"], ["psf", "Price per sq ft: low first"], ["drop", "Biggest price drop"]];
+function sortItems(items, key) {
+  const psf = (p) => (p.price && p.size_sqft ? p.price / p.size_sqft : Infinity);
+  const by = {
+    new: (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    plow: (a, b) => (a.price || Infinity) - (b.price || Infinity),
+    phigh: (a, b) => (b.price || 0) - (a.price || 0),
+    psf: (a, b) => psf(a) - psf(b),
+    drop: (a, b) => (b.price_cut_pct || 0) - (a.price_cut_pct || 0)
+  }[key];
+  return by ? items.slice().sort(by) : items;
+}
+async function openCompare() {
+  openSheet("compare", "Compare your shortlist");
+  const body = $("#sheet-body");
+  body.innerHTML = `<p class="muted">Loading…</p>`;
+  const all = (await shortlistPins()).filter((p) => p.kind === "listing"), items = all.slice(0, 6);
+  if (sheet.dataset.view !== "compare") return;
+  if (items.length < 2) { body.innerHTML = `<p class="muted">Shortlist at least two homes to compare them.</p>`; return; }
+  const psf = (p) => (p.price && p.size_sqft && p.deal === "sale" ? p.price / p.size_sqft : null);
+  const only = (vals, pick) => { const xs = vals.filter((v) => v != null); if (xs.length < 2) return null; const b = pick(...xs); return xs.filter((v) => v === b).length === 1 ? b : null; };
+  const alike = new Set(items.map((p) => (p.currency || "INR") + "|" + p.deal)).size === 1;
+  const lowP = alike ? only(items.map((p) => p.price || null), Math.min) : null, lowPsf = alike ? only(items.map(psf), Math.min) : null, bigS = only(items.map((p) => p.size_sqft || null), Math.max);
+  const row = (label, cell) => `<tr><th scope="row">${label}</th>${items.map((p) => `<td>${cell(p)}</td>`).join("")}</tr>`;
+  const mark = (on, t) => (on ? `<span class="best">${t} ✓</span>` : t);
+  body.innerHTML = `${all.length > items.length ? `<p class="muted">Showing the first ${items.length} of ${all.length}.</p>` : ""}
+    <div class="cmp-wrap"><table class="cmp"><tbody>
+    ${row("", (p) => `<img src="${esc(cardOf(p))}" alt="" loading="lazy" decoding="async"><b>${esc(titleOf(p))}</b>`)}
+    ${row("Price", (p) => mark(lowP != null && p.price === lowP, esc(priceOf(p))))}
+    ${row("Per sq ft", (p) => (psf(p) ? mark(lowPsf != null && psf(p) === lowPsf, esc(psfIn(psf(p), p.currency || "INR"))) : "—"))}
+    ${row("Size", (p) => (p.size_sqft ? mark(bigS != null && p.size_sqft === bigS, esc(sizeOf(p))) : "—"))}
+    ${row("Bedrooms", (p) => (isDev(p) && p.configs ? esc(p.configs) : p.bedrooms ? esc(p.bedrooms + " BHK") : "—"))}
+    ${row("Type", (p) => esc(cap(TYPE[p.property_type] || "") || "—"))}
+    ${row("Where", (p) => esc(placeOf(p) || "—"))}
+    ${row("Listed", (p) => esc(ago(p.created_at) || "—"))}
+    ${row("Price check", (p) => [p.below_market_pct >= 10 ? `${p.below_market_pct}% below area price` : "", p.price_cut_pct >= 3 ? `Price cut ${p.price_cut_pct}%` : ""].filter(Boolean).map(esc).join("<br>") || "—")}
+    ${row("Air", (p) => (p.env && p.env.air ? esc(`AQI ${p.env.air.aqi} · ${p.env.air.label}`) : "—"))}
+    ${row("Posted by", (p) => esc(posterLine(p) || "—"))}
+    ${row("My notes", (p) => esc(NOTES.get(p.id)) || "—")}
+    ${row("", (p) => `<button type="button" class="btn" data-open="${esc(p.id)}">Open</button>`)}
+    </tbody></table></div>
+    <p class="hint">✓ marks the lowest price, the lowest price per sq ft and the largest home.</p>`;
+  body.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.open, { pan: true }); }));
+}
+async function shareShortlist(items) {
+  const ids = items.map((p) => p.id).slice(0, 40);
+  if (!ids.length) return;
+  const link = `${location.origin}/#list=${ids.join(",")}`;
+  const text = `${ids.length} ${ids.length === 1 ? "home" : "homes"} I shortlisted on Property Stalkers`;
+  try { if (await shareOut({ title: "My shortlist", text, url: link })) return; } catch (e) { if (isCancel(e)) return; }
+  try { await navigator.clipboard.writeText(link); toast("Link copied. Anyone with it can see these homes."); }
+  catch (e) { window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + link), "_blank", "noopener"); }
+}
+/** A list someone shared by link (#list=id,id,…): shown as its own tab in the list. */
+async function openSharedList(ids) {
+  S.listMode = "shared"; S.sharedItems = null;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  if (!ids.length) { S.sharedItems = []; return openList("shared"); }
+  try {
+    const { pins } = await api("/posts/batch", { method: "POST", body: JSON.stringify({ ids }) });
+    S.sharedItems = pins.map(cachePut);
+  } catch (e) { S.sharedItems = []; toast(e.message); }
+  openList("shared");
+}
+
 function areaEnvHtml(p) {
   const e = p.env;
   if (!e || (!e.air && !e.noise) || p.kind === "request") return "";
