@@ -41,9 +41,10 @@ export function marketInfo(posts) {
     groups.get(k).push(p);
   }
   const out = new Map();
+  const now = Date.now();
   for (const p of posts) {
     const cut = p.first_price && p.price && p.price < p.first_price ? Math.round(((p.first_price - p.price) / p.first_price) * 100) : 0;
-    let below = 0, med = null, comps = 0;
+    let below = 0, med = null, comps = 0, avgDays = null;
     if (p.kind === "listing" && p.poster_type !== "developer") {
       const others = (groups.get(keyOf(p)) || []).filter((o) => o.id !== p.id && !(p.unit_key && o.unit_key === p.unit_key));
       const psfs = others.map(perSqft).filter(Boolean);
@@ -52,8 +53,11 @@ export function marketInfo(posts) {
         med = median(psfs);
         below = Math.round(((med - perSqft(p)) / med) * 100);
       }
+      // How long similar homes nearby have been listed, on average (for "new to the market" / "listed longer than most").
+      const days = others.map((o) => (now - Date.parse(o.created_at)) / 86400000).filter((d) => Number.isFinite(d) && d >= 0);
+      if (days.length >= 3) avgDays = Math.round(days.reduce((a, b) => a + b, 0) / days.length);
     }
-    out.set(p.id, { comps, median_psf: med ? Math.round(med) : null, below_pct: below, cut_pct: cut, deal: below >= 10 || cut >= 5 });
+    out.set(p.id, { comps, median_psf: med ? Math.round(med) : null, avg_days: avgDays, below_pct: below, cut_pct: cut, deal: below >= 10 || cut >= 5 });
   }
   return out;
 }

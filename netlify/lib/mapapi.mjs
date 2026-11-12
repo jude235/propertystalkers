@@ -121,13 +121,17 @@ async function fullDetails(store, posts, viewer, deps, later) {
     groups.set(k, g);
   }
   const spots = posts.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng }));
-  const [nearLists, avatars, watchedRows, hiddenRows, missingEnv] = await Promise.all([
+  const [nearLists, avatars, watchedRows, hiddenRows, missingEnv, savedRows] = await Promise.all([
     Promise.all([...groups.values()].map((g) => store.mapPins({ w: g.w, e: g.e, s: g.s, n: g.n, kind: "listing", deals: [g.deal], lim: 400 }).catch(() => []))),
     store.avatarsFor([...new Set(posts.map((p) => p.user_id))]),
     viewer ? store.rows("watches", { user_id: viewer.id, post_id: { in: ids } }, { limit: 1000 }) : [],
     viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: { in: ids } }, { limit: 1000 }) : [],
-    attachEnv(store, spots).catch(() => [])
+    attachEnv(store, spots).catch(() => []),
+    // How many people shortlisted each home (a number only, never who).
+    store.rows("watches", { post_id: { in: ids } }, { limit: 5000 }).catch(() => [])
   ]);
+  const saves = new Map();
+  for (const w of savedRows) saves.set(w.post_id, (saves.get(w.post_id) || 0) + 1);
   const near = new Map();
   for (const r of nearLists.flat()) near.set(r.id, r);
   for (const p of posts) if (!near.has(p.id)) near.set(p.id, p);
@@ -149,6 +153,12 @@ async function fullDetails(store, posts, viewer, deps, later) {
     o.nphotos = o.photos.length;
     o.photo = o.photos[0] || null;
     if (spots[k].env) o.env = spots[k].env;
+    // "This home in the market": its price and time listed against similar homes nearby, and how many people saved it.
+    if (p.kind === "listing") o.market = {
+      median_psf: i.median_psf || null, comps: i.comps || 0, avg_days: i.avg_days ?? null,
+      first_price: p.first_price && p.price && Number(p.first_price) !== Number(p.price) ? Number(p.first_price) : null,
+      saves: saves.get(p.id) || 0
+    };
     return o;
   });
   if (missingEnv.length && deps.envq && later) await later(() => fillEnv(store, deps.envq, missingEnv));
