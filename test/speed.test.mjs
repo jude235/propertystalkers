@@ -87,3 +87,20 @@ test("full details: at most 40 listings per request, and an empty list is fine",
   assert.equal(r.posts.length, 40);
   assert.deepEqual(await (await handle(req("POST", "/posts/details", { body: {} }), deps)).json(), { posts: [] });
 });
+
+test("listing details carry the market picture: area price per sq ft, average days listed, first price, how many saved it", async () => {
+  const store = memoryStore();
+  const owner = store.addUser("mk@x.in"), fan1 = store.addUser("f1@x.in"), fan2 = store.addUser("f2@x.in");
+  const mk = (o) => store.createPost({ user_id: owner.id, kind: "listing", poster_type: "landlord", deal: "sale", property_type: "apartment", bedrooms: 2, price: 1000000, currency: "AED", size_sqft: 1000, locality: "Mk Town", city: "Dubai", lat: 25.1, lng: 55.2, status: "active", photos: [], ...o });
+  const old = (d) => new Date(Date.now() - d * 86400000).toISOString();
+  const target = await mk({ price: 900000, first_price: 1000000, created_at: old(5) });
+  await mk({ price: 1200000, created_at: old(10) }); await mk({ price: 1300000, created_at: old(20) }); await mk({ price: 1400000, created_at: old(30) });
+  await store.insert("watches", [{ user_id: fan1.id, post_id: target.id }, { user_id: fan2.id, post_id: target.id }]);
+  const deps = { store, ai: scriptedAI(), geo: tableGeo({}), env: ENV };
+  const post = (await (await handle(req("GET", "/posts/" + target.id), deps)).json()).post;
+  assert.deepEqual(post.market, { median_psf: 1300, comps: 3, avg_days: 20, first_price: 1000000, saves: 2 });
+  // A request has no market picture, and a listing with nothing to compare still answers
+  const lone = await mk({ locality: "Elsewhere", city: "Ajman", lat: 25.4, lng: 55.5 });
+  const m2 = (await (await handle(req("GET", "/posts/" + lone.id), deps)).json()).post.market;
+  assert.deepEqual(m2, { median_psf: null, comps: 0, avg_days: null, first_price: null, saves: 0 });
+});
