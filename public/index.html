@@ -433,6 +433,47 @@
   .calc-out .tot { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; font-weight: 700; }
   .calc .sec-h { margin: 14px 0 8px; }
   .map-links a:only-child { grid-column: 1 / -1; }
+  /* Map tools: draw an area, radius, measure, my places, units and currency, the sun */
+  .tools-btn { position: fixed; left: 12px; bottom: calc(128px + env(safe-area-inset-bottom)); z-index: 19; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    font-size: 12px; font-weight: 600; padding: 7px 11px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+  .tools-btn.on { background: var(--brass); border-color: var(--brass); color: #1c1503; }
+  html.look-new .tools-btn { bottom: calc(170px + env(safe-area-inset-bottom)); }
+  @media (max-width: 759px) { .tools-btn { bottom: calc(244px + env(safe-area-inset-bottom)); } html.look-new .tools-btn { bottom: calc(286px + env(safe-area-inset-bottom)); } }
+  .tools-pop { position: fixed; left: 12px; z-index: 30; bottom: calc(212px + env(safe-area-inset-bottom)); width: 244px; max-width: calc(100vw - 24px); background: #fff; color: #10201a; border-radius: 14px; padding: 6px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .3); }
+  @media (max-width: 759px) { .tools-pop { bottom: calc(328px + env(safe-area-inset-bottom)); } }
+  .tools-pop button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 10px; cursor: pointer; font: inherit; color: inherit; }
+  .tools-pop button:hover, .tools-pop button:focus-visible { background: #f3efe4; }
+  .tools-pop b { display: block; font-size: 14px; font-weight: 600; }
+  .tools-pop small { display: block; font-size: 11.5px; color: #5b6b63; margin-top: 1px; }
+  .tool-bar { position: fixed; left: 50%; top: 120px; transform: translateX(-50%); z-index: 21; width: max-content; max-width: calc(100vw - 20px); display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 8px;
+    background: var(--brand); color: var(--brand-ink); border: 1px solid var(--brass); border-radius: 14px; padding: 8px 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); font-size: 13px; line-height: 1.3; }
+  .tool-bar[hidden] { display: none; }
+  .tool-bar span { padding: 0 2px; }
+  .tool-bar button { border: 1px solid rgba(255, 255, 255, .35); background: transparent; color: inherit; font: inherit; font-weight: 600; font-size: 12.5px; padding: 6px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .tool-bar button.on { background: var(--brass); border-color: var(--brass); color: #1c1503; }
+  .tool-bar .tb-km { display: inline-flex; gap: 4px; padding: 0; }
+  .tool-bar .tb-km button { padding: 6px 8px; }
+  #draw-layer { position: fixed; inset: 0; z-index: 18; touch-action: none; cursor: crosshair; }
+  #draw-layer svg { display: block; width: 100%; height: 100%; }
+  .m-dot { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 3px solid var(--brass); box-shadow: 0 1px 4px rgba(0, 0, 0, .4); transform: translateY(50%); }
+  .place-pin { display: flex; align-items: center; gap: 4px; background: var(--brand); color: var(--brand-ink); border: 1px solid var(--brass); border-radius: 999px; padding: 3px 9px 3px 6px; font-size: 11.5px; font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .35); white-space: nowrap; pointer-events: none; }
+  .place-pin i { font-style: normal; color: var(--brass); }
+  .pl-sug { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
+  .pl-sug button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .pl-list { border: 1px solid var(--line); border-radius: 14px; background: var(--soft); overflow: hidden; }
+  .pl-row { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: center; padding: 10px 14px; text-decoration: none; color: inherit; border-top: 1px solid var(--line); }
+  .pl-row:first-child { border-top: 0; }
+  .pl-row b { font-size: 14px; font-weight: 600; }
+  .pl-row span { grid-column: 1; color: var(--muted); font-size: 12.5px; }
+  .pl-row i { grid-column: 2; grid-row: 1 / span 2; font-style: normal; font-size: 12.5px; font-weight: 600; color: var(--brass-ink); }
+  .approx { margin: 2px 0 0; color: var(--muted); font-size: 14px; font-weight: 500; }
+  .sun-wrap { display: flex; align-items: center; gap: 14px; }
+  .sun-wrap svg { flex: 0 0 auto; }
+  .sun-wrap svg text { font-size: 8px; font-weight: 700; fill: var(--muted); }
+  .sun-rows { font-size: 13.5px; line-height: 1.5; min-width: 0; }
+  .sun-rows b { font-weight: 600; }
   .note { display: block; width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-size: 14px; background: #fff; color: var(--ink); resize: vertical; }
   .sim-row { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 8px 0; border: 0; border-top: 1px solid var(--line);
     background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
@@ -859,6 +900,8 @@
   <rect x="12" y="22.5" width="8" height="1.6" rx=".8" fill="#0b2c22"/></svg><span>Stalker</span></button>
 <button class="locate" id="locate" aria-label="Show where I am" title="Show where I am"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
 <button class="map-key" id="map-key" type="button" aria-label="What the colours and letters mean">Key</button>
+<button class="tools-btn" id="tools-btn" type="button" aria-label="Map tools: draw an area, radius, measure, my places, units">Tools</button>
+<div class="tool-bar" id="tool-bar" role="status" hidden></div>
 <button class="maptype" id="maptype" aria-label="Switch map style">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
   <span id="maptype-label">Map</span>
@@ -1019,7 +1062,12 @@ function bindThemePicker(root) {
     root.querySelectorAll("[data-theme-pick]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
   }));
 }
-const sizeOf = (p) => p.size_sqft ? `${Number(p.size_sqft).toLocaleString("en-US")} sq ft` : "";
+/** Sizes show in square feet or square metres, as the visitor chose (Tools > Units and currency). */
+const UNIT = () => (store.get("ps_unit") === "sqm" ? "sqm" : "sqft");
+const SQM = 0.092903;
+const sizeOf = (p) => p.size_sqft ? (UNIT() === "sqm" ? `${Math.round(p.size_sqft * SQM).toLocaleString("en-US")} m²` : `${Number(p.size_sqft).toLocaleString("en-US")} sq ft`) : "";
+/** A price per square foot, shown per square foot or per square metre. */
+const perArea = (n, cur) => (cur === "INR" ? "₹" : SYMBOL[cur] || cur + " ") + Math.round(UNIT() === "sqm" ? n / SQM : n).toLocaleString("en-US") + (UNIT() === "sqm" ? "/m²" : "/sq ft");
 const POSTER = { landlord: "Landlord", broker: "Broker", developer: "Developer", buyer: "Buyer", tenant: "Tenant", host: "Host" };
 const isDev = (p) => p.poster_type === "developer";
 const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
@@ -1216,7 +1264,8 @@ const NEW_LOOK = store.get("ps_look") !== "old";
 if (NEW_LOOK) document.documentElement.classList.add("look-new");
 
 async function initMap() {
-  const { Map } = await google.maps.importLibrary("maps");
+  const { Map, Polygon, Polyline, Circle } = await google.maps.importLibrary("maps");
+  S.G = { Polygon, Polyline, Circle };
   const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
   S.Marker = AdvancedMarkerElement;
   let start = { lat: 24, lng: 64, zoom: 4 };
@@ -1228,7 +1277,12 @@ async function initMap() {
   addMapTint(S.map);
   // On phones Google Maps also reports a tap on a pin as a tap on the map, about a third of a second later
   // (it waits to rule out a double-tap). Ignore that one, or it would close the card the pin just opened.
-  if (NEW_LOOK) { addDotLayer(S.map); S.map.addListener("click", (e) => { if (Date.now() - (S.pinTapAt || 0) < 900) return; if (!tapDot(e)) closeMapCard(); }); }
+  if (NEW_LOOK) addDotLayer(S.map);
+  S.map.addListener("click", (e) => {
+    if (Date.now() - (S.pinTapAt || 0) < 900) return;
+    if (toolTap(e)) return;   // a map tool was waiting for this tap (radius centre, measuring point, a place)
+    if (NEW_LOOK && !tapDot(e)) closeMapCard();
+  });
   S.map.addListener("idle", () => {
     updateListCount();
     renderBanner();
@@ -1238,6 +1292,8 @@ async function initMap() {
     if (docked() && S.panelMode === "list") openList();
   });
   updateMapTypeButton();
+  renderPlaces();
+  drawAreas();
 }
 
 /* A see-through film in the theme's colour over the map imagery. It lives in the map's lowest layer,
@@ -1447,6 +1503,7 @@ function chipQuery() {
     if (String(a.q || "").trim()) q.set("q", String(a.q).trim().slice(0, 80));
   }
   if (a.age) q.set("age", a.age);
+  if (S.areas && S.areas.length) q.set("area", areaParam());
   return q;
 }
 /** The visible area, a little bigger and snapped to a grid, so small moves reuse the last answer. */
@@ -1713,7 +1770,7 @@ function passChips(p) {
   return deals.includes(p.deal) || (cats.includes("project") && isDev(p)) || (cats.includes("commercial") && COMMERCIAL.includes(p.property_type)) || (cats.includes("land") && p.property_type === "plot");
 }
 function passFilter(p, adv = S.adv) { return passAdv(p, adv) && passChips(p); }
-const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && !p.hidden && passFilter(p));
+const visiblePosts = () => S.posts.filter((p) => p.kind === S.tab && !p.hidden && passFilter(p) && inAreas(p));
 
 function inView(p) {
   const b = S.map && S.map.getBounds && S.map.getBounds();
@@ -1867,7 +1924,7 @@ function mortgageGuess(p) {
 function perSqft(p) {
   if (!p.price || !p.size_sqft || p.kind !== "listing" || p.deal !== "sale" || isDev(p)) return "";
   const cur = p.currency || "INR";
-  return (cur === "INR" ? "₹" : SYMBOL[cur] || cur + " ") + Math.round(p.price / p.size_sqft).toLocaleString("en-US") + "/sq ft";
+  return perArea(p.price / p.size_sqft, cur);
 }
 function closeMapCard() {
   const c = $("#map-card");
@@ -2167,7 +2224,7 @@ async function openDetails(id, opts = {}) {
       <span class="tag${isReq ? " req" : ""}">${isReq ? (p.deal === "share" ? "Wants co-living" : p.deal === "stay" ? "Wants a stay" : p.deal === "rent" ? "Wants to rent" : "Wants to buy") : isDev(p) ? "New project" : (p.deal === "share" ? "Co-living" : p.deal === "stay" ? "Holiday home" : p.deal === "rent" ? "For rent" : "For sale")}</span>${p.mine ? `<span class="tag mine">Your post</span>` : ""}
       <div class="title-row"><h1 class="title">${esc(titleOf(p))}</h1><button class="share-btn" id="share-post" aria-label="Share this post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</button></div>
       <p class="loc">${esc(placeOf(p))}</p>
-      <p class="price">${esc(priceOf(p))}</p>
+      <p class="price">${esc(priceOf(p))}</p>${approxHtml(p)}
       ${badgeHtml(p)}
       ${areaEnvHtml(p)}
       ${marketHtml(p)}
@@ -2217,7 +2274,7 @@ async function openDetails(id, opts = {}) {
       </div>` : ""}
       ${!p.mine && p.kind === "request" && S.access && S.access.requests ? `<div class="act-row"><button class="btn" id="pitch-btn" style="grid-column:1/-1">Send them one of my listings</button></div>` : ""}
       ${p.precision === "area" ? `<p class="hint">The pin shows the sector or area, not the exact building.${p.mine ? " Add a Google Maps link in Edit for an exact pin." : ""}</p>` : ""}
-      ${mapLinksHtml(p)}${noteHtml(p)}${similarHtml(p)}
+      ${mapLinksHtml(p)}${placesHtml(p)}${sunHtml(p)}${noteHtml(p)}${similarHtml(p)}
       ${p.source === "dld" && !p.mine ? `<div class="claim"><p class="hint">Listed from Dubai Land Department project records.</p>
         <a class="btn claim-btn" id="claim-post" href="${esc(waHref(p.contact_phone, `Hi, I represent ${p.company || "the developer"} and would like to claim the project "${p.building}" on Property Stalkers: ${location.origin}/#p=${p.id}`))}" target="_blank" rel="noopener">Developer? Claim this project</a></div>` : ""}
       ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
@@ -2277,6 +2334,7 @@ async function openDetails(id, opts = {}) {
   on("#check-btn", () => { openAssistant({ post_id: p.id }); setTimeout(() => { const m = $("#msg"); if (m) { m.value = "Is the price fair? What should I offer?"; askSend(); } }, 50); });
   on("#pitch-btn", () => openPitchPicker(p));
   bindExtras(p);
+  bindApprox(p);
   on("#still-here", async (e) => { e.currentTarget.disabled = true; try { await api(`/posts/${p.id}/confirm`, { method: "POST" }); toast("Thanks! It stays on the map."); await loadFeed(); openDetails(p.id); } catch (err) { toast(err.message); } });
   const rm = $("#remove-post");
   if (rm) rm.addEventListener("click", () => removePost(p.id));
@@ -2302,7 +2360,7 @@ function showQuickDetails(p, opts = {}) {
     <div class="body">
       <h1 class="title">${esc(titleOf(p))}</h1>
       <p class="loc">${esc(placeOf(p))}</p>
-      <p class="price">${esc(priceOf(p))}</p>
+      <p class="price">${esc(priceOf(p))}</p>${approxHtml(p)}
       <p class="muted loading-line">Loading details…</p>
     </div>`;
   panel.classList.remove("list-mode");
@@ -4339,9 +4397,366 @@ function envChips(p) {
   const noise = e.noise ? `<span class="env-chip" title="Noise (estimate): ${esc(e.noise.label)}"><i class="l${e.noise.lvl}"></i>${esc(e.noise.label)}</span>` : "";
   return `<div class="lc-env" aria-label="Area: ${e.air ? "air " + esc(e.air.label) + ", " : ""}${e.noise ? "noise " + esc(e.noise.label) : ""}">${air}${noise}</div>`;
 }
+/* ---------------- map tools: draw an area, radius, measure distance, my places, units and currency, the sun ---------------- */
+S.areas = [];   // shapes to search inside: { t: "c", lat, lng, km } circles and { t: "p", pts: [[lat, lng], …] } outlines
+const TOOL = { mode: null, gfx: [], pts: [], mGfx: [], placeName: "", placePins: [], km: 2 };
+const MAX_AREAS = 5;
+function kmApart(aLat, aLng, bLat, bLng) {
+  const r = Math.PI / 180, dLat = (bLat - aLat) * r, dLng = (bLng - aLng) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+const fmtKm = (km) => (km < 1 ? `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m` : `${km.toFixed(km < 10 ? 2 : km < 100 ? 1 : 0)} km`);
+function inOutline(lat, lng, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [aLat, aLng] = pts[i], [bLat, bLng] = pts[j];
+    if ((aLat > lat) !== (bLat > lat) && lng < ((bLng - aLng) * (lat - aLat)) / (bLat - aLat) + aLng) inside = !inside;
+  }
+  return inside;
+}
+/** Is this listing inside one of the drawn areas? (Always yes when nothing is drawn.) */
+function inAreas(p) {
+  if (!S.areas || !S.areas.length) return true;
+  if (p.lat == null || p.lng == null) return false;
+  return S.areas.some((s) => (s.t === "c" ? kmApart(p.lat, p.lng, s.lat, s.lng) <= s.km : inOutline(p.lat, p.lng, s.pts)));
+}
+const areaParam = () => S.areas.map((s) => (s.t === "c" ? `c:${s.lat},${s.lng},${s.km}` : "p:" + s.pts.map((x) => x.join(",")).join(";"))).join("|");
+/** A spot on the screen as a place on the map (the map is kept flat and north-up while drawing). */
+function pxToLatLng(x, y) {
+  const r = $("#map").getBoundingClientRect(), b = S.map.getBounds(), ne = b.getNorthEast(), sw = b.getSouthWest();
+  const my = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+  const w = sw.lng(); let e = ne.lng(); if (e < w) e += 360;
+  const lng = w + ((x - r.left) / (r.width || 1)) * (e - w);
+  const yN = my(ne.lat()), yS = my(sw.lat());
+  const lat = (Math.atan(Math.exp(yN + ((y - r.top) / (r.height || 1)) * (yS - yN))) * 360) / Math.PI - 90;
+  return [+lat.toFixed(5), +((((lng + 540) % 360) - 180).toFixed(5))];
+}
+/** Fewer points for a finger-drawn line, keeping its shape. */
+function thinLine(pts, eps) {
+  if (pts.length < 3) return pts;
+  const a = pts[0], b = pts[pts.length - 1], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+  let max = 0, idx = 0;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i], t = L2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2)) : 0;
+    const d = Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+    if (d > max) { max = d; idx = i; }
+  }
+  if (max <= eps) return [a, b];
+  return [...thinLine(pts.slice(0, idx + 1), eps).slice(0, -1), ...thinLine(pts.slice(idx), eps)];
+}
+const cssVar = (n, d) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d;
+/** Line colour that shows on the map in use: dark on the plain map, gold on satellite. */
+const lineColour = () => (S.map && S.map.getMapTypeId && S.map.getMapTypeId() !== "roadmap" ? cssVar("--brass", "#d4af37") : cssVar("--brand", "#0b231c"));
+
+function drawAreas() {
+  TOOL.gfx.forEach((g) => g.setMap(null));
+  TOOL.gfx = [];
+  if (!S.G || !S.map) return;
+  const look = { map: S.map, strokeColor: lineColour(), strokeWeight: 2.5, strokeOpacity: 1, fillColor: cssVar("--brass", "#d4af37"), fillOpacity: 0.12, clickable: false };
+  for (const s of S.areas) {
+    TOOL.gfx.push(s.t === "c" ? new S.G.Circle({ ...look, center: { lat: s.lat, lng: s.lng }, radius: s.km * 1000 })
+      : new S.G.Polygon({ ...look, paths: s.pts.map(([lat, lng]) => ({ lat, lng })) }));
+  }
+}
+function areasChanged() {
+  drawAreas();
+  toolBar();
+  mapMemo.clear();
+  renderMarkers();
+  refreshMap(true);
+}
+function clearAreas() { S.areas = []; endTool(); areasChanged(); }
+function fitCircle(s) {
+  const dLat = s.km / 110.5, dLng = s.km / (111.3 * Math.max(0.05, Math.cos((s.lat * Math.PI) / 180)));
+  S.map.fitBounds({ north: s.lat + dLat, south: s.lat - dLat, east: s.lng + dLng, west: s.lng - dLng }, 40);
+}
+function roomForArea() {
+  if (S.areas.length < MAX_AREAS) return true;
+  toast(`That's the most areas at once (${MAX_AREAS}). Clear them to start again.`);
+  return false;
+}
+function beginTool(mode) {
+  endTool();
+  closeMapCard();
+  const pop = $("#tools-pop"); if (pop) pop.remove();
+  TOOL.mode = mode;
+}
+function endTool() {
+  const l = $("#draw-layer");
+  if (l) l.remove();
+  if (TOOL.mode === "measure") { TOOL.pts = []; drawMeasure(); }
+  TOOL.mode = null;
+  toolBar();
+}
+function startDraw() {
+  if (!roomForArea()) return;
+  beginTool("draw");
+  try { if (S.map.setTilt) S.map.setTilt(0); if (S.map.setHeading) S.map.setHeading(0); } catch (e) {}
+  const layer = document.createElement("div");
+  layer.id = "draw-layer";
+  layer.innerHTML = `<svg width="100%" height="100%"><path fill="rgba(212,175,55,.14)" stroke="${lineColour()}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" d=""/></svg>`;
+  document.body.appendChild(layer);
+  const path = layer.querySelector("path");
+  let px = null;
+  layer.addEventListener("pointerdown", (e) => { e.preventDefault(); px = [[e.clientX, e.clientY]]; try { layer.setPointerCapture(e.pointerId); } catch (x) {} });
+  layer.addEventListener("pointermove", (e) => {
+    if (!px) return;
+    const l = px[px.length - 1];
+    if (Math.hypot(e.clientX - l[0], e.clientY - l[1]) < 3) return;
+    px.push([e.clientX, e.clientY]);
+    path.setAttribute("d", "M" + px.map((q) => q.join(" ")).join("L") + "Z");
+  });
+  const up = () => {
+    if (!px) return;
+    const got = px; px = null;
+    const xs = got.map((p) => p[0]), ys = got.map((p) => p[1]);
+    if (got.length < 6 || Math.max(...xs) - Math.min(...xs) < 24 || Math.max(...ys) - Math.min(...ys) < 24) {
+      path.setAttribute("d", "");
+      return toast("Draw a loop around the area you want, without lifting your finger.");
+    }
+    let eps = 3, out = thinLine(got, eps);
+    while (out.length > 60) out = thinLine(got, (eps *= 1.5));
+    S.areas.push({ t: "p", pts: out.map(([x, y]) => pxToLatLng(x, y)) });
+    endTool();
+    areasChanged();
+  };
+  layer.addEventListener("pointerup", up);
+  layer.addEventListener("pointercancel", up);
+  toolBar();
+}
+function startRadius() { if (!roomForArea()) return; beginTool("radius"); toolBar(); }
+function startMeasure() { beginTool("measure"); TOOL.pts = []; drawMeasure(); toolBar(); }
+function measured() { let km = 0; for (let i = 1; i < TOOL.pts.length; i++) km += kmApart(...TOOL.pts[i - 1], ...TOOL.pts[i]); return km; }
+function drawMeasure() {
+  TOOL.mGfx.forEach((g) => (g.setMap ? g.setMap(null) : (g.map = null)));
+  TOOL.mGfx = [];
+  if (!TOOL.pts.length || !S.G || !S.map) return;
+  TOOL.mGfx.push(new S.G.Polyline({ map: S.map, path: TOOL.pts.map(([lat, lng]) => ({ lat, lng })), strokeColor: lineColour(), strokeWeight: 4, strokeOpacity: 1, clickable: false }));
+  TOOL.pts.forEach(([lat, lng]) => {
+    const el = document.createElement("div");
+    el.className = "m-dot";
+    TOOL.mGfx.push(new S.Marker({ position: { lat, lng }, content: el, zIndex: 9, map: S.map }));
+  });
+}
+/** A tap on the map while a tool is waiting for one. Returns true when the tool used it. */
+function toolTap(e) {
+  const pop = $("#tools-pop"); if (pop) pop.remove();
+  const m = TOOL.mode;
+  if (!m || !e || !e.latLng) return false;
+  const lat = +e.latLng.lat().toFixed(5), lng = +e.latLng.lng().toFixed(5);
+  if (m === "radius") {
+    const s = { t: "c", lat, lng, km: TOOL.km };
+    S.areas.push(s);
+    endTool(); areasChanged(); fitCircle(s);
+  } else if (m === "measure") { TOOL.pts.push([lat, lng]); drawMeasure(); toolBar(); }
+  else if (m === "place") {
+    const name = TOOL.placeName;
+    PLACES.save([...PLACES.all(), { name, lat, lng }]);
+    endTool(); renderPlaces();
+    toast(`Saved “${name}”. Listings now show how far they are from it.`);
+  } else return false;
+  return true;
+}
+/** The strip under the search bar: what the tool in use is waiting for, or what the map is limited to. */
+function toolBar() {
+  const bar = $("#tool-bar");
+  if (!bar) return;
+  const m = TOOL.mode, n = S.areas.length, last = S.areas[n - 1];
+  let h = "";
+  if (m === "draw") h = `<span>Draw a loop around the area with your finger.</span><button type="button" data-t="cancel">Cancel</button>`;
+  else if (m === "radius") h = `<span>Tap the map where the circle should be centred.</span><button type="button" data-t="cancel">Cancel</button>`;
+  else if (m === "place") h = `<span>Tap the map where “${esc(TOOL.placeName)}” is.</span><button type="button" data-t="cancel">Cancel</button>`;
+  else if (m === "measure") h = `<span id="m-total">${TOOL.pts.length < 2 ? (TOOL.pts.length ? "Now tap the next point." : "Tap the map to start measuring.") : `<b>${fmtKm(measured())}</b> in a straight line · ${TOOL.pts.length} points`}</span>${TOOL.pts.length ? `<button type="button" data-t="undo">Undo</button>` : ""}<button type="button" data-t="cancel">Done</button>`;
+  else if (n) h = `<span>${n === 1 ? "Showing only what's inside your area." : `Showing only what's inside your ${n} areas.`}</span>${last.t === "c" ? `<span class="tb-km">${[1, 2, 5, 10, 25].map((k) => `<button type="button" data-km="${k}" class="${last.km === k ? "on" : ""}">${k} km</button>`).join("")}</span>` : ""}${n < MAX_AREAS ? `<button type="button" data-t="draw">+ Draw</button><button type="button" data-t="radius">+ Radius</button>` : ""}<button type="button" data-t="clear">Clear</button>`;
+  bar.innerHTML = h;
+  bar.hidden = !h;
+  const top = document.querySelector(".topbar");
+  if (h && top) bar.style.top = Math.round(top.getBoundingClientRect().bottom + 8) + "px";
+  const btn = $("#tools-btn");
+  if (btn) btn.classList.toggle("on", !!(m || n));
+}
+const TOOL_RUN = {
+  draw: () => startDraw(), radius: () => startRadius(), measure: () => startMeasure(), places: () => openPlaces(), units: () => openUnits(),
+  clear: () => clearAreas(), cancel: () => endTool(), undo: () => { TOOL.pts.pop(); drawMeasure(); toolBar(); }
+};
+$("#tool-bar").addEventListener("click", (e) => {
+  const km = e.target.closest("[data-km]"), t = e.target.closest("[data-t]");
+  if (km) {
+    const last = S.areas[S.areas.length - 1];
+    if (!last || last.t !== "c") return;
+    last.km = TOOL.km = Number(km.dataset.km);
+    areasChanged(); fitCircle(last);
+  } else if (t && TOOL_RUN[t.dataset.t]) TOOL_RUN[t.dataset.t]();
+});
+$("#tools-btn").addEventListener("click", () => {
+  const old = $("#tools-pop");
+  if (old) return old.remove();
+  const kp = $("#key-pop"); if (kp) kp.remove();
+  const pop = document.createElement("div");
+  pop.id = "tools-pop"; pop.className = "tools-pop";
+  pop.innerHTML = [["draw", "Draw an area", "Circle a neighbourhood with your finger"], ["radius", "Radius around a point", "Homes within 1 to 25 km of a spot"],
+    ["measure", "Measure distance", "Tap points to see how far apart they are"], ["places", "My places", "How far each home is from work or school"],
+    ["units", "Units and currency", "Square feet or metres, and your own currency"]]
+    .map(([k, t, d]) => `<button type="button" data-tool="${k}"><b>${t}</b><small>${d}</small></button>`).join("")
+    + (S.areas.length ? `<button type="button" data-tool="clear"><b>Clear ${S.areas.length === 1 ? "the area" : "the areas"}</b><small>Show everything on the map again</small></button>` : "");
+  document.body.appendChild(pop);
+  pop.addEventListener("click", (e) => { const b = e.target.closest("[data-tool]"); pop.remove(); if (b && TOOL_RUN[b.dataset.tool]) TOOL_RUN[b.dataset.tool](); });
+});
+window.addEventListener("resize", () => { if (!$("#tool-bar").hidden) toolBar(); });
+
+/* ----- my places: spots that matter to the visitor, kept on this device ----- */
+const MAX_PLACES = 8;
+const PLACES = {
+  all() {
+    try { const v = JSON.parse(store.get("ps_places") || "[]"); return Array.isArray(v) ? v.filter((x) => x && typeof x.name === "string" && x.name && Number.isFinite(x.lat) && Number.isFinite(x.lng)).slice(0, MAX_PLACES) : []; }
+    catch (e) { return []; }
+  },
+  save(list) { store.set("ps_places", JSON.stringify(list.slice(0, MAX_PLACES))); }
+};
+function renderPlaces() {
+  TOOL.placePins.forEach((m) => { m.map = null; });
+  TOOL.placePins = [];
+  if (!S.map || !S.Marker) return;
+  for (const pl of PLACES.all()) {
+    const el = document.createElement("div");
+    el.className = "place-pin";
+    el.innerHTML = `<i>★</i>${esc(pl.name)}`;
+    TOOL.placePins.push(new S.Marker({ position: { lat: pl.lat, lng: pl.lng }, content: el, zIndex: 4, map: S.map }));
+  }
+}
+function openPlaces() {
+  const pop = $("#tools-pop"); if (pop) pop.remove();
+  openSheet("places", "My places");
+  const list = PLACES.all();
+  $("#sheet-body").innerHTML = `<p class="muted">Save the places that matter to you, like work or a school. Every listing then shows how far it is from each one. They stay on this device only.</p>
+    ${list.map((pl, i) => `<div class="my-post"><div><b>★ ${esc(pl.name)}</b><small>On the map</small></div><button type="button" class="btn" data-go="${i}">Show</button><button type="button" class="btn" data-rm="${i}">Remove</button></div>`).join("")}
+    ${list.length >= MAX_PLACES ? `<p class="hint">That's the most places (${MAX_PLACES}). Remove one to add another.</p>` : `
+    <label class="field" style="margin-top:16px"><span>Name of a new place</span><input id="pl-name" maxlength="24" placeholder="e.g. Work" autocomplete="off"></label>
+    <div class="pl-sug">${["Work", "School", "Family", "Gym"].filter((n) => !list.some((x) => x.name.toLowerCase() === n.toLowerCase())).map((n) => `<button type="button" data-sug="${n}">${n}</button>`).join("")}</div>
+    <button type="button" class="btn accent" id="pl-add" style="width:100%;margin-top:14px">Choose it on the map</button>`}`;
+  const body = $("#sheet-body");
+  body.querySelectorAll("[data-sug]").forEach((b) => b.addEventListener("click", () => { $("#pl-name").value = b.dataset.sug; }));
+  body.querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => { const l = PLACES.all(); l.splice(Number(b.dataset.rm), 1); PLACES.save(l); renderPlaces(); openPlaces(); }));
+  body.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { const pl = PLACES.all()[Number(b.dataset.go)]; if (!pl) return; closeSheet(); S.map.setCenter({ lat: pl.lat, lng: pl.lng }); S.map.setZoom(14); }));
+  const add = $("#pl-add");
+  if (add) add.addEventListener("click", () => {
+    const name = $("#pl-name").value.trim().replace(/\s+/g, " ").slice(0, 24);
+    if (!name) { toast("Give the place a name first, like Work."); $("#pl-name").focus(); return; }
+    closeSheet();
+    beginTool("place");
+    TOOL.placeName = name;
+    toolBar();
+  });
+}
+function placesHtml(p) {
+  const list = PLACES.all();
+  if (p.kind !== "listing" || p.lat == null || p.lng == null || !list.length) return "";
+  return `<div class="sec-h">From your places</div><div class="pl-list" id="my-places">${list.map((pl) => `<a class="pl-row" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin=${pl.lat},${pl.lng}&destination=${p.lat},${p.lng}"><b>★ ${esc(pl.name)}</b><span>${p.precision === "area" ? "about " : ""}${fmtKm(kmApart(pl.lat, pl.lng, p.lat, p.lng))} in a straight line</span><i>Route ›</i></a>`).join("")}</div>`;
+}
+
+/* ----- units and currency ----- */
+const CURS = [["", "As listed (no second price)"], ["AED", "UAE dirham (AED)"], ["USD", "US dollar ($)"], ["INR", "Indian rupee (₹)"], ["EUR", "Euro (€)"], ["GBP", "British pound (£)"], ["SAR", "Saudi riyal (SAR)"], ["CNY", "Chinese yuan (CNY)"], ["RUB", "Russian rouble (RUB)"]];
+const FX = { rates: null, loading: null };
+const myCur = () => { const c = store.get("ps_cur") || ""; return CURS.some(([k]) => k === c) ? c : ""; };
+/** Exchange rates for the second price: remembered on the device for half a day. */
+function loadRates() {
+  if (!myCur()) return Promise.resolve();
+  if (FX.rates) return Promise.resolve();
+  try { const c = JSON.parse(store.get("ps_rates") || "null"); if (c && c.rates && Date.now() - c.t < 12 * 3600e3) { FX.rates = c.rates; return Promise.resolve(); } } catch (e) {}
+  if (!FX.loading) {
+    FX.loading = api("/rates").then((r) => {
+      if (r && r.rates) { FX.rates = r.rates; if (r.live) store.set("ps_rates", JSON.stringify({ t: Date.now(), rates: r.rates })); }
+    }).catch(() => {}).then(() => { FX.loading = null; });
+  }
+  return FX.loading;
+}
+/** The price again in the visitor's chosen currency ("≈ $4M"), or "" when there's nothing to add. */
+function approx(p) {
+  const to = myCur(), from = p.currency || "INR";
+  if (!to || to === from || !p.price || !FX.rates || !FX.rates[to] || !FX.rates[from]) return "";
+  const n = (p.price / FX.rates[from]) * FX.rates[to];
+  return "≈ " + priceOf({ ...p, price: n >= 1000 ? Number(n.toPrecision(3)) : Math.round(n), currency: to });
+}
+const approxHtml = (p) => (myCur() ? `<p class="approx" id="approx"${approx(p) ? "" : " hidden"}>${esc(approx(p))}</p>` : "");
+function bindApprox(p) {
+  if (!myCur() || FX.rates) return;
+  loadRates().then(() => { const el = $("#approx"), a = approx(p); if (el && a) { el.textContent = a; el.hidden = false; } });
+}
+function openUnits() {
+  const pop = $("#tools-pop"); if (pop) pop.remove();
+  openSheet("units", "Units and currency");
+  const u = UNIT(), cur = myCur();
+  $("#sheet-body").innerHTML = `<div class="section-title" style="margin-top:4px">Sizes</div>
+    <div class="seg" id="u-seg"><button type="button" class="segb" data-u="sqft" aria-pressed="${u === "sqft"}">Square feet</button><button type="button" class="segb" data-u="sqm" aria-pressed="${u === "sqm"}">Square metres</button></div>
+    <div class="section-title">Also show prices in</div>
+    <label class="field"><select id="u-cur" aria-label="Also show prices in">${CURS.map(([k, t]) => `<option value="${k}"${k === cur ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+    <p class="hint">Every price stays in the currency it was listed in. The second price on a listing is a guide at today's exchange rate. Filters and posting keep using square feet.</p>`;
+  const redraw = () => {
+    renderMarkers();
+    if (panel.classList.contains("open") && S.panelMode === "list") openList();
+  };
+  $("#sheet-body").querySelectorAll("[data-u]").forEach((b) => b.addEventListener("click", () => {
+    store.set("ps_unit", b.dataset.u);
+    $("#sheet-body").querySelectorAll("[data-u]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    redraw();
+    toast(b.dataset.u === "sqm" ? "Sizes now show in square metres." : "Sizes now show in square feet.");
+  }));
+  $("#u-cur").addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (v) store.set("ps_cur", v); else store.del("ps_cur");
+    if (v) loadRates().then(() => toast(FX.rates && FX.rates[v] ? `Listings now also show the price in ${v}.` : "Couldn't get today's exchange rates. Please try again later."));
+    else toast("Prices show as listed.");
+  });
+}
+
+/* ----- the sun at a listing: where it rises and sets, how high it gets, how long the day is ----- */
+const WINDS = ["north", "north-north-east", "north-east", "east-north-east", "east", "east-south-east", "south-east", "south-south-east", "south", "south-south-west", "south-west", "west-south-west", "west", "west-north-west", "north-west", "north-north-west"];
+const windOf = (deg) => WINDS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+/** The sun on day `n` of the year at this latitude. Directions are degrees clockwise from north. Good to about a degree. */
+function sunDay(lat, n) {
+  const r = Math.PI / 180, decl = -23.44 * Math.cos(r * (360 / 365) * (n + 10)), alt = -0.833 * r;
+  const cosH = (Math.sin(alt) - Math.sin(lat * r) * Math.sin(decl * r)) / (Math.cos(lat * r) * Math.cos(decl * r));
+  if (cosH >= 1) return { hours: 0 };
+  if (cosH <= -1) return { hours: 24 };
+  const az = Math.acos(Math.max(-1, Math.min(1, (Math.sin(decl * r) - Math.sin(lat * r) * Math.sin(alt)) / (Math.cos(lat * r) * Math.cos(alt))))) / r;
+  return { hours: (2 * Math.acos(cosH)) / r / 15, rise: az, set: 360 - az, noonAlt: 90 - Math.abs(lat - decl), south: lat > decl };
+}
+const dayOfYear = (d) => Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000);
+const hoursText = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)} h ${m % 60} min`; };
+function sunHtml(p, now = new Date()) {
+  if (p.kind !== "listing" || p.lat == null || Math.abs(p.lat) > 85) return "";
+  const s = sunDay(p.lat, dayOfYear(now)), jun = sunDay(p.lat, 172), dec = sunDay(p.lat, 355);
+  if (s.rise == null) return "";
+  const c = 44, R = 34, at = (deg, rad = R) => [c + rad * Math.sin((deg * Math.PI) / 180), c - rad * Math.cos((deg * Math.PI) / 180)].map((v) => +v.toFixed(1));
+  const [rx, ry] = at(s.rise), [sx, sy] = at(s.set);
+  const sweep = s.south ? s.set - s.rise : 360 - (s.set - s.rise);
+  const arc = `M${rx} ${ry}A${R} ${R} 0 ${sweep > 180 ? 1 : 0} ${s.south ? 1 : 0} ${sx} ${sy}`;
+  const [nx, ny] = at(s.south ? 180 : 0, R * (1 - s.noonAlt / 90));
+  const longest = Math.max(jun.hours, dec.hours), shortest = Math.min(jun.hours, dec.hours);
+  return `<div class="area-env sun" id="sun"><h3>The sun here</h3>
+    <div class="sun-wrap"><svg viewBox="0 0 88 88" width="88" height="88" aria-hidden="true">
+      <circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+      <path d="${arc}" fill="none" stroke="var(--brass)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M${c} ${c}L${rx} ${ry}M${c} ${c}L${sx} ${sy}" stroke="var(--brass)" stroke-width="1.2" stroke-dasharray="2 3"/>
+      <circle cx="${nx}" cy="${ny}" r="5" fill="var(--brass)"/><circle cx="${c}" cy="${c}" r="2.5" fill="var(--brand)"/>
+      <text x="${c}" y="8" text-anchor="middle">N</text><text x="${c}" y="87" text-anchor="middle">S</text><text x="4" y="${c + 3}" text-anchor="middle">W</text><text x="84" y="${c + 3}" text-anchor="middle">E</text>
+    </svg>
+    <div class="sun-rows">
+      <div><b>Sunrise</b> in the ${windOf(s.rise)}</div>
+      <div><b>Sunset</b> in the ${windOf(s.set)}</div>
+      <div><b>Midday</b> sun to the ${s.south ? "south" : "north"}, ${Math.round(s.noonAlt)}° above the horizon</div>
+      <div><b>Daylight</b> ${hoursText(s.hours)} today</div>
+    </div></div>
+    <p class="ae-src">Over the year the day runs from ${hoursText(shortest)} to ${hoursText(longest)}. Worked out from the spot on the map and today's date; buildings nearby can block the sun.</p></div>`;
+}
+
+$("#maptype").addEventListener("click", () => setTimeout(() => { drawAreas(); drawMeasure(); }, 0));
+loadRates();
+
 /* ---------------- listing extras: market panel, cost calculator, map links, notes, similar homes ---------------- */
 const moneyIn = (n, cur) => amount({ price: n, currency: cur });
-const psfIn = (n, cur) => (cur === "INR" ? "₹" : SYMBOL[cur] || cur + " ") + Math.round(n).toLocaleString("en-US") + "/sq ft";
+const psfIn = (n, cur) => perArea(n, cur);
 /** "This home in the market": its price and time listed against similar homes nearby, price changes, and how many people saved it. */
 function marketHtml(p) {
   const m = p.market;
@@ -4350,7 +4765,7 @@ function marketHtml(p) {
   if (m.median_psf && p.price && p.size_sqft) {
     const psf = p.price / p.size_sqft, diff = Math.round(((psf - m.median_psf) / m.median_psf) * 100);
     const lvl = diff <= -10 ? 1 : diff >= 10 ? 3 : 2;
-    rows.push(`<div class="ae-row"><span class="dot l${lvl}"></span><b>Price per sq ft: ${lvl === 1 ? "low" : lvl === 3 ? "high" : "typical"} for the area</b><small>${esc(psfIn(psf, cur))} here. Similar homes nearby ask around ${esc(psfIn(m.median_psf, cur))}${diff ? ` (this one is ${Math.abs(diff)}% ${diff < 0 ? "lower" : "higher"})` : ""}.</small></div>`);
+    rows.push(`<div class="ae-row"><span class="dot l${lvl}"></span><b>Price per ${UNIT() === "sqm" ? "m²" : "sq ft"}: ${lvl === 1 ? "low" : lvl === 3 ? "high" : "typical"} for the area</b><small>${esc(psfIn(psf, cur))} here. Similar homes nearby ask around ${esc(psfIn(m.median_psf, cur))}${diff ? ` (this one is ${Math.abs(diff)}% ${diff < 0 ? "lower" : "higher"})` : ""}.</small></div>`);
   }
   const days = Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000);
   if (m.avg_days != null && isFinite(days) && days >= 0) {
@@ -4490,7 +4905,7 @@ async function openCompare() {
     <div class="cmp-wrap"><table class="cmp"><tbody>
     ${row("", (p) => `<img src="${esc(cardOf(p))}" alt="" loading="lazy" decoding="async"><b>${esc(titleOf(p))}</b>`)}
     ${row("Price", (p) => mark(lowP != null && p.price === lowP, esc(priceOf(p))))}
-    ${row("Per sq ft", (p) => (psf(p) ? mark(lowPsf != null && psf(p) === lowPsf, esc(psfIn(psf(p), p.currency || "INR"))) : "—"))}
+    ${row(UNIT() === "sqm" ? "Per m²" : "Per sq ft", (p) => (psf(p) ? mark(lowPsf != null && psf(p) === lowPsf, esc(psfIn(psf(p), p.currency || "INR"))) : "—"))}
     ${row("Size", (p) => (p.size_sqft ? mark(bigS != null && p.size_sqft === bigS, esc(sizeOf(p))) : "—"))}
     ${row("Bedrooms", (p) => (isDev(p) && p.configs ? esc(p.configs) : p.bedrooms ? esc(p.bedrooms + " BHK") : "—"))}
     ${row("Type", (p) => esc(cap(TYPE[p.property_type] || "") || "—"))}
@@ -4502,7 +4917,7 @@ async function openCompare() {
     ${row("My notes", (p) => esc(NOTES.get(p.id)) || "—")}
     ${row("", (p) => `<button type="button" class="btn" data-open="${esc(p.id)}">Open</button>`)}
     </tbody></table></div>
-    <p class="hint">✓ marks the lowest price, the lowest price per sq ft and the largest home.</p>`;
+    <p class="hint">✓ marks the lowest price, the lowest price per ${UNIT() === "sqm" ? "m²" : "sq ft"} and the largest home.</p>`;
   body.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.open, { pan: true }); }));
 }
 async function shareShortlist(items) {
