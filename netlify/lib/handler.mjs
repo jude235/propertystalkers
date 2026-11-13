@@ -9,6 +9,7 @@ import { runAssistant } from "./assistant.mjs";
 import { onListingLive, onRequestLive, onPriceChange } from "./events.mjs";
 import { maybeRunJobs } from "./jobs.mjs";
 import { mapRoutes } from "./mapapi.mjs";
+import { ratesRoute } from "./rates.mjs";
 import { oauthRoutes } from "./oauth.mjs";
 
 const placeCache = new Map();
@@ -121,6 +122,10 @@ export async function handle(req, deps) {
       }
       return json({ place: placeCache.get(key) });
     }
+
+    /* ---------- exchange rates, for showing a price in another currency (see rates.mjs) ---------- */
+    const rt = await ratesRoute({ path, method, deps });
+    if (rt) return rt;
 
     /* ---------- the fast map, listing details, search, shortlist (see mapapi.mjs) ---------- */
     const m = await mapRoutes({ path, method, url, req, deps, json, readJson, loadViewer, user, later, maybeRunJobs });

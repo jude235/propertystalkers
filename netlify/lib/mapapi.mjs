@@ -48,6 +48,8 @@ export function mapFilter(url, viewer) {
     cut: q("cut") === "1" || null,
     ppmin: num("ppmin", 0, 1e9), ppmax: num("ppmax", 0, 1e9),
     words: keywords(q("q")),
+    // Shapes drawn on the map (circles and outlines); only listings inside one of them are sent.
+    area: parseArea(q("area")),
     me: viewer ? viewer.id : null,
     req_scope: viewer && (viewer.isAdmin || viewer.isBroker) ? "all" : viewer && viewer.sharesSpace ? "share" : "own",
     // Grid square size for counts: about a quarter of a map tile at this zoom.
@@ -61,9 +63,81 @@ export function keywords(raw) {
   return [...new Set(w)].slice(0, 5);
 }
 
+/** Shapes drawn on the map: circles "c:lat,lng,km" and outlines "p:lat,lng;lat,lng;…", joined by "|". At most 5 shapes. */
+export function parseArea(raw) {
+  const shapes = [];
+  const nums = (t) => t.split(",").map((x) => (x.trim() === "" ? NaN : Number(x)));
+  const onMap = (lat, lng) => Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 85 && Math.abs(lng) <= 180;
+  for (const part of String(raw || "").split("|").slice(0, 5)) {
+    const body = part.slice(2);
+    if (part.startsWith("c:")) {
+      const [lat, lng, km] = nums(body);
+      if (onMap(lat, lng) && km > 0 && km <= 500) shapes.push({ t: "c", lat, lng, km });
+    } else if (part.startsWith("p:")) {
+      const pts = body.split(";").slice(0, 80).map(nums).filter((x) => x.length === 2 && onMap(x[0], x[1]));
+      if (pts.length >= 3) shapes.push({ t: "p", pts });
+    }
+  }
+  return shapes.length ? shapes : null;
+}
+/** Distance in km between two points on the ground. */
+export function kmBetween(aLat, aLng, bLat, bLng) {
+  const r = Math.PI / 180, dLat = (bLat - aLat) * r, dLng = (bLng - aLng) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function inOutline(lat, lng, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [aLat, aLng] = pts[i], [bLat, bLng] = pts[j];
+    if ((aLat > lat) !== (bLat > lat) && lng < ((bLng - aLng) * (lat - aLat)) / (bLat - aLat) + aLng) inside = !inside;
+  }
+  return inside;
+}
+/** Is this point inside any of the shapes? */
+export function inArea(lat, lng, shapes) {
+  return shapes.some((s) => (s.t === "c" ? kmBetween(lat, lng, s.lat, s.lng) <= s.km : inOutline(lat, lng, s.pts)));
+}
+/** The rectangle around all the shapes, cut down to what's on screen. Null when none of it is on screen. */
+function areaView(f) {
+  let s = 90, n = -90, w = 180, e = -180;
+  for (const sh of f.area) {
+    const pts = sh.t === "c"
+      ? [[sh.lat - sh.km / 110.5, sh.lng - sh.km / (111.3 * Math.max(0.05, Math.cos((sh.lat * Math.PI) / 180)))], [sh.lat + sh.km / 110.5, sh.lng + sh.km / (111.3 * Math.max(0.05, Math.cos((sh.lat * Math.PI) / 180)))]]
+      : sh.pts;
+    for (const [lat, lng] of pts) { s = Math.min(s, lat); n = Math.max(n, lat); w = Math.min(w, lng); e = Math.max(e, lng); }
+  }
+  s = Math.max(s, f.s, -85); n = Math.min(n, f.n, 85); w = Math.max(w, -180); e = Math.min(e, 180);
+  if (f.w <= f.e) { w = Math.max(w, f.w); e = Math.min(e, f.e); }
+  return s < n && w < e ? { s, n, w, e } : null;
+}
+/** The map, the list and the count when shapes are drawn: fetch what's in the rectangle around them, keep what's inside. */
+async function areaAnswer(store, f, viewer, mode, lim, wantDots, withEnv) {
+  const box = areaView(f);
+  const inside = (r) => inArea(Number(r.lat), Number(r.lng), f.area);
+  if (!box) return mode === "count" ? { total: 0 } : { mode: "pins", pins: [], total: 0 };
+  const g = dbF(f, box);
+  const light = async () => (await store.mapDots({ ...g, lim: 20000 })).filter(inside);
+  if (mode === "count") return { total: (await light()).length };
+  const MAX = 1000;
+  const rows = await store.mapPins({ ...g, lim: MAX });
+  const mine = rows.filter(inside);
+  const all = rows.length < MAX;   // false: the rectangle holds more than one fetch brings back
+  if (mode === "list") return { mode: "pins", pins: await withEnv(await pinsFor(store, mine.slice(0, lim), viewer)), total: all ? mine.length : (await light()).length };
+  if (all && mine.length <= PIN_LIMIT) { const pins = await withEnv(await pinsFor(store, mine, viewer)); return { mode: "pins", pins, total: pins.length }; }
+  const dots = await light();
+  if (wantDots && dots.length <= DOT_LIMIT) return { mode: "dots", dots: dots.map((d) => [Math.round(d.lat * 1e5) / 1e5, Math.round(d.lng * 1e5) / 1e5, dotCode({ ...d, kind: d.kind || f.kind })]), total: dots.length };
+  const cells = new Map();
+  for (const d of dots) {
+    const k = Math.floor(d.lat / f.cell) + ":" + Math.floor(d.lng / f.cell), c = cells.get(k) || { lat: 0, lng: 0, n: 0 };
+    c.lat += Number(d.lat); c.lng += Number(d.lng); c.n++; cells.set(k, c);
+  }
+  return { mode: "clusters", clusters: [...cells.values()].map((c) => ({ lat: c.lat / c.n, lng: c.lng / c.n, n: c.n })), total: dots.length };
+}
+
 /** One rectangle, or two when the view crosses the date line. */
 const boxes = (f) => (f.w <= f.e ? [f] : [{ ...f, e: 180 }, { ...f, w: -180 }]);
-const dbF = (f, extra = {}) => { const { z, ...rest } = f; return { ...rest, ...extra }; };
+const dbF = (f, extra = {}) => { const { z, area, ...rest } = f; return { ...rest, ...extra }; };
 
 /** What a marker and a list card need. */
 export function toPin(p, viewer, i = {}, watched = new Set()) {
@@ -187,6 +261,10 @@ export async function mapRoutes(c) {
     if (!f) return json({ error: "Please send the map area (w, s, e, n)." }, 400);
     const mode = url.searchParams.get("mode");
     const base = { access: accessSummary(viewer), signedIn: !!viewer };
+    if (f.area) {
+      const lim = Math.min(Math.max(Number(url.searchParams.get("lim")) || 30, 1), 60);
+      return json({ ...base, ...(await areaAnswer(store, f, viewer, mode, lim, url.searchParams.get("dots") === "1", withEnv)) });
+    }
     if (mode === "count") return json({ ...base, total: await countIn(store, f) });
 
     // The list asks for the newest few in view even when the map is showing counts.
