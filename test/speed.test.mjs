@@ -98,9 +98,9 @@ test("listing details carry the market picture: area price per sq ft, average da
   await store.insert("watches", [{ user_id: fan1.id, post_id: target.id }, { user_id: fan2.id, post_id: target.id }]);
   const deps = { store, ai: scriptedAI(), geo: tableGeo({}), env: ENV };
   const post = (await (await handle(req("GET", "/posts/" + target.id), deps)).json()).post;
-  assert.deepEqual(post.market, { median_psf: 1300, comps: 3, avg_days: 20, first_price: 1000000, saves: 2 });
+  assert.deepEqual(post.market, { median_psf: 1300, comps: 3, avg_days: 20, first_price: 1000000, saves: 2, views: 0, history: [] });
   // A request has no market picture, and a listing with nothing to compare still answers
   const lone = await mk({ locality: "Elsewhere", city: "Ajman", lat: 25.4, lng: 55.5 });
   const m2 = (await (await handle(req("GET", "/posts/" + lone.id), deps)).json()).post.market;
-  assert.deepEqual(m2, { median_psf: null, comps: 0, avg_days: null, first_price: null, saves: 0 });
+  assert.deepEqual(m2, { median_psf: null, comps: 0, avg_days: null, first_price: null, saves: 0, views: 0, history: [] });
 });
