@@ -4,6 +4,7 @@
 // Full details (description, contact, warnings) come from GET /posts/<id> when someone opens a listing.
 import { DEALS, PROPERTY_TYPES, COMMERCIAL_TYPES, AMENITIES, isUuid, clean, collapseUnits, canSee, accessSummary, toPublic } from "./core.mjs";
 import { marketInfo, FLAG_TEXT, PUBLIC_FLAGS } from "./market.mjs";
+import { priceHistories, publicExtras } from "./extras.mjs";
 import { attachEnv, fillEnv } from "./envq.mjs";
 
 /** More pins than this in view -> send counts per area instead. */
@@ -195,14 +196,15 @@ async function fullDetails(store, posts, viewer, deps, later) {
     groups.set(k, g);
   }
   const spots = posts.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng }));
-  const [nearLists, avatars, watchedRows, hiddenRows, missingEnv, savedRows] = await Promise.all([
+  const [nearLists, avatars, watchedRows, hiddenRows, missingEnv, savedRows, histories] = await Promise.all([
     Promise.all([...groups.values()].map((g) => store.mapPins({ w: g.w, e: g.e, s: g.s, n: g.n, kind: "listing", deals: [g.deal], lim: 400 }).catch(() => []))),
     store.avatarsFor([...new Set(posts.map((p) => p.user_id))]),
     viewer ? store.rows("watches", { user_id: viewer.id, post_id: { in: ids } }, { limit: 1000 }) : [],
     viewer ? store.rows("hidden_posts", { user_id: viewer.id, post_id: { in: ids } }, { limit: 1000 }) : [],
     attachEnv(store, spots).catch(() => []),
     // How many people shortlisted each home (a number only, never who).
-    store.rows("watches", { post_id: { in: ids } }, { limit: 5000 }).catch(() => [])
+    store.rows("watches", { post_id: { in: ids } }, { limit: 5000 }).catch(() => []),
+    priceHistories(store, ids)
   ]);
   const saves = new Map();
   for (const w of savedRows) saves.set(w.post_id, (saves.get(w.post_id) || 0) + 1);
@@ -231,8 +233,11 @@ async function fullDetails(store, posts, viewer, deps, later) {
     if (p.kind === "listing") o.market = {
       median_psf: i.median_psf || null, comps: i.comps || 0, avg_days: i.avg_days ?? null,
       first_price: p.first_price && p.price && Number(p.first_price) !== Number(p.price) ? Number(p.first_price) : null,
-      saves: saves.get(p.id) || 0
+      saves: saves.get(p.id) || 0,
+      views: Number(p.views) || 0,
+      history: (histories.get(p.id) || []).slice(-12)
     };
+    if (p.kind === "listing") o.extra = publicExtras(p);
     return o;
   });
   if (missingEnv.length && deps.envq && later) await later(() => fillEnv(store, deps.envq, missingEnv));

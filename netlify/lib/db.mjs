@@ -175,6 +175,9 @@ export function makeStore({ url, serviceKey }) {
     async deleteDraft(id) {
       must(await sb.from("drafts").delete().eq("id", id));
     },
+    async bumpViews(postId) {
+      return must(await sb.rpc("bump_views", { pid: postId }));
+    },
     async bumpAiUsage(userId) {
       return must(await sb.rpc("bump_ai_usage", { uid: userId }));
     },

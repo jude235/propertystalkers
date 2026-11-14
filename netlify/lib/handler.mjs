@@ -10,6 +10,7 @@ import { onListingLive, onRequestLive, onPriceChange } from "./events.mjs";
 import { maybeRunJobs } from "./jobs.mjs";
 import { mapRoutes } from "./mapapi.mjs";
 import { ratesRoute } from "./rates.mjs";
+import { extrasRoutes, notePrice } from "./extras.mjs";
 import { oauthRoutes } from "./oauth.mjs";
 
 const placeCache = new Map();
@@ -128,6 +129,10 @@ export async function handle(req, deps) {
     if (rt) return rt;
 
     /* ---------- the fast map, listing details, search, shortlist (see mapapi.mjs) ---------- */
+    /* ---------- views, reports, extra details, sold / rented (see extras.mjs) ---------- */
+    const ex = await extrasRoutes({ path, method, deps, json, readJson: () => readJson(req), user, isAdmin });
+    if (ex) return ex;
+
     const m = await mapRoutes({ path, method, url, req, deps, json, readJson, loadViewer, user, later, maybeRunJobs });
     if (m) return m;
 
@@ -414,6 +419,7 @@ export async function handle(req, deps) {
         // A review account (for app-store / directory reviewers) posts privately: nobody else sees it or is alerted.
         status: profile.sandbox === true ? "private" : "active"
       });
+      if (post.kind === "listing") await notePrice(store, post.id, post.price);
       await store.deleteDraft(body.draftId);
       if (draft.poster_type === "broker" && draft.rera_number && profile.rera_number !== draft.rera_number) {
         await store.upsertProfile({ id: user.id, rera_number: draft.rera_number });
@@ -488,6 +494,7 @@ export async function handle(req, deps) {
       }
       const before = { ...post };
       const updated = await store.updatePost(post.id, fields);
+      if (priceChanged && updated.kind === "listing") await notePrice(store, updated.id, updated.price);
       if (updated.kind === "listing" && updated.status === "active") {
         await later(() => (priceChanged ? onPriceChange(deps, updated, before.price) : onListingLive(deps, updated, { previous: before })));
       }
