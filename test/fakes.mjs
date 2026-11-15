@@ -122,6 +122,10 @@ function mapWhere(p, f) {
   if ((dealsOn || catOn) && !((dealsOn && f.deals.includes(p.deal)) || (f.cat_dev && p.poster_type === "developer") || (f.cat_types || []).includes(p.property_type || ""))) return false;
   if (!has(f.types, p.property_type || "")) return false;
   if (f.beds != null && !(Math.max(p.bedrooms || 0, 0) >= f.beds)) return false;
+  if (f.bedsmax != null && !(Math.max(p.bedrooms || 0, 0) <= f.bedsmax)) return false;
+  if (f.floormin != null && !(p.floor_level >= f.floormin)) return false;
+  if (f.ymin != null && !(p.year_built >= f.ymin)) return false;
+  if (f.scmax != null && !(p.service_charge <= f.scmax)) return false;
   if (f.pmin != null && !(p.price >= f.pmin)) return false;
   if (f.pmax != null && !(p.price <= f.pmax)) return false;
   if (f.smin != null && !(p.size_sqft >= f.smin)) return false;

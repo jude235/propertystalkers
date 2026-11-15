@@ -110,3 +110,15 @@ test("exchange rates: looked up once and remembered; fixed Gulf rates fill in; a
   assert.equal(n, 2);
   forgetRates();
 });
+
+test("exactly N bedrooms, and the extra-detail filters, apply on the server (so they hold when zoomed out too)", async () => {
+  const { call, mk } = await setup();
+  const two = await mk({ lat: 25.3, lng: 55.3, bedrooms: 2 }), three = await mk({ lat: 25.3, lng: 55.31, bedrooms: 3, floor_level: 20, year_built: 2022, service_charge: 12 });
+  const v = "w=55.25&e=55.35&s=25.25&n=25.35&z=13";
+  assert.deepEqual(ids(await call("GET", `/map?${v}&beds=2`)), [two.id, three.id].sort());
+  assert.deepEqual(ids(await call("GET", `/map?${v}&beds=2&bedsmax=2`)), [two.id]);
+  assert.equal((await call("GET", `/map?${v}&beds=2&bedsmax=2&mode=count`)).body.total, 1);
+  assert.deepEqual(ids(await call("GET", `/map?${v}&floormin=10`)), [three.id]);
+  assert.deepEqual(ids(await call("GET", `/map?${v}&ymin=2020&scmax=15`)), [three.id]);
+  assert.deepEqual(ids(await call("GET", `/map?${v}&scmax=5`)), []);
+});
