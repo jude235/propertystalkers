@@ -290,7 +290,7 @@ function areaFacts(list) {
   return facts;
 }
 const factsHtml = (facts) => (facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : "");
-const countLine = (list) => GROUPS.map(([name, pick]) => { const n = list.filter(pick).length; return n ? `${n} ${name.toLowerCase()}` : ""; }).filter(Boolean).join(", ");
+const countLine = (list) => GROUPS.map(([name, pick]) => { const n = list.filter(pick).length; return n ? `${n} ${n === 1 ? name.toLowerCase().replace(/(projects|homes)$/, (w) => w.slice(0, -1)) : name.toLowerCase()}` : ""; }).filter(Boolean).join(", ");
 const linksHtml = (items) => `<ul class="amen">${items.map(([href, text]) => `<li><a href="${esc(href)}">${esc(text)}</a></li>`).join("")}</ul>`;
 /** Names grouped by their web-address form, most listings first: [{ name, slug, list }]. */
 function groupBy(list, key) {
