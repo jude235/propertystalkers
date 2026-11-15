@@ -27,6 +27,12 @@ language sql stable parallel safe as $$
     )
     and (f->'types' is null or jsonb_array_length(f->'types') = 0 or (f->'types') ? coalesce(p.property_type, ''))
     and (f->>'beds' is null or greatest(coalesce(p.bedrooms, 0), 0) >= (f->>'beds')::int)
+    -- Exactly N bedrooms: beds and bedsmax are sent together
+    and (f->>'bedsmax' is null or greatest(coalesce(p.bedrooms, 0), 0) <= (f->>'bedsmax')::int)
+    -- Extra details owners can add (see extras.sql)
+    and (f->>'floormin' is null or p.floor_level >= (f->>'floormin')::int)
+    and (f->>'ymin' is null or p.year_built >= (f->>'ymin')::int)
+    and (f->>'scmax' is null or p.service_charge <= (f->>'scmax')::numeric)
     and (f->>'pmin' is null or p.price >= (f->>'pmin')::numeric)
     and (f->>'pmax' is null or p.price <= (f->>'pmax')::numeric)
     and (f->>'smin' is null or p.size_sqft >= (f->>'smin')::numeric)
