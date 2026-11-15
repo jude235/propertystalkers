@@ -106,3 +106,37 @@ test("a review account's private listing has no public page and isn't in the sit
   const map = await (await handlePublic(get("/sitemap.xml"), deps)).text();
   assert.doesNotMatch(map, new RegExp(hush.id));
 });
+
+test("area, city and developer pages list what's there, link to each other, and leak nothing private", async () => {
+  const { store, deps, flat, dearer, villa, request, sold } = await setup();
+  const proj = await store.createPost({ kind: "listing", poster_type: "developer", status: "active", deal: "sale", property_type: "apartment", currency: "AED", price: 1500000, building: "Creek Tower", company: "Emaar Properties",
+    locality: "Dubai Marina", city: "Dubai", country: "United Arab Emirates", lat: 25.08, lng: 55.14, user_id: "u9", photos: [], contact_phone: "971509999999" });
+  const page = async (path) => { const r = await handlePublic(get(path), deps); return { status: r.status, text: await r.text(), type: r.headers.get("content-type") }; };
+  const area = await page("/homes/dubai/dubai-marina");
+  assert.equal(area.status, 200);
+  assert.match(area.type, /text\/html/);
+  assert.match(area.text, /<h1>Property in Dubai Marina, Dubai<\/h1>/);
+  assert.ok(area.text.includes(`/property/${flat.id}`) && area.text.includes(`/property/${proj.id}`));
+  assert.ok(!area.text.includes(dearer.id), "the dearer copy of the same unit isn't listed twice");
+  assert.ok(!area.text.includes(villa.id) && !area.text.includes(request.id) && !area.text.includes(sold.id));
+  assert.match(area.text, /For rent \(1\)/);
+  assert.match(area.text, /New projects \(1\)/);
+  assert.match(area.text, /\/homes\/dubai\/arabian-ranches/, "links to the other areas");
+  assert.match(area.text, /<link rel="canonical" href="https:\/\/propertystalkers.com\/homes\/dubai\/dubai-marina">/);
+  for (const secret of ["971501111111", "971509999999", "1204", "Owner One", "Secret Buyer", "<script>alert"]) assert.ok(!area.text.includes(secret), secret);
+  const city = await page("/homes/dubai");
+  assert.match(city.text, /<h1>Property in Dubai<\/h1>/);
+  assert.match(city.text, /\/homes\/dubai\/dubai-marina/);
+  assert.match(city.text, /\/developer\/emaar-properties/);
+  assert.ok(city.text.includes(villa.id));
+  const index = await page("/homes");
+  assert.match(index.text, /\/homes\/dubai"/);
+  const dev = await page("/developer/emaar-properties");
+  assert.match(dev.text, /<h1>Emaar Properties projects<\/h1>/);
+  assert.ok(dev.text.includes(proj.id) && !dev.text.includes(flat.id));
+  for (const missing of ["/homes/nowhere", "/homes/dubai/nowhere", "/developer/nobody"]) { const r = await page(missing); assert.equal(r.status, 404, missing); assert.match(r.text, /noindex/); }
+  const listing = await page("/property/" + flat.id);
+  assert.match(listing.text, /href="https:\/\/propertystalkers.com\/homes\/dubai\/dubai-marina">Dubai Marina<\/a>/);
+  const map = await (await handlePublic(get("/sitemap.xml"), deps)).text();
+  for (const u of ["/homes<", "/homes/dubai<", "/homes/dubai/dubai-marina<", "/homes/dubai/arabian-ranches<", "/developer/emaar-properties<"]) assert.ok(map.includes("https://propertystalkers.com" + u), u);
+});
