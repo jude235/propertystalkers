@@ -139,6 +139,8 @@ const STYLE = `
   .more a { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; background: #fff; }
   .more b { font-weight: 600; }
   .more span { color: var(--brand); font-weight: 700; white-space: nowrap; }
+  .amen a { text-decoration: none; }
+  h2 a { color: inherit; }
   .gone { text-align: center; padding: 60px 0 20px; }
   .gone p { color: var(--muted); }
   .gone .btn { width: auto; padding: 0 28px; margin-top: 10px; }
@@ -224,7 +226,7 @@ export function propertyPage(raw, { site, all = [], canonicalId = null, supabase
   const changed = lastChange(p);
   const deal = p.deal === "share" ? "Co-living" : p.deal === "stay" ? "Holiday home" : isDev(p) ? "New project" : p.deal === "rent" ? "For rent" : "For sale";
   const body = `<main>
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a>${p.country ? ` › ${esc(p.country)}` : ""}${p.city ? ` › ${esc(p.city)}` : ""}${p.locality ? ` › ${esc(p.locality)}` : ""}</nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a>${p.country ? ` › ${esc(p.country)}` : ""}${p.city ? ` › <a href="${site}/homes/${slug(p.city)}">${esc(p.city)}</a>` : ""}${p.locality ? (p.city ? ` › <a href="${site}/homes/${slug(p.city)}/${slug(p.locality)}">${esc(p.locality)}</a>` : ` › ${esc(p.locality)}`) : ""}</nav>
   ${photos.length ? `<div class="photos">${photos.map((u, i) => `<img src="${esc(u)}" alt="${esc(titleOf(p))}, photo ${i + 1}" loading="${i ? "lazy" : "eager"}" width="560" height="420">`).join("")}</div>` : `<div class="nophoto">${LOGO.replace('width="24" height="27"', 'width="56" height="63"')}</div>`}
   <h1>${esc(titleOf(p))}</h1>
   <p class="place">${esc(fullPlace(p))}</p>
@@ -260,12 +262,121 @@ export function gonePage({ site, post = null, all = [] }) {
   return shell({ title: "No longer listed | Property Stalkers", description: "This property is no longer listed on Property Stalkers.", body, robots: "noindex,follow", site });
 }
 
+/* ---------- Area, city and developer pages: /homes, /homes/<city>, /homes/<city>/<area>, /developer/<name> ---------- */
+export const slug = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const newest = (a, b) => String(b.created_at).localeCompare(String(a.created_at));
+const GROUPS = [["New projects", (p) => isDev(p)], ["For sale", (p) => !isDev(p) && p.deal === "sale"], ["For rent", (p) => !isDev(p) && p.deal === "rent"],
+  ["Co-living", (p) => p.deal === "share"], ["Holiday homes", (p) => p.deal === "stay"]];
+const rowsHtml = (list, site, max = 40) => `<ul class="more">${list.slice(0, max).map((x) =>
+  `<li><a href="${site}/property/${x.id}"><b>${esc(titleOf(x))}${placeOf(x) ? `, ${esc(placeOf(x))}` : ""}</b><span>${esc(priceOf(x))}</span></a></li>`).join("")}</ul>${list.length > max ? `<p class="meta">And ${list.length - max} more on the map.</p>` : ""}`;
+const groupsHtml = (list, site) => GROUPS.map(([name, pick]) => { const l = list.filter(pick).sort(newest); return l.length ? `<h2>${name} (${l.length})</h2>${rowsHtml(l, site)}` : ""; }).join("");
+/** Counts, price ranges and the typical price per sq ft, in the currency most listings there use. */
+function areaFacts(list) {
+  const facts = [];
+  const money = (n, cur) => amount({ price: Math.round(n), currency: cur });
+  for (const [name, pick] of GROUPS) {
+    const l = list.filter(pick);
+    if (!l.length) continue;
+    facts.push([name, String(l.length)]);
+    const curs = {}; for (const p of l) if (p.price) curs[p.currency || "INR"] = (curs[p.currency || "INR"] || 0) + 1;
+    const cur = Object.keys(curs).sort((a, b) => curs[b] - curs[a])[0];
+    const prices = l.filter((p) => p.price && (p.currency || "INR") === cur).map((p) => Number(p.price)).sort((a, b) => a - b);
+    if (prices.length >= 2 && prices[0] !== prices[prices.length - 1]) facts.push([name === "New projects" ? "New projects: starting prices" : `${name}: asking prices`, `${money(prices[0], cur)} to ${money(prices[prices.length - 1], cur)}`]);
+    if (name === "For sale") {
+      const psf = l.filter((p) => p.price && p.size_sqft > 0 && (p.currency || "INR") === cur).map((p) => p.price / p.size_sqft).sort((a, b) => a - b);
+      if (psf.length >= 3) facts.push(["Typical asking price per sq ft", money(psf.length % 2 ? psf[(psf.length - 1) / 2] : (psf[psf.length / 2 - 1] + psf[psf.length / 2]) / 2, cur)]);
+    }
+  }
+  return facts;
+}
+const factsHtml = (facts) => (facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : "");
+const countLine = (list) => GROUPS.map(([name, pick]) => { const n = list.filter(pick).length; return n ? `${n} ${name.toLowerCase()}` : ""; }).filter(Boolean).join(", ");
+const linksHtml = (items) => `<ul class="amen">${items.map(([href, text]) => `<li><a href="${esc(href)}">${esc(text)}</a></li>`).join("")}</ul>`;
+/** Names grouped by their web-address form, most listings first: [{ name, slug, list }]. */
+function groupBy(list, key) {
+  const m = new Map();
+  for (const p of list) { const name = String(key(p) || "").trim(), s = slug(name); if (!s) continue; const g = m.get(s) || { name, slug: s, list: [] }; g.list.push(p); m.set(s, g); }
+  return [...m.values()].sort((a, b) => b.list.length - a.list.length || a.name.localeCompare(b.name));
+}
+function listLd(list, site, crumbs) {
+  return JSON.stringify([{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: crumbs.map(([name, item], i) => ({ "@type": "ListItem", position: i + 1, name, item })) },
+    { "@context": "https://schema.org", "@type": "ItemList", numberOfItems: list.length, itemListElement: list.slice(0, 40).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${site}/property/${p.id}`, name: titleOf(p) })) }]).replace(/</g, "\\u003c");
+}
+const mapCta = (list, text) => (list.length ? `<div class="cta"><a class="btn" href="/#p=${esc([...list].sort(newest)[0].id)}">${esc(text)}</a></div>` : "");
+const note = `<p class="meta">Prices are asking prices set by the listers, not sale prices. This page updates as listings are added and removed.</p>`;
+
+export function areaPage({ site, city, area, cityList }) {
+  const list = area.list, url = `${site}/homes/${city.slug}/${area.slug}`, where = `${area.name}, ${city.name}`;
+  const others = groupBy(cityList, (p) => p.locality).filter((a) => a.slug !== area.slug).slice(0, 24);
+  const body = `<main>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a> › <a href="${site}/homes">Areas</a> › <a href="${site}/homes/${city.slug}">${esc(city.name)}</a> › ${esc(area.name)}</nav>
+  <h1>Property in ${esc(where)}</h1>
+  <p class="place">${esc(countLine(list))} listed on Property Stalkers.</p>
+  ${factsHtml(areaFacts(list))}
+  ${groupsHtml(list, site)}
+  ${others.length ? `<h2>Other areas in ${esc(city.name)}</h2>${linksHtml(others.map((a) => [`${site}/homes/${city.slug}/${a.slug}`, `${a.name} (${a.list.length})`]))}` : ""}
+  ${note}
+</main>${mapCta(list, `See ${area.name} on the map`)}`;
+  return shell({ title: `Property in ${where}: ${countLine(list)} | Property Stalkers`, description: `${cap(countLine(list))} in ${where}, on a map, with asking prices and price per sq ft. Listed by owners, brokers and developers.`,
+    url, canonical: url, jsonLd: listLd(list, site, [["Areas", `${site}/homes`], [city.name, `${site}/homes/${city.slug}`], [area.name, url]]), body, site });
+}
+export function cityPage({ site, city }) {
+  const list = city.list, url = `${site}/homes/${city.slug}`;
+  const areas = groupBy(list, (p) => p.locality), devs = groupBy(list.filter(isDev), (p) => p.company).slice(0, 40);
+  const body = `<main>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a> › <a href="${site}/homes">Areas</a> › ${esc(city.name)}</nav>
+  <h1>Property in ${esc(city.name)}</h1>
+  <p class="place">${esc(countLine(list))} listed on Property Stalkers.</p>
+  ${factsHtml(areaFacts(list))}
+  ${areas.length ? `<h2>Areas in ${esc(city.name)}</h2>${linksHtml(areas.map((a) => [`${site}/homes/${city.slug}/${a.slug}`, `${a.name} (${a.list.length})`]))}` : ""}
+  ${devs.length ? `<h2>Developers with projects in ${esc(city.name)}</h2>${linksHtml(devs.map((d) => [`${site}/developer/${d.slug}`, `${d.name} (${d.list.length})`]))}` : ""}
+  <h2>Newest in ${esc(city.name)}</h2>${rowsHtml([...list].sort(newest), site, 30)}
+  ${note}
+</main>${mapCta(list, `See ${city.name} on the map`)}`;
+  return shell({ title: `Property in ${city.name}: ${countLine(list)} | Property Stalkers`, description: `${cap(countLine(list))} in ${city.name}, area by area, on a map with asking prices.`,
+    url, canonical: url, jsonLd: listLd([...list].sort(newest), site, [["Areas", `${site}/homes`], [city.name, url]]), body, site });
+}
+export function homesIndex({ site, all }) {
+  const cities = groupBy(all, (p) => p.city), url = `${site}/homes`;
+  const body = `<main>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a> › Areas</nav>
+  <h1>Property by city and area</h1>
+  <p class="place">${esc(countLine(all))} on the map.</p>
+  ${cities.map((c) => { const areas = groupBy(c.list, (p) => p.locality).slice(0, 30);
+    return `<h2><a href="${site}/homes/${c.slug}">${esc(c.name)}</a> (${c.list.length})</h2>${areas.length ? linksHtml(areas.map((a) => [`${site}/homes/${c.slug}/${a.slug}`, `${a.name} (${a.list.length})`])) : ""}`; }).join("")}
+  ${note}
+</main><div class="cta"><a class="btn" href="/">Open the map</a></div>`;
+  return shell({ title: "Property by city and area | Property Stalkers", description: `Homes for sale and rent, new projects, co-living rooms and holiday homes by city and area: ${countLine(all)}.`, url, canonical: url, body, site });
+}
+export function developerPage({ site, dev }) {
+  const list = [...dev.list].sort(newest), url = `${site}/developer/${dev.slug}`;
+  const cities = groupBy(list, (p) => p.city);
+  const body = `<main>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Map</a> › Developers › ${esc(dev.name)}</nav>
+  <h1>${esc(dev.name)} projects</h1>
+  <p class="place">${list.length} ${list.length === 1 ? "project" : "projects"} on Property Stalkers${cities.length ? ` in ${esc(cities.map((c) => c.name).slice(0, 4).join(", "))}` : ""}.</p>
+  ${factsHtml(areaFacts(list))}
+  ${cities.map((c) => `<h2>${esc(c.name)} (${c.list.length})</h2>${rowsHtml(c.list.sort(newest), site)}`).join("")}
+  <p class="meta">Project details come from the developer's or the land department's public records and from listers. Prices are starting prices where given.</p>
+</main>${mapCta(list, `See ${dev.name} projects on the map`)}`;
+  return shell({ title: `${dev.name} projects: ${list.length} on the map | Property Stalkers`, description: `${list.length} ${dev.name} ${list.length === 1 ? "project" : "projects"}${cities.length ? " in " + cities.map((c) => c.name).slice(0, 4).join(", ") : ""}, with starting prices, handover dates and locations on a map.`,
+    url, canonical: url, jsonLd: listLd(list, site, [["Developers", `${site}/homes`], [dev.name, url]]), body, site });
+}
+const notFoundPage = (site) => shell({ title: "Page not found | Property Stalkers", description: "This page isn't available on Property Stalkers.", robots: "noindex,follow", site,
+  body: `<main><div class="gone"><h1>Nothing listed here right now</h1><p>There are no listings at this address at the moment.</p><a class="btn" href="${site}/homes">Browse by area</a></div></main>` });
+
 export function sitemap(listings, site) {
   const urls = [`  <url><loc>${site}/</loc><changefreq>daily</changefreq></url>`];
   for (const p of listings) {
     const d = lastChange(p);
     urls.push(`  <url><loc>${site}/property/${p.id}</loc>${d ? `<lastmod>${d.toISOString().slice(0, 10)}</lastmod>` : ""}</url>`);
   }
+  if (listings.length) urls.splice(1, 0, `  <url><loc>${site}/homes</loc><changefreq>daily</changefreq></url>`);
+  for (const c of groupBy(listings, (p) => p.city)) {
+    urls.push(`  <url><loc>${site}/homes/${c.slug}</loc></url>`);
+    for (const a of groupBy(c.list, (p) => p.locality)) urls.push(`  <url><loc>${site}/homes/${c.slug}/${a.slug}</loc></url>`);
+  }
+  for (const d of groupBy(listings.filter(isDev), (p) => p.company)) urls.push(`  <url><loc>${site}/developer/${d.slug}</loc></url>`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
 }
 
@@ -281,6 +392,22 @@ export async function handlePublic(req, { store, env }) {
   if (url.pathname === "/sitemap.xml") {
     const all = publicListings(await store.sitemapRows());
     return new Response(sitemap(all, site), { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=1800" } });
+  }
+
+  const hm = url.pathname.match(/^\/homes(?:\/([^/]+))?(?:\/([^/]+))?\/?$/), dm = url.pathname.match(/^\/developer\/([^/]+)\/?$/);
+  if (hm || dm) {
+    const all = publicListings(await store.sitemapRows());
+    const page = (body) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=1800", "x-content-type-options": "nosniff" } });
+    if (dm) {
+      const dev = groupBy(all.filter(isDev), (p) => p.company).find((d) => d.slug === dm[1].toLowerCase());
+      return dev ? page(developerPage({ site, dev })) : html(notFoundPage(site), 404);
+    }
+    if (!hm[1]) return page(homesIndex({ site, all }));
+    const city = groupBy(all, (p) => p.city).find((c) => c.slug === hm[1].toLowerCase());
+    if (!city) return html(notFoundPage(site), 404);
+    if (!hm[2]) return page(cityPage({ site, city }));
+    const area = groupBy(city.list, (p) => p.locality).find((a) => a.slug === hm[2].toLowerCase());
+    return area ? page(areaPage({ site, city, area, cityList: city.list })) : html(notFoundPage(site), 404);
   }
 
   const m = url.pathname.match(/^\/property\/([^/]+)\/?$/);

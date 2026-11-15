@@ -122,7 +122,7 @@ export function makeStore({ url, serviceKey }) {
         .order("created_at", { ascending: false }).limit(limit));
     },
     async sitemapRows() {
-      return must(await sb.from("posts").select("id,kind,status,user_id,unit_key,price,lat,created_at,price_changed_at,confirmed_at")
+      return must(await sb.from("posts").select("id,kind,status,user_id,unit_key,price,lat,created_at,price_changed_at,confirmed_at,poster_type,deal,property_type,bedrooms,currency,size_sqft,building,locality,city,company,room_type,bills_included")
         .eq("status", "active").eq("kind", "listing").order("created_at", { ascending: false }).limit(50000));
     },
     async activePosts() {
