@@ -476,6 +476,31 @@
   .why label { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; background: #fff; cursor: pointer; font-size: 14.5px; }
   .why input { accent-color: var(--brand); width: 18px; height: 18px; margin: 0; }
   #extra-facts { margin-top: 10px; }
+  .qr-box { width: 220px; max-width: 70%; margin: 14px auto 8px; padding: 10px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+  .qr-box svg { display: block; width: 100%; height: auto; }
+  #print-area { display: none; }
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body > *:not(#print-area) { display: none !important; }
+    html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
+    #print-area { display: block; color: #10201a; font-family: inherit; }
+    .bro-top { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #b8902f; padding-bottom: 6px; margin-bottom: 10px; font-size: 11pt; }
+    .bro-top b { font-size: 15pt; letter-spacing: .02em; }
+    .bro-photos { display: grid; gap: 6px; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; height: 82mm; }
+    .bro-photos img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+    .bro-photos img:first-child { grid-row: 1 / span 2; }
+    .bro-photos.n1 { grid-template-columns: 1fr; } .bro-photos.n2 { grid-template-rows: 1fr; grid-template-columns: 1fr 1fr; } .bro-photos.n2 img:first-child { grid-row: auto; }
+    .bro-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin: 12px 0 8px; }
+    .bro-head h1 { font-size: 18pt; margin: 0 0 2px; } .bro-head p { margin: 0; color: #555; font-size: 11pt; }
+    .bro-price { font-size: 18pt; font-weight: 700; white-space: nowrap; }
+    .bro-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+    .bro-facts div { border: 1px solid #ddd; border-radius: 6px; padding: 5px 8px; }
+    .bro-facts small { display: block; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #666; } .bro-facts b { font-size: 11pt; }
+    .bro-desc { font-size: 10.5pt; line-height: 1.45; margin: 8px 0; white-space: pre-line; } .bro-amen { font-size: 9.5pt; color: #444; margin: 0 0 8px; }
+    .bro-foot { display: flex; gap: 12px; align-items: center; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; break-inside: avoid; }
+    .bro-qr { width: 30mm; flex: 0 0 auto; } .bro-qr svg { display: block; width: 100%; height: auto; }
+    .bro-foot b, .bro-foot span, .bro-foot em { display: block; font-style: normal; } .bro-foot b { font-size: 12pt; } .bro-foot span { font-size: 9pt; color: #555; word-break: break-all; } .bro-foot em { margin-top: 6px; font-size: 11pt; font-weight: 600; }
+  }
   .approx { margin: 2px 0 0; color: var(--muted); font-size: 14px; font-weight: 500; }
   .sun-wrap { display: flex; align-items: center; gap: 14px; }
   .sun-wrap svg { flex: 0 0 auto; }
@@ -2287,6 +2312,7 @@ async function openDetails(id, opts = {}) {
       ${p.source === "dld" && !p.mine ? `<div class="claim"><p class="hint">Listed from Dubai Land Department project records.</p>
         <a class="btn claim-btn" id="claim-post" href="${esc(waHref(p.contact_phone, `Hi, I represent ${p.company || "the developer"} and would like to claim the project "${p.building}" on Property Stalkers: ${location.origin}/#p=${p.id}`))}" target="_blank" rel="noopener">Developer? Claim this project</a></div>` : ""}
       ${p.mine ? `<button class="btn edit-btn" id="edit-post"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit my post</button>` : ""}
+      ${p.kind === "listing" ? `<button type="button" class="link-btn" id="brochure-btn" style="color:var(--brass-ink);display:block">Brochure and QR code</button>` : ""}
       ${ownerLinksHtml(p)}
       ${p.removable ? `<button class="link-btn" id="remove-post">${p.mine ? "Remove my post" : "Remove post (admin)"}</button>` : ""}
     </div>
@@ -4856,7 +4882,78 @@ function bindMore(p) {
   on("#more-details", () => openMoreDetails(p));
   on("#report-post", () => openReport(p));
   on("#close-post", () => closePost(p));
+  on("#brochure-btn", () => openBrochure(p));
   pingView(p);
+}
+
+/* ---------------- brochure and QR code for a listing; reports for admins ---------------- */
+let qrLoading = null;
+/** The QR-code maker is a separate small file, fetched the first time it's needed. */
+function loadQr() {
+  if (window.qrcode) return Promise.resolve();
+  if (!qrLoading) qrLoading = new Promise((ok, fail) => { const s = document.createElement("script"); s.src = "/qr.js"; s.onload = ok; s.onerror = () => { qrLoading = null; fail(new Error("Couldn't make the QR code. Please check your connection and try again.")); }; document.head.appendChild(s); });
+  return qrLoading;
+}
+/** A QR code for a link, as a picture that stays sharp at any size. */
+function qrSvg(text) {
+  const q = window.qrcode(0, "M");
+  q.addData(text); q.make();
+  const n = q.getModuleCount(), m = 2, size = n + m * 2;
+  let d = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+const listingLink = (p) => `${location.origin}/#p=${p.id}`;
+function brochureHtml(p, qr) {
+  const x = p.extra || {}, photos = (p.photos || []).slice(0, 3);
+  const facts = [["Type", cap(TYPE[p.property_type] || "Home")], p.bedrooms ? ["Bedrooms", String(p.bedrooms)] : null, p.bathrooms ? ["Bathrooms", String(p.bathrooms)] : null, sizeOf(p) ? ["Size", sizeOf(p)] : null,
+    perSqft(p) ? ["Price per " + (UNIT() === "sqm" ? "m²" : "sq ft"), perSqft(p)] : null, x.floor_level != null ? ["Floor", floorText(x.floor_level)] : null, x.year_built ? ["Built", String(x.year_built)] : null,
+    p.furnishing ? ["Furnishing", cap(String(p.furnishing).replace(/_/g, " "))] : null, x.permit_number ? ["Permit no.", x.permit_number] : null].filter(Boolean);
+  const who = p.mine ? [p.contact_name, p.contact_phone ? "+" + String(p.contact_phone).replace(/^\+/, "") : "", p.company || ""].filter(Boolean).join(" · ") : "";
+  return `<div class="bro">
+    <div class="bro-top"><b>Property Stalkers</b><span>${esc(location.host)}</span></div>
+    ${photos.length ? `<div class="bro-photos n${photos.length}">${photos.map((u) => `<img src="${esc(shown(u))}" alt="">`).join("")}</div>` : ""}
+    <div class="bro-head"><div><h1>${esc(titleOf(p))}</h1><p>${esc(placeOf(p))}</p></div><div class="bro-price">${esc(priceOf(p))}</div></div>
+    <div class="bro-facts">${facts.map(([k, v]) => `<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join("")}</div>
+    ${p.description ? `<p class="bro-desc">${esc(String(p.description).slice(0, 900))}</p>` : ""}
+    ${(p.amenities || []).length ? `<p class="bro-amen">${p.amenities.slice(0, 14).map((a) => esc(AMENITIES[a] || a)).join(" · ")}</p>` : ""}
+    <div class="bro-foot"><div class="bro-qr">${qr}</div><div><b>Scan to see it on the map</b><span>${esc(listingLink(p))}</span>${who ? `<em>${esc(who)}</em>` : ""}</div></div>
+  </div>`;
+}
+async function openBrochure(p) {
+  openSheet("brochure", "Brochure and QR code");
+  $("#sheet-body").innerHTML = `<p class="muted">Making the QR code…</p>`;
+  let qr;
+  try { await loadQr(); qr = qrSvg(listingLink(p)); } catch (e) { $("#sheet-body").innerHTML = `<p class="error">${esc(e.message)}</p>`; return; }
+  $("#sheet-body").innerHTML = `<p class="muted">${esc(titleOf(p))} · ${esc(placeOf(p))}</p>
+    <div class="qr-box" id="qr-box">${qr}</div>
+    <p class="hint" style="text-align:center">Anyone who scans this opens the listing on the map.</p>
+    <button type="button" class="btn accent" style="width:100%" id="bro-print">Print the brochure or save it as a PDF</button>
+    <button type="button" class="btn" style="width:100%;margin-top:8px" id="qr-save">Save the QR code as a picture</button>`;
+  $("#bro-print").addEventListener("click", () => {
+    let area = $("#print-area");
+    if (!area) { area = document.createElement("div"); area.id = "print-area"; document.body.appendChild(area); }
+    area.innerHTML = brochureHtml(p, qr);
+    const imgs = [...area.querySelectorAll("img")];
+    Promise.all(imgs.map((i) => (i.complete ? null : new Promise((r) => { i.onload = i.onerror = r; setTimeout(r, 4000); })))).then(() => window.print());
+  });
+  $("#qr-save").addEventListener("click", () => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = c.height = 1024;
+      c.getContext("2d").drawImage(img, 0, 0, 1024, 1024);
+      const a = document.createElement("a"); a.download = "property-stalkers-qr.png"; a.href = c.toDataURL("image/png"); a.click();
+    };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(qr);
+  });
+}
+async function showReports() {
+  const out = $("#adm-out");
+  try {
+    const r = await api("/admin/reports");
+    out.innerHTML = r.reports.length ? r.reports.map((x) => `<div class="my-post"><div><b>${esc(x.reason)}</b><small>${esc(dayText(x.created_at))}${x.note ? " · " + esc(x.note) : ""}</small></div><button class="btn" data-view="${esc(x.post_id)}">View</button></div>`).join("") : `<p class="muted">No reports.</p>`;
+    out.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }).then((ok) => { if (!ok) toast("That listing has been removed."); }); }));
+  } catch (e) { out.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
 }
 
 /* ---------------- listing extras: market panel, cost calculator, map links, notes, similar homes ---------------- */
@@ -5280,6 +5377,7 @@ async function renderExtras() {
       <button class="btn" data-copy-link="${esc(t.repair_token)}">Repair link</button><button class="btn" data-edit-ten="${t.id}">Edit</button></div>`).join("")}
     <button class="btn" id="new-tenancy" style="width:100%;margin-top:8px">Add a tenancy</button>` : ""}
     ${S.me && S.me.isAdmin ? `<div class="section-title">Admin</div><button class="btn" id="adm-flags" style="width:100%">Flagged posts</button>
+      <button class="btn" id="adm-reports" style="width:100%;margin-top:8px">Listings people reported</button>
       <button class="btn" id="adm-jobs" style="width:100%;margin-top:8px">Run reminders and stale checks now</button><div id="adm-out"></div>` : ""}`;
   box.querySelectorAll("[data-del-alert]").forEach((b) => b.addEventListener("click", async () => { await api("/alerts/" + b.dataset.delAlert, { method: "DELETE" }); renderExtras(); }));
   $("#new-alert").addEventListener("click", () => { openAssistant(); setTimeout(() => { const m = $("#msg"); if (m) { m.value = "Alert me when "; m.focus(); } }, 50); });
@@ -5292,6 +5390,8 @@ async function renderExtras() {
     $("#adm-out").innerHTML = r.posts.length ? r.posts.map((p) => `<div class="my-post"><div><b>${esc(p.title)}</b><small>${esc(p.flags.join(", "))} · ${esc(p.contact_name || "")}</small></div><button class="btn" data-view="${p.id}">View</button></div>`).join("") : `<p class="muted">Nothing flagged.</p>`;
     document.querySelectorAll("#adm-out [data-view]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openDetails(b.dataset.view, { zoom: 15 }); }));
   });
+  const ar = $("#adm-reports");
+  if (ar) ar.addEventListener("click", showReports);
   const aj = $("#adm-jobs");
   if (aj) aj.addEventListener("click", async () => { const r = await api("/admin/run-jobs", { method: "POST" }); $("#adm-out").innerHTML = `<p class="muted">${esc(Object.entries(r.done).map(([k, v]) => `${k}: ${v}`).join(" · "))}</p>`; });
 }
