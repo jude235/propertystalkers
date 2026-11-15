@@ -1521,7 +1521,7 @@ function chipQuery() {
     if (cats.length) q.set("cats", cats.join(","));
   }
   if (a.types.length) q.set("types", a.types.join(","));
-  if (a.beds) q.set("beds", a.beds);
+  if (a.beds) { q.set("beds", a.beds); if (a.bedsx) q.set("bedsmax", a.beds); }
   if (num(a.min)) q.set("pmin", num(a.min));
   if (num(a.max)) q.set("pmax", num(a.max));
   if (num(a.smin)) q.set("smin", num(a.smin));
